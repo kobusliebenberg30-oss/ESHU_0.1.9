@@ -1,0 +1,165 @@
+/* image-cropper.css — Eshu engine crop modal */
+
+.eshu-cropper-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.82);
+  align-items: center;
+  justify-content: center;
+}
+.eshu-cropper-modal.open {
+  display: flex;
+}
+
+.eshu-cropper-inner {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary, #fff);
+  width: min(96vw, 760px);
+  max-height: 96vh;
+  overflow: hidden;
+}
+
+/* Header */
+.eshu-cropper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color, #e0e0d8);
+}
+.eshu-cropper-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary, #111);
+}
+.eshu-cropper-cancel {
+  all: unset;
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  background: #111;
+  color: #fff;
+  text-align: center;
+  line-height: 28px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.eshu-cropper-cancel:hover { background: #333; }
+
+/* Stage */
+.eshu-cropper-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a1a1a;
+  flex: 1;
+  min-height: 320px;
+  max-height: 56vh;
+  overflow: hidden;
+  padding: 12px;
+}
+.eshu-cropper-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Ratio bar */
+.eshu-cropper-ratios {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 10px 8px;
+  background: var(--bg-secondary, #f7f7f2);
+  border-top: 1px solid var(--border-color, #e0e0d8);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.eshu-cropper-ratios::-webkit-scrollbar { display: none; }
+
+.eshu-cropper-ratio-btn {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  min-width: 44px;
+}
+.eshu-cropper-ratio-btn:hover {
+  background: var(--bg-primary, #fff);
+  border-color: var(--border-color, #ccc);
+}
+.eshu-cropper-ratio-btn.active {
+  background: #111;
+  color: #fff;
+}
+.eshu-cropper-ratio-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.eshu-cropper-ratio-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+/* Footer */
+.eshu-cropper-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-color, #e0e0d8);
+  background: var(--bg-primary, #fff);
+}
+.eshu-cropper-done {
+  all: unset;
+  display: inline-block;
+  padding: 0 24px;
+  height: 36px;
+  background: #111;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 36px;
+  cursor: pointer;
+}
+.eshu-cropper-done:hover { background: #333; }
+
+/* Dark theme */
+html[data-theme="dark"] .eshu-cropper-inner {
+  background: var(--bg-primary, #1e1e1e);
+}
+html[data-theme="dark"] .eshu-cropper-ratios {
+  background: var(--bg-secondary, #2a2a2a);
+}
+html[data-theme="dark"] .eshu-cropper-ratio-btn:hover {
+  background: #333;
+  border-color: #555;
+}
+html[data-theme="dark"] .eshu-cropper-ratio-btn.active {
+  background: #fff;
+  color: #111;
+}
+html[data-theme="dark"] .eshu-cropper-cancel,
+html[data-theme="dark"] .eshu-cropper-done {
+  background: #fff;
+  color: #111;
+}
+html[data-theme="dark"] .eshu-cropper-cancel:hover,
+html[data-theme="dark"] .eshu-cropper-done:hover {
+  background: #ddd;
+}

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#000" stroke-linejoin="miter" stroke-linecap="butt" stroke-width="48">
+    <!-- Outer hexagon (flat top + bottom, points on left/right) -->
+    <polygon points="792,560 652,318 372,318 232,560 372,802 652,802"/>
+    <!-- Middle circle, inscribed inside the hexagon -->
+    <circle cx="512" cy="560" r="190"/>
+    <!-- Inner diamond, inscribed inside the circle -->
+    <polygon points="512,432 632,560 512,688 392,560"/>
+  </g>
+</svg>

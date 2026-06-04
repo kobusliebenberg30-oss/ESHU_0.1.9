@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#000" stroke-linejoin="miter" stroke-linecap="butt">
+    <!-- Cap: top 3 edges of a hex scaled 1.30x, bolder stroke -->
+    <polyline points="184,450 316,220 708,220 840,450" stroke-width="78" />
+    <!-- Main flat-top hexagon -->
+    <polygon points="792,560 652,318 372,318 232,560 372,802 652,802" stroke-width="44" />
+  </g>
+</svg>

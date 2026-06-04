@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="eshu-api-base" content="http://localhost:3000/api">
+<title>ESHU - Games</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<link rel="stylesheet" href="assets/styles/layout-shared.css">
+<link rel="stylesheet" href="assets/styles/games-page.css">
+<link rel="stylesheet" href="assets/styles/animation-draw.css">
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link active">Your Games</a>
+    <a href="groups.html" class="nav-link">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <button type="button" class="action-btn play-btn" id="playGameBtn" title="Play Game"><span class="btn-label">PLAY<br>GAME</span></button>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation"><span class="btn-label">UPLOAD<br>CREATION</span></a>
+    <button type="button" class="action-btn create-game-btn" id="createGameBtn" title="Create Game"><span class="btn-label">CREATE<br>GAME</span></button>
+    <a href="groups.html?action=create" class="action-btn create-group-btn" title="Create Group"><span class="btn-label">CREATE<br>GROUP</span></a>
+    <div class="xp-display" id="xpCounter">0 XP</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="page-container" id="pageContainer">
+  <!-- Left Panel -->
+  <div class="left-panel" id="leftPanel">
+    <!-- Default: Games List -->
+    <div class="games-list-wrapper" id="gamesListWrapper">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;padding:16px;gap:12px;">
+        <div class="gf-tab-toolbar">
+          <select class="gf-tab-filter" id="scopeFilter">
+            <option value="mine">Your Games</option>
+            <option value="public">Public Games</option>
+            <option value="private">Private Games</option>
+            <option value="all">All Games</option>
+            <option value="byGroup">By Group</option>
+          </select>
+          <input type="text" class="gf-tab-search" id="searchBox" placeholder="Search games..." />
+          <span class="gf-tab-count" id="gamesCountLabel"></span>
+        </div>
+        <div class="u-card-list" id="gamesList" style="flex:1;overflow-y:auto;">
+          <!-- Games rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Mode: Game Image Panel -->
+    <div class="game-image-panel" id="gameImagePanel">
+      <div class="image-panel-header">
+        <button type="button" class="back-btn" id="backBtn"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <div class="image-panel-title" id="imagePanelTitle">Game Title</div>
+      </div>
+      <div class="image-panel-content">
+        <div>
+          <div class="game-image-large clickable" id="gameImageLarge">
+            <img src="assets/images/diamond-logo.svg" alt="" class="game-placeholder-logo">
+          </div>
+          <div class="image-upload-hint">Click image to change</div>
+          <input type="file" id="imageUploadInput" accept="image/*" style="display:none" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel" id="rightPanel">
+    <!-- Default: Empty State -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">
+        <img src="assets/images/diamond-logo.svg" alt="">
+      </div>
+      <div class="empty-state-text">Select a game to view details</div>
+    </div>
+
+    <!-- Single Tap: Game Preview -->
+    <div class="game-preview-panel" id="gamePreviewPanel">
+      <div class="preview-header">
+        <div class="preview-title" id="previewTitle">Game Details</div>
+        <div class="preview-actions">
+          <div class="preview-action-icons">
+            <button type="button" class="u-card-like-btn" id="previewLikeBtn" title="Like"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+            <button type="button" class="u-card-follow-btn" id="previewFollowBtn" title="Follow">
+              <svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"></polygon><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"></polygon></svg>
+            </button>
+            <button type="button" class="u-card-options-btn" id="previewSettingsBtn" title="Options"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-body">
+        <div class="preview-image-area">
+          <div class="preview-image" id="previewImage">
+            <div class="eshu-logo"></div>
+          </div>
+          <div class="preview-image-hint" id="previewImageHint">Tap image for more details</div>
+        </div>
+
+        <div class="preview-game-title" id="detailTitle">--</div>
+        <div class="preview-badge-row" id="previewBadgeRow">
+          <span class="u-card-tag public" id="previewPrivacyBadge">Public</span>
+          <span class="u-card-tag primary" id="previewModeBadge">Arena</span>
+        </div>
+
+        <button type="button" class="preview-play-btn" id="previewPlayBtn">PLAY</button>
+      </div>
+
+      <div class="preview-info-bar" id="previewInfoBar">
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Group</span>
+          <span class="preview-info-value" id="detailGroup">--</span>
+        </div>
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Owner</span>
+          <span class="preview-info-value" id="detailOwner">--</span>
+        </div>
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Time</span>
+          <span class="preview-info-value" id="detailTime">--</span>
+        </div>
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Votes Available</span>
+          <span class="preview-info-value preview-info-votes" id="detailVotesAvailable">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Mode: Edit Form -->
+    <div class="game-edit-panel" id="gameEditPanel">
+      <div class="edit-header">
+        <div class="edit-title" id="editPanelTitle">Edit Game</div>
+      </div>
+
+      <div class="edit-content">
+        <!-- Title -->
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input type="text" class="form-input" id="editTitle" placeholder="Give your game a title" />
+        </div>
+
+        <!-- Description -->
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-input" id="editDescription" placeholder="Describe your game"></textarea>
+        </div>
+
+        <!-- Host Group -->
+        <div class="form-group">
+          <label class="form-label">Host Group</label>
+          <div class="group-dropdown" id="groupDropdown">
+            <div class="group-dropdown-trigger" id="groupDropdownTrigger">
+              <span class="group-dropdown-value placeholder" id="groupDropdownValue">Select a group...</span>
+              <span class="group-dropdown-arrow">▼</span>
+            </div>
+            <div class="group-dropdown-menu" id="groupDropdownMenu">
+              <div class="group-dropdown-search">
+                <input type="text" id="groupSearchInput" placeholder="Search groups..." />
+              </div>
+              <div class="group-dropdown-list" id="groupDropdownList">
+                <!-- Groups rendered here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tags -->
+        <div class="form-group">
+          <label class="form-label">Tags</label>
+          <input type="text" class="form-input" id="editTags" placeholder="e.g. ox, house, camel" />
+        </div>
+
+        <!-- Rules -->
+        <div class="form-group">
+          <label class="form-label">Rules</label>
+          <textarea class="form-input" id="editRules" placeholder="Describe the rules of your game"></textarea>
+        </div>
+
+        <!-- Timing -->
+        <div class="form-group">
+          <label class="form-label">Timing</label>
+          <div class="toggle-options">
+            <label class="toggle-option">
+              <input type="radio" name="timingMode" value="infinite" />
+              <span>Infinite</span>
+            </label>
+            <label class="toggle-option">
+              <input type="radio" name="timingMode" value="deadline" checked />
+              <span>Deadline</span>
+            </label>
+          </div>
+          <div class="timing-mode-message" id="infiniteMessage" style="display:none;">
+            This game will run indefinitely until you manually end it.
+          </div>
+          <div class="duration-picker" id="durationPicker">
+            <div class="timing-picker-stack">
+              <!-- START: absolute datetime, may be any moment in the past up to now -->
+              <div class="timing-picker-row start">
+                <div class="timing-row-label">Start</div>
+                <div class="timing-start-grid">
+                  <input type="datetime-local" id="startDatetime" class="timing-datetime-input" />
+                  <button type="button" class="timing-now-btn" id="startNowBtn" title="Set to right now">Now</button>
+                </div>
+              </div>
+
+              <!-- HOW LONG: total runtime of the game from start to end -->
+              <div class="timing-picker-row duration">
+                <div class="timing-row-label">How Long</div>
+                <div class="timing-wheel-grid">
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="duration" data-unit="weeks" value="0" />
+                    <div class="timing-wheel-label">Weeks</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="1" class="timing-wheel-value" data-timing="duration" data-unit="days" value="1" />
+                    <div class="timing-wheel-label">Days</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="duration" data-unit="hours" value="0" />
+                    <div class="timing-wheel-label">Hours</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="duration" data-unit="mins" value="0" />
+                    <div class="timing-wheel-label">Mins</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBS CLOSE: offset from start, must be <= duration -->
+              <div class="timing-picker-row submission">
+                <div class="timing-row-label">Subs Close</div>
+                <div class="timing-wheel-grid">
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="submission" data-unit="weeks" value="0" />
+                    <div class="timing-wheel-label">Weeks</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="1" class="timing-wheel-value" data-timing="submission" data-unit="days" value="0" />
+                    <div class="timing-wheel-label">Days</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="submission" data-unit="hours" value="23" />
+                    <div class="timing-wheel-label">Hours</div>
+                  </div>
+                  <div class="timing-wheel-control">
+                    <input type="text" inputmode="numeric" maxlength="2" class="timing-wheel-value" data-timing="submission" data-unit="mins" value="0" />
+                    <div class="timing-wheel-label">Mins</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- END: derived = start + duration (read-only preview) -->
+              <div class="timing-picker-row end readonly">
+                <div class="timing-row-label">End</div>
+                <div class="timing-end-grid">
+                  <div class="timing-end-readout" id="endDatetimeReadout">—</div>
+                  <div class="timing-end-countdown" id="endCountdownReadout">—</div>
+                </div>
+              </div>
+            </div>
+            <div class="timing-preview">
+              <div class="timing-preview-item white">
+                <div class="timing-preview-label">Starts</div>
+                <div class="timing-preview-time" id="previewStartTime">--:--</div>
+              </div>
+              <div class="timing-preview-item green">
+                <div class="timing-preview-label">How Long</div>
+                <div class="timing-preview-time" id="previewDurationTime">—</div>
+              </div>
+              <div class="timing-preview-item yellow">
+                <div class="timing-preview-label">Subs Close</div>
+                <div class="timing-preview-time" id="previewSubTime">--:--</div>
+              </div>
+              <div class="timing-preview-item red">
+                <div class="timing-preview-label">Ends</div>
+                <div class="timing-preview-time" id="previewEndTime">--:--</div>
+              </div>
+            </div>
+            <div class="timing-extension-note" id="timingExtensionNote" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">ASU Playback Mode</label>
+          <div class="mode-options">
+            <label class="mode-option">
+              <input type="radio" name="gameType" value="arena" checked />
+              <div class="mode-title">Arena</div>
+              <div class="mode-desc">Random competitive matchups</div>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="gameType" value="book" />
+              <div class="mode-title">Book</div>
+              <div class="mode-desc">Chronological pages in sequence</div>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Privacy</label>
+          <div class="toggle-options">
+            <label class="toggle-option">
+              <input type="radio" name="editPrivacy" value="public" checked />
+              <span>Public</span>
+            </label>
+            <label class="toggle-option">
+              <input type="radio" name="editPrivacy" value="private" />
+              <span>Private</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-footer">
+        <button type="button" class="cancel-btn" id="cancelBtn">Cancel</button>
+        <button type="button" class="save-btn" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Game Modal (Group Selection Only) -->
+<div class="create-game-modal" id="createGameModal">
+  <div class="create-modal-content">
+    <div class="create-modal-header">
+      <h2><span class="eshu-icon"></span> Create Game</h2>
+      <button class="create-modal-close" id="createModalClose"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    
+    <div class="step-indicator">Step 1/3</div>
+    
+    <div class="create-modal-body">
+      <p class="step-instruction">Choose Group to Host your Game</p>
+      <div class="modal-search-wrap">
+        <input type="text" class="modal-search-input" id="createGroupSearch" placeholder="Search groups..." />
+      </div>
+      <div class="group-list-container">
+        <div class="group-list-header">Groups</div>
+        <div class="group-list-items" id="createGroupList">
+          <!-- Groups will be rendered here -->
+        </div>
+      </div>
+    </div>
+    
+    <div class="create-modal-footer">
+      <button type="button" class="btn-cancel" id="createCancelBtn">Cancel</button>
+      <button type="button" class="btn-next" id="createNextBtn">Next</button>
+    </div>
+  </div>
+</div>
+
+<!-- Play Game Modal -->
+<div class="create-game-modal play-game-modal" id="playGameModal">
+  <div class="create-modal-content">
+    <div class="create-modal-header">
+      <h2><span class="eshu-icon"></span> Play Game</h2>
+      <button class="create-modal-close" id="playModalClose"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+
+    <div class="create-modal-body">
+      <p class="step-instruction">Search and choose a game to play</p>
+      <div class="modal-search-wrap">
+        <input type="text" class="modal-search-input" id="playGameSearch" placeholder="Search games..." />
+        <select class="modal-search-input" id="playGameVotesFilter" aria-label="Filter games by votes available">
+          <option value="all">All Games</option>
+          <option value="votes_available">Votes Available</option>
+        </select>
+      </div>
+      <div class="group-list-container">
+        <div class="group-list-header">Games</div>
+        <div class="group-list-items" id="playGameList">
+          <!-- Games will be rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <div class="create-modal-footer">
+      <button type="button" class="btn-cancel" id="playCancelBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Game Front Modal -->
+<div class="game-front-modal" id="gameFrontModal">
+  <div class="gf-modal-content">
+    <!-- Header -->
+    <div class="gf-header">
+      <div class="gf-header-left">
+        <div class="gf-icon" id="gfModalIcon">
+          <div class="eshu-logo"></div>
+        </div>
+        <div class="gf-header-info">
+          <span class="gf-label">Game</span>
+          <span class="gf-title" id="gfModalTitle">Game Title</span>
+        </div>
+      </div>
+      <div class="gf-tabs">
+        <button class="gf-tab active" data-tab="game">Game</button>
+        <button class="gf-tab" data-tab="creations">Creations</button>
+        <button class="gf-tab" data-tab="comments">Comments</button>
+      </div>
+      <div class="gf-header-right">
+        <button class="gf-header-btn gf-like-btn" id="gfLikeBtn" title="Like"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+        <button class="gf-header-btn gf-follow-btn" id="gfFollowBtn" title="Follow">
+          <svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"></polygon><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"></polygon></svg>
+        </button>
+        <button class="gf-header-btn gf-settings-btn" id="gfSettingsBtn" title="Options"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+        <button class="gf-header-btn gf-close-btn" id="gfCloseBtn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+      </div>
+    </div>
+    
+    <!-- Tab Content -->
+    <div class="gf-body">
+      <!-- Game Tab -->
+      <div class="gf-tab-content active" id="gfTabGame">
+        <div class="gf-game-layout">
+          <!-- Left: game info + comments -->
+          <div class="gf-game-left">
+            <div class="gf-game-left-scroll">
+              <div class="gf-game-image" id="gfGameImage">
+                <div class="eshu-logo"></div>
+              </div>
+              <h1 class="gf-game-title" id="gfGameTitle">Game Title</h1>
+              <p class="gf-game-stats" id="gfGameStats">0 Creations 0 Players</p>
+              <div class="gf-game-badges" id="gfGameBadges">
+                <span class="gf-badge badge-public">Public</span>
+                <span class="gf-badge badge-infinite">Infinite</span>
+              </div>
+              <div class="gf-game-meta">
+                <span class="gf-meta-item">Burns: <span id="gfBurnsCount">0</span></span>
+              </div>
+              <div class="gf-timing-schedule" id="gfTimingSchedule"></div>
+              <h3 class="gf-section-title">Group</h3>
+              <p class="gf-description" id="gfGroupDetails">No group linked.</p>
+              <h3 class="gf-section-title">Description</h3>
+              <p class="gf-description" id="gfDescription">No description</p>
+              <h3 class="gf-section-title">Rules</h3>
+              <ul class="gf-rules" id="gfRules">
+                <li>No rules specified</li>
+              </ul>
+            </div>
+            <!-- Comments fixed at bottom of left column -->
+            <div class="gf-game-comments-unit" id="gfGameCommentsUnit">
+              <div class="comment-wrapper">
+                <div class="comment-toolbar">
+                  <span class="comment-count" id="gfInlineCommentsCount">0 comments</span>
+                  <button class="gf-comments-toggle" id="gfCommentsToggle" title="Maximize comments"></button>
+                </div>
+                <div class="comment-section" id="gfInlineCommentsList">
+                  <div class="comment-empty">No comments yet.</div>
+                </div>
+                <div class="comment-form">
+                  <textarea class="comment-input" id="gfInlineCommentsInput" placeholder="Add a comment about this game..."></textarea>
+                  <button class="comment-button" type="button" id="gfInlineCommentsSubmit">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Right: leaderboard column (10 items) -->
+          <div class="gf-game-right">
+            <h2 class="gf-lb-title">Current Leaderboard</h2>
+            <div class="gf-leaderboard" id="gfLeaderboard">
+              <!-- Leaderboard items -->
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Creations Tab -->
+      <div class="gf-tab-content" id="gfTabCreations">
+        <div style="display:flex;flex-direction:column;height:100%;width:100%;padding:16px;gap:12px;">
+          <div class="gf-tab-toolbar">
+            <select class="gf-tab-filter" id="gfCreationsFilter">
+              <option value="all">All</option>
+              <option value="liked">Liked</option>
+              <option value="public">Public</option>
+              <option value="private">Private</option>
+            </select>
+            <select class="gf-tab-filter" id="gfCreationsSort">
+              <option value="recent">Recent</option>
+              <option value="votes">Top Votes</option>
+              <option value="name">A-Z</option>
+            </select>
+            <input type="text" class="gf-tab-search" id="gfCreationsSearch" placeholder="Search creations, tags, author..." />
+            <span class="gf-tab-count" id="gfCreationsCount">0 / 50</span>
+          </div>
+          <div class="u-card-list" id="gfCreations" style="flex:1;overflow-y:auto;">
+            <div class="u-card-empty">No creations yet</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comments Tab -->
+      <div class="gf-tab-content" id="gfTabComments">
+        <div style="display:flex;flex-direction:column;height:100%;width:100%;padding:16px;gap:12px;">
+          <div class="gf-tab-toolbar">
+            <select class="gf-tab-filter" id="gfCommentsSort">
+              <option value="recent">Recent</option>
+              <option value="oldest">Oldest</option>
+            </select>
+            <span class="gf-tab-count" id="gfCommentsCount">0 comments</span>
+          </div>
+          <div class="u-card-list" id="gfCommentsList" style="flex:1;overflow-y:auto;">
+            <div class="u-card-empty">No comments yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Diagonal Chamfer Overlay -->
+    <div class="gf-chamfer-overlay" id="gfChamferOverlay">
+      <div class="gf-chamfer-bg"></div>
+      <div class="gf-chamfer-content">
+        <div class="gf-chamfer-status" id="gfGameStatus">Game is live!</div>
+        <button class="gf-chamfer-upload" id="gfUploadBtn">
+          <span class="gf-chamfer-upload-label">UPLOAD</span>
+          <span class="gf-chamfer-upload-sub">CREATION</span>
+        </button>
+        <button class="gf-chamfer-play" id="gfPlayBtn">
+          <span class="gf-chamfer-play-label">PLAY</span>
+          <span class="gf-chamfer-play-sub">VOTES AVAILABLE</span>
+          <span class="gf-play-votes-value" id="gfPlayVotesAvailable">0</span>
+        </button>
+      </div>
+      <button class="gf-chamfer-toggle" id="gfChamferToggle" title="Minimize">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+      </button>
+    </div>
+    <!-- Chamfer minimized tab -->
+    <button class="gf-chamfer-tab" id="gfChamferTab" title="Open actions panel">
+      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M7 17L17 7M17 7H9M17 7v8" stroke="currentColor" stroke-width="2.5" fill="none"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/core/comments-actions.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="assets/core/eshu-sync.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/app-runtime.js"></script>
+<script src="assets/components/xp-history.js"></script>
+<script src="assets/components/modal.js"></script>
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/core/state-manager.js"></script>
+<script src="assets/components/toast.js"></script>
+<script src="assets/utils/debounce.js"></script>
+<script src="assets/burned-modal.js"></script>
+<script src="assets/core/media-store.js"></script>
+<script src="assets/core/image-migrator.js"></script>
+
+<script src="assets/components/card-options.js"></script>
+<script src="assets/core/drawing-compositor.js"></script>
+<script src="assets/components/animation-draw.js"></script>
+<script src="assets/components/animation-player.js"></script>
+<script src="assets/pages/games.page.js"></script>
+</body>
+</html>

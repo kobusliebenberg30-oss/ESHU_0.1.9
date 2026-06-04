@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ESHU - Wipe Data</title>
+<link rel="icon" href="data:,">
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  .card {
+    max-width: 560px;
+    width: 100%;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 32px;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; }
+  p { line-height: 1.5; color: #bbb; }
+  pre {
+    background: #0a0a0a;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: #9cdcfe;
+    overflow: auto;
+    max-height: 280px;
+    white-space: pre-wrap;
+  }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+  button, a.btn {
+    background: #e63a28;
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+  button.secondary, a.btn.secondary {
+    background: #333;
+  }
+  .ok { color: #4ade80; }
+  .warn { color: #fbbf24; }
+  .err { color: #ff8a80; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>ESHU — Nuclear Data Wipe</h1>
+  <p>This page clears <strong>all locally stored ESHU data</strong> for this browser:
+  IndexedDB media store, localStorage, sessionStorage, and cookies.
+  It does <strong>not</strong> require any other ESHU script — safe to load even if home.html is crashing.</p>
+
+  <pre id="log">Ready to wipe. Click the button below.</pre>
+
+  <div class="row">
+    <button id="wipeBtn">Wipe Everything Now</button>
+    <a class="btn secondary" href="home.html">Go to Home</a>
+  </div>
+</div>
+
+<script>
+  (function () {
+    'use strict';
+    const log = document.getElementById('log');
+    const btn = document.getElementById('wipeBtn');
+
+    function append(line, cls) {
+      const span = document.createElement('span');
+      if (cls) span.className = cls;
+      span.textContent = line + '\n';
+      log.appendChild(span);
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      log.textContent = '';
+      append('Starting wipe...', 'warn');
+
+      // 1) Delete known IndexedDB databases
+      const dbsToDelete = ['eshu_media_store_v1'];
+      // Try discovering all databases (Chromium-only)
+      try {
+        if (indexedDB.databases) {
+          const list = await indexedDB.databases();
+          list.forEach(d => { if (d.name && !dbsToDelete.includes(d.name)) dbsToDelete.push(d.name); });
+        }
+      } catch (e) { /* ignore */ }
+
+      for (const name of dbsToDelete) {
+        try {
+          await new Promise((resolve) => {
+            const req = indexedDB.deleteDatabase(name);
+            req.onsuccess = () => { append('  IndexedDB deleted: ' + name, 'ok'); resolve(); };
+            req.onerror = () => { append('  IndexedDB error: ' + name, 'err'); resolve(); };
+            req.onblocked = () => { append('  IndexedDB blocked: ' + name + ' (close other tabs)', 'warn'); resolve(); };
+          });
+        } catch (e) { append('  IndexedDB throw: ' + name + ' - ' + e.message, 'err'); }
+      }
+
+      // 2) Clear localStorage
+      try {
+        const lsCount = localStorage.length;
+        localStorage.clear();
+        append('localStorage cleared (' + lsCount + ' keys)', 'ok');
+      } catch (e) { append('localStorage error: ' + e.message, 'err'); }
+
+      // 3) Clear sessionStorage
+      try {
+        const ssCount = sessionStorage.length;
+        sessionStorage.clear();
+        append('sessionStorage cleared (' + ssCount + ' keys)', 'ok');
+      } catch (e) { append('sessionStorage error: ' + e.message, 'err'); }
+
+      // 4) Clear cookies for this path
+      try {
+        let cookieCount = 0;
+        document.cookie.split(';').forEach(c => {
+          const name = c.split('=')[0].trim();
+          if (name) {
+            document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            cookieCount++;
+          }
+        });
+        append('Cookies cleared (' + cookieCount + ')', 'ok');
+      } catch (e) { append('Cookie error: ' + e.message, 'err'); }
+
+      // 5) Clear caches (service worker)
+      try {
+        if (window.caches && caches.keys) {
+          const keys = await caches.keys();
+          for (const k of keys) await caches.delete(k);
+          append('Cache storage cleared (' + keys.length + ' caches)', 'ok');
+        }
+      } catch (e) { append('Cache error: ' + e.message, 'err'); }
+
+      append('\nDone! You can now click "Go to Home".', 'ok');
+      btn.disabled = false;
+      btn.textContent = 'Wipe Again';
+    });
+  })();
+</script>
+</body>
+</html>

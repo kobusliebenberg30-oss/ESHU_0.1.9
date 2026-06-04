@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="eshu-api-base" content="http://localhost:3000/api">
+<title>ESHU Arena - Live Creations</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<link rel="stylesheet" href="assets/styles/layout-shared.css">
+<link rel="stylesheet" href="assets/styles/eshu-page.css">
+<link rel="stylesheet" href="assets/styles/games-page.css">
+<link rel="stylesheet" href="assets/styles/animation-draw.css">
+<link rel="stylesheet" href="assets/styles/image-viewer.css">
+<style>
+/* Pending animation indicator in comment input */
+.has-pending-animation {
+  border: 2px solid #2aa8ff !important;
+  background: linear-gradient(90deg, rgba(42, 168, 255, 0.1) 0%, transparent 100%);
+  box-shadow: 0 0 8px rgba(42, 168, 255, 0.3);
+}
+</style>
+</head>
+<body>
+
+<!-- ===== STABLE FIXED NAVIGATION BAR ===== -->
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link">Your Games</a>
+    <a href="groups.html" class="nav-link">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <button type="button" class="action-btn play-btn" id="playGameTopBtn" title="Play Game">
+      <span class="btn-label">PLAY<br>GAME</span>
+    </button>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation">
+      <span class="btn-label">UPLOAD<br>CREATION</span>
+    </a>
+    <a href="games.html?action=create" class="action-btn create-game-btn" title="Create Game">
+      <span class="btn-label">CREATE<br>GAME</span>
+    </a>
+    <a href="groups.html?action=create" class="action-btn create-group-btn" title="Create Group">
+      <span class="btn-label">CREATE<br>GROUP</span>
+    </a>
+    <div class="xp-display" id="xpCounter">0 XP</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="container">
+  <!-- Left Side -->
+  <div class="side left" id="leftSide">
+    <div class="image-box">
+      <img class="creation-image" id="leftCreationImage" alt="Left creation image">
+      <div class="creation-display" id="leftCreation">[Left Creation]</div>
+      <div class="eshu-hover-overlay">
+        <div class="eshu-overlay-panel">
+          <div class="eshu-overlay-meta">
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Title</span>
+              <span class="eshu-overlay-value" id="leftOverlayTitle">Untitled</span>
+            </div>
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Player</span>
+              <span class="eshu-overlay-value" id="leftOverlayAuthor">Player</span>
+            </div>
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Game</span>
+              <span class="eshu-overlay-value" id="leftOverlayGame">—</span>
+            </div>
+          </div>
+          <button type="button" class="eshu-overlay-note" data-side="left">More about this creation...</button>
+          <div class="eshu-overlay-actions">
+            <button type="button" class="eshu-overlay-action-btn" data-side="left" data-action="like" id="leftLikeBtn" title="Like"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="left" data-action="follow" id="leftFollowBtn" title="Follow"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="left" data-action="comment" title="Add comment"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="left" data-action="draw" title="Draw"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <span class="eshu-trend-indicator" id="leftTrendIndicator" aria-hidden="true">▲</span>
+      <button class="fullscreen-btn" data-target="leftDrawOverlay" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+        <svg viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>
+      </button>
+      <div class="winner-cross" id="leftCross">+</div>
+      <div class="chamfer-button left" title="Choose Left"></div>
+    </div>
+    <div class="draw-overlay" id="leftDrawOverlay"><iframe id="leftDrawIframe"></iframe></div>
+    <div class="comment-wrapper" id="leftCommentWrapper">
+      <div class="comment-toolbar">
+        <span class="comment-count" id="leftCommentsCount">0 comments</span>
+        <button type="button" class="eshu-comments-toggle" id="leftCommentsToggle" title="Maximize comments"></button>
+      </div>
+      <div class="comment-section" id="leftComments">
+        <div class="comment-empty">No comments yet.</div>
+      </div>
+      <form class="comment-form" id="leftForm" autocomplete="off">
+        <textarea class="comment-input" id="leftInput" placeholder="Add a comment about this creation..."></textarea>
+        <button type="button" class="draw-button" id="leftDrawBtn">Draw</button>
+        <button type="submit" class="comment-button">Send</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Middle Controls -->
+  <div class="middle-controls-stack">
+    <button class="middle-button" id="gamesButton" type="button">
+      <!-- Random-game loader mark: nested hex / circle / diamond.
+           Inline SVG (3 shapes) — no network request, scales with the button. -->
+      <svg class="games-btn-logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g fill="none" stroke="#fff" stroke-linejoin="miter" stroke-linecap="butt" stroke-width="48">
+          <polygon points="792,560 652,318 372,318 232,560 372,802 652,802"/>
+          <circle cx="512" cy="560" r="190"/>
+          <polygon points="512,432 632,560 512,688 392,560"/>
+        </g>
+      </svg>
+      <span class="games-btn-label">Gaming</span>
+    </button>
+    <div class="middle-choice-row">
+      <button class="middle-button middle-choice-btn middle-choice-left" id="leftChoiceBtn" type="button">Left</button>
+      <button class="middle-button middle-choice-btn middle-choice-right" id="rightChoiceBtn" type="button">Right</button>
+    </div>
+    <button class="current-game-thumb-btn" id="currentGameThumbBtn" type="button" title="Current game info">
+      <span class="game-thumb-logo-wrap">
+        <img id="currentGameThumbImage" class="game-thumb-img" alt="Current game thumbnail">
+        <svg class="game-thumb-logo-svg" id="currentGameThumbFallback" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-linecap="butt">
+            <polyline points="215,470 512,174 809,470" stroke-width="78"/>
+            <polygon points="512,312 790,590 512,868 234,590" stroke-width="44"/>
+          </g>
+        </svg>
+      </span>
+      <span class="current-game-thumb-title" id="currentGameThumbTitle">Select game</span>
+    </button>
+  </div>
+
+  <!-- Right Side -->
+  <div class="side right" id="rightSide">
+    <div class="image-box">
+      <img class="creation-image" id="rightCreationImage" alt="Right creation image">
+      <div class="creation-display" id="rightCreation">[Right Creation]</div>
+      <div class="eshu-hover-overlay">
+        <div class="eshu-overlay-panel">
+          <div class="eshu-overlay-meta">
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Title</span>
+              <span class="eshu-overlay-value" id="rightOverlayTitle">Untitled</span>
+            </div>
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Player</span>
+              <span class="eshu-overlay-value" id="rightOverlayAuthor">Player</span>
+            </div>
+            <div class="eshu-overlay-chip">
+              <span class="eshu-overlay-label">Game</span>
+              <span class="eshu-overlay-value" id="rightOverlayGame">—</span>
+            </div>
+          </div>
+          <button type="button" class="eshu-overlay-note" data-side="right">More about this creation...</button>
+          <div class="eshu-overlay-actions">
+            <button type="button" class="eshu-overlay-action-btn" data-side="right" data-action="like" id="rightLikeBtn" title="Like"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="right" data-action="follow" id="rightFollowBtn" title="Follow"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="right" data-action="comment" title="Add comment"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></button>
+            <button type="button" class="eshu-overlay-action-btn" data-side="right" data-action="draw" title="Draw"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <span class="eshu-trend-indicator" id="rightTrendIndicator" aria-hidden="true">▲</span>
+      <button class="fullscreen-btn" data-target="rightDrawOverlay" title="Toggle fullscreen" aria-label="Toggle fullscreen">
+        <svg viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>
+      </button>
+      <div class="winner-cross right" id="rightCross">+</div>
+      <div class="chamfer-button right" title="Choose Right"></div>
+    </div>
+    <div class="draw-overlay" id="rightDrawOverlay"><iframe id="rightDrawIframe"></iframe></div>
+    <div class="comment-wrapper" id="rightCommentWrapper">
+      <div class="comment-toolbar">
+        <span class="comment-count" id="rightCommentsCount">0 comments</span>
+        <button type="button" class="eshu-comments-toggle" id="rightCommentsToggle" title="Maximize comments"></button>
+      </div>
+      <div class="comment-section" id="rightComments">
+        <div class="comment-empty">No comments yet.</div>
+      </div>
+      <form class="comment-form" id="rightForm" autocomplete="off">
+        <textarea class="comment-input" id="rightInput" placeholder="Add a comment about this creation..."></textarea>
+        <button type="button" class="draw-button" id="rightDrawBtn">Draw</button>
+        <button type="submit" class="comment-button">Send</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal for Games -->
+<div class="create-game-modal play-game-modal" id="gamesModal">
+  <div class="create-modal-content">
+    <div class="create-modal-header">
+      <h2><span class="eshu-icon"></span> Play Game</h2>
+      <button class="create-modal-close" id="closeModal"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    <div class="create-modal-body">
+      <p class="step-instruction">Search and choose a game to play</p>
+      <div class="modal-search-wrap">
+        <input type="text" class="modal-search-input" id="gameSearchModal" placeholder="Search games..." />
+        <select class="modal-search-input" id="gameVotesFilterModal" aria-label="Filter games by votes available">
+          <option value="all">All Games</option>
+          <option value="votes_available">Votes Available</option>
+        </select>
+      </div>
+      <div class="group-list-container">
+        <div class="group-list-header">Games</div>
+        <div class="group-list-items" id="modalGamesList"></div>
+      </div>
+    </div>
+    <div class="create-modal-footer">
+      <button type="button" class="btn-cancel" id="eshuModalCancelBtn">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="currentGameInfoModal" class="current-game-info-modal">
+  <div class="current-game-info-content" role="dialog" aria-modal="true" aria-labelledby="currentGameInfoTitle">
+    <button type="button" class="current-game-info-close" id="currentGameInfoClose" aria-label="Close" title="Close"></button>
+    <div class="current-game-info-header">Current Game</div>
+    <button type="button" class="current-game-info-image-wrap" id="currentGameInfoImageBtn" title="Open game front page">
+      <div class="diamond-image-frame">
+        <img class="diamond-image-inner" id="currentGameInfoImage" alt="Current game image">
+        <svg class="diamond-image-overlay" id="currentGameInfoFallback" viewBox="0 0 1024 1024" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-linejoin="miter" stroke-linecap="butt">
+            <polyline points="215,470 512,174 809,470" stroke-width="78"/>
+            <polygon points="512,312 790,590 512,868 234,590" stroke-width="44"/>
+          </g>
+        </svg>
+      </div>
+    </button>
+    <div class="current-game-info-title" id="currentGameInfoTitle">Select a game</div>
+    <div class="current-game-info-meta" id="currentGameInfoMeta">Choose a game to start playing in ESHU.</div>
+    <div class="current-game-info-actions">
+      <button type="button" id="currentGameFrontBtn">View Game</button>
+    </div>
+  </div>
+</div>
+
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/core/comments-actions.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/app-runtime.js"></script>
+<script src="assets/components/xp-history.js"></script>
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/components/toast.js"></script>
+<script src="assets/burned-modal.js"></script>
+<script src="assets/core/media-store.js"></script>
+<script src="assets/core/image-migrator.js"></script>
+<script src="assets/core/drawing-compositor.js"></script>
+<script src="assets/components/animation-draw.js"></script>
+<script src="assets/components/animation-player.js"></script>
+<script src="assets/components/image-viewer.js"></script>
+
+<script src="assets/pages/eshu.page.js"></script>
+</body>
+</html>

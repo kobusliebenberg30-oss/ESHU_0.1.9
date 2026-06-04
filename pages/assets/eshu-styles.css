@@ -1,0 +1,1862 @@
+/* ============================================
+   ESHU Games - Core Stylesheet
+   Monochromatic + Red accent design system
+   ============================================ */
+
+ /* === CSS Variables === */
+ :root {
+  /* LIGHT THEME — Clean white with warm gray accents */
+  --bg-body: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-nav: #111111;
+  --bg-surface: #ffffff;
+  
+  /* Accent palette — Monochrome + Red */
+  --accent-green: #2e7d32;
+  --accent-green-dark: #1b5e20;
+  --accent-green-light: #66bb6a;
+  --accent-coral: #e53935;
+  --accent-coral-dark: #c62828;
+  --accent-orange: #f57c00;
+  --accent-blue: #1565c0;
+  --accent-purple: #7b1fa2;
+  --accent-orange-dark: #e65100;
+  --accent-coral-darker: #b71c1c;
+  --accent-blue-dark: #0d47a1;
+  --accent-purple-dark: #6a1b9a;
+  --accent-black: #111111;
+  --accent-black-dark: #000000;
+  
+  --neutral-btn: #555555;
+  --neutral-btn-hover: #333333;
+  
+  --text-primary: #111111;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+  --text-light: #ffffff;
+  
+  --border-color: #e0e0e0;
+  --border-light: #eeeeee;
+  
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-round: 0;
+  
+  --spacing-2xs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+
+  --control-height-sm: 32px;
+  --control-height-md: 36px;
+  --control-padding-x: 12px;
+  --control-radius: 0;
+  --panel-radius: 0;
+  
+  /* Shadows — flat brutalist, no shadows */
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-card: none;
+  
+  --transition-fast: 0.10s ease;
+  --transition-normal: 0.18s ease;
+
+  --hover-bg: #f0f0f0;
+  --ring: #111111;
+
+  --scrollbar-thumb: #cccccc;
+  --scrollbar-thumb-hover: #999999;
+
+  --glow-1: transparent;
+  --glow-2: transparent;
+  --glow-3: transparent;
+  --glow-green-strong: rgba(46, 125, 50, 0.4);
+  --glow-blue-strong: rgba(21, 101, 192, 0.4);
+ }
+
+ html {
+  color-scheme: light;
+ }
+
+ html[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Pure-black, high-contrast variant. Every surface, including
+     --bg-tertiary, is #000000. Hover/active feedback comes from
+     --hover-bg (#222) instead, so we don't need a "lifted" surface
+     shade — keeping it as pure black avoids visible grey squares
+     on cards, avatars, badges and thumbnail placeholders. */
+  --bg-body: #000000;
+  --bg-panel: #000000;
+  --bg-card: #000000;
+  --bg-input: #000000;
+  --bg-nav: #000000;
+  --bg-surface: #000000;
+  --bg-secondary: #000000;
+  --bg-tertiary: #000000;
+  --bg-inset: #000000;
+
+  /* Text is pure white for primary, secondary AND tertiary. Only
+     --text-muted stays slightly dimmed for placeholders / captions
+     where full white would be too loud. */
+  --text-primary: #ffffff;
+  --text-secondary: #ffffff;
+  --text-tertiary: #ffffff;
+  --text-muted: #aaaaaa;
+  --text-light: #ffffff;
+
+  /* Borders bumped a notch so panels stay legible on pure black. */
+  --border-color: #333333;
+  --border-light: #1f1f1f;
+  --border-dark: #4a4a4a;
+
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-card: none;
+
+  --hover-bg: #222222;
+  --ring: #ffffff;
+
+  --scrollbar-thumb: #444444;
+  --scrollbar-thumb-hover: #666666;
+
+  --glow-1: transparent;
+  --glow-2: transparent;
+  --glow-3: transparent;
+  --glow-green-strong: transparent;
+  --glow-blue-strong: transparent;
+
+  --accent-orange-dark: #e65100;
+  --accent-coral-darker: #c62828;
+  --accent-blue-dark: #0d47a1;
+  --accent-purple-dark: #7e22ce;
+
+  --neutral-btn: #334155;
+  --neutral-btn-hover: #1e293b;
+ }
+
+/* === Base Reset === */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+ html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-body);
+  color: var(--text-primary);
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+ }
+
+h1, h2, h3 {
+  margin: 0 0 var(--spacing-md) 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
+h3 { font-size: 14px; }
+
+/* === Scrollbar === */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-card);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--bg-card);
+}
+
+/* === Top Navigation Bar === */
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--spacing-lg);
+  background: var(--bg-panel);
+  height: 56px;
+  gap: var(--spacing-md);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: none;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.nav-buttons {
+  display: flex;
+  gap: 1px;
+  align-items: center;
+}
+
+/* Tab-style navigation buttons */
+.hex-button {
+  position: relative;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  clip-path: none;
+  box-shadow: none;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  height: 34px;
+  border: none;
+}
+
+.hex-button:hover {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.hex-button:focus {
+  outline: none;
+}
+
+.hex-button.active,
+.hex-button[data-active="true"] {
+  background: var(--accent-black);
+  color: var(--text-light);
+}
+
+/* XP Counter - Prominent display */
+.xp-counter {
+  display: none;
+  align-items: center;
+  gap: var(--spacing-sm);
+  background: var(--bg-surface);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.xp-counter::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent-coral);
+  border-radius: 50%;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-left: auto;
+}
+
+#profileBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-black);
+  border: 2px solid var(--border-color);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#profileBtn:hover {
+  border-color: var(--accent-coral);
+}
+
+/* === Main Container Layout === */
+.container {
+  display: flex;
+  min-height: calc(100vh - 56px);
+  width: 100%;
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+  background: var(--bg-body);
+}
+
+.form-container,
+.list-container,
+.left-panel,
+.right-panel {
+  flex: 1;
+  background: var(--bg-panel);
+  padding: var(--spacing-lg);
+  border-radius: var(--panel-radius);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--border-color);
+  overflow-y: auto;
+}
+
+/* === Form Elements === */
+label {
+  display: block;
+  margin-top: var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="datetime-local"],
+textarea,
+select {
+  width: 100%;
+  min-height: var(--control-height-md);
+  padding: 8px var(--control-padding-x);
+  border-radius: var(--control-radius);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  line-height: 1.4;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent-black);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
+textarea {
+  min-height: 96px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  resize: vertical;
+}
+
+/* === Buttons === */
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--control-height-md);
+  padding: 0 var(--control-padding-x);
+  border: 1px solid var(--border-color);
+  border-radius: var(--control-radius);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+button:focus-visible,
+.btn:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--accent-black);
+  outline-offset: 1px;
+}
+
+button:disabled {
+  background: var(--bg-tertiary, #eeeeee);
+  color: var(--text-muted, #aaaaaa);
+  cursor: not-allowed;
+  border-color: var(--border-light, #eeeeee);
+}
+
+/* Primary Button — Dark (default action) */
+.btn-primary,
+button[type="submit"],
+#saveBtn {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: transparent;
+}
+
+.btn-primary:hover,
+button[type="submit"]:hover,
+#saveBtn:hover {
+  background: #333333;
+}
+
+/* Secondary/Update Button */
+#updateBtn {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: transparent;
+}
+
+#updateBtn:hover {
+  background: #333333;
+}
+
+/* Action Buttons */
+.button-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.button-group button {
+  min-height: var(--control-height-sm);
+  padding: 0 var(--spacing-md);
+  font-size: 11px;
+  border-radius: var(--radius-lg);
+}
+
+.join-btn {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: transparent;
+}
+.join-btn:hover { background: #333333; }
+
+.edit-btn {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+.edit-btn:hover { background: var(--hover-bg); }
+
+.clear-btn {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: transparent;
+}
+.clear-btn:hover { background: #333333; }
+
+.boot-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+.boot-btn:hover { background: var(--hover-bg) !important; }
+
+.follow-btn {
+  background: var(--accent-black) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.follow-btn:hover { background: #333333 !important; }
+
+.burn-btn {
+  background: var(--accent-coral);
+  color: var(--text-light);
+  border-color: transparent;
+}
+.burn-btn:hover { background: var(--accent-coral-dark); }
+
+/* === List Items / Cards === */
+.group-item,
+.game-item,
+.creation-item,
+.item {
+  background: var(--bg-card);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-xs);
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: border-color var(--transition-fast);
+}
+
+.item-name {
+  flex: 1;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.group-item:hover,
+.game-item:hover,
+.creation-item:hover,
+.item:hover {
+  border-color: var(--accent-black);
+}
+
+.group-item.editing,
+.game-item.editing,
+.creation-item.editing,
+.item.edit-focus {
+  border-color: var(--accent-coral);
+  background: var(--color-danger-light, #fff5f5);
+}
+
+.creation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.creation-header > strong {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.details-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+}
+
+.details-meta {
+  display: flex;
+  gap: var(--spacing-lg);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-sm);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.creation-content {
+  display: none;
+  margin-top: var(--spacing-md);
+  padding: var(--spacing-md);
+  background: var(--bg-body);
+  border-radius: var(--radius-md);
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+/* DELETED STATE: Consistent (NOT INVERTED) */
+/* Light Theme: Pure black background */
+.item.deleted,
+.creation-item.deleted,
+.group-item.deleted,
+.game-item.deleted {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+/* DELETED STATE: Force white text on ALL descendants (text inheritance guarantee) */
+/* This ensures spans, labels, links, buttons, and any nested elements are white */
+.item.deleted,
+.item.deleted *,
+.creation-item.deleted,
+.creation-item.deleted *,
+.group-item.deleted,
+.group-item.deleted *,
+.game-item.deleted,
+.game-item.deleted * {
+  color: #ffffff !important;
+}
+
+/* Exception: Boot button inside deleted items should have black text */
+.item.deleted .boot-btn,
+.creation-item.deleted .boot-btn,
+.group-item.deleted .boot-btn,
+.game-item.deleted .boot-btn {
+  color: #333333 !important;
+  background: #ffffff !important;
+}
+
+ .item.deleted .boot-btn *,
+ .creation-item.deleted .boot-btn *,
+ .group-item.deleted .boot-btn *,
+ .game-item.deleted .boot-btn * {
+  color: #333333 !important;
+ }
+
+/* Exception: Boot button inside booted items should have black text for readability */
+.item.booted .boot-btn,
+.creation-item.booted .boot-btn {
+  color: #333333 !important;
+  background: #ffffff !important;
+}
+
+ .item.booted .boot-btn *,
+ .creation-item.booted .boot-btn * {
+  color: #333333 !important;
+ }
+
+/* Dark Theme: inverted boot/deleted state */
+html[data-theme="dark"] .item.deleted,
+html[data-theme="dark"] .creation-item.deleted,
+html[data-theme="dark"] .group-item.deleted,
+html[data-theme="dark"] .game-item.deleted {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+html[data-theme="dark"] .item.deleted,
+html[data-theme="dark"] .item.deleted *,
+html[data-theme="dark"] .creation-item.deleted,
+html[data-theme="dark"] .creation-item.deleted *,
+html[data-theme="dark"] .group-item.deleted,
+html[data-theme="dark"] .group-item.deleted *,
+html[data-theme="dark"] .game-item.deleted,
+html[data-theme="dark"] .game-item.deleted * {
+  color: #000000 !important;
+}
+
+html[data-theme="dark"] .item.deleted .boot-btn,
+html[data-theme="dark"] .item.deleted .boot-btn *,
+html[data-theme="dark"] .creation-item.deleted .boot-btn,
+html[data-theme="dark"] .creation-item.deleted .boot-btn *,
+html[data-theme="dark"] .group-item.deleted .boot-btn,
+html[data-theme="dark"] .group-item.deleted .boot-btn *,
+html[data-theme="dark"] .game-item.deleted .boot-btn,
+html[data-theme="dark"] .game-item.deleted .boot-btn * {
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* BURNED STATE: Global constant (NO INVERSION) */
+.item.burned,
+.creation-item.burned,
+.group-item.burned,
+.game-item.burned {
+  background: var(--accent-coral);
+  border-color: var(--accent-coral);
+  color: #ffffff;
+  cursor: default;
+}
+
+/* BURNED STATE: Force white text on ALL descendants */
+.item.burned,
+.item.burned *,
+.creation-item.burned,
+.creation-item.burned *,
+.group-item.burned,
+.group-item.burned *,
+.game-item.burned,
+.game-item.burned * {
+  color: #ffffff !important;
+}
+
+/* Burned state in dark theme (same as light) */
+html[data-theme="dark"] .item.burned,
+html[data-theme="dark"] .creation-item.burned,
+html[data-theme="dark"] .group-item.burned,
+html[data-theme="dark"] .game-item.burned {
+  background: var(--accent-coral);
+  border-color: var(--accent-coral);
+  color: #ffffff;
+  cursor: default;
+}
+
+/* DARK THEME: Force white text on ALL descendants */
+html[data-theme="dark"] .item.burned,
+html[data-theme="dark"] .item.burned *,
+html[data-theme="dark"] .creation-item.burned,
+html[data-theme="dark"] .creation-item.burned *,
+html[data-theme="dark"] .group-item.burned,
+html[data-theme="dark"] .group-item.burned *,
+html[data-theme="dark"] .game-item.burned,
+html[data-theme="dark"] .game-item.burned * {
+  color: #ffffff !important;
+}
+
+.item.booted,
+.creation-item.booted {
+  background: var(--bg-tertiary, #e8e8e8);
+  border-color: var(--border-dark, #cccccc);
+  color: var(--text-muted, #888888);
+}
+
+/* DARK THEME: Booted state - black text on white background (inverse of light theme) */
+html[data-theme="dark"] .item.booted,
+html[data-theme="dark"] .creation-item.booted {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* DARK THEME: Force black text on booted item descendants for contrast */
+html[data-theme="dark"] .item.booted *,
+html[data-theme="dark"] .creation-item.booted * {
+  color: #000000 !important;
+}
+
+/* DARK THEME: Exception - Boot button inside booted items inverts back to dark */
+html[data-theme="dark"] .item.booted .boot-btn,
+html[data-theme="dark"] .item.booted .boot-btn *,
+html[data-theme="dark"] .creation-item.booted .boot-btn,
+html[data-theme="dark"] .creation-item.booted .boot-btn * {
+  color: #ffffff !important;
+  background: #000000 !important;
+}
+
+/* FINISHED STATE: Game has ended - locked and non-editable */
+.item.finished,
+.game-item.finished {
+  background: var(--bg-card);
+  border-color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.item.finished .button-group button:not(.view-btn),
+.game-item.finished .button-group button:not(.view-btn) {
+  display: none !important;
+}
+
+/* Dark theme finished state */
+html[data-theme="dark"] .item.finished,
+html[data-theme="dark"] .game-item.finished {
+  background: var(--bg-card);
+  border-color: var(--text-muted);
+  opacity: 0.75;
+}
+
+/* === Search & Filter === */
+.search-filter,
+.search-filter-container,
+.filter-bar {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  flex-wrap: wrap;
+}
+
+.search-box,
+.filter-select {
+  flex: 1;
+  min-width: 120px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--control-radius);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.search-box:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: var(--accent-black);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+}
+
+/* === Sub-menu / Tabs === */
+.sub-menu {
+  display: flex;
+  gap: 2px;
+  margin-bottom: var(--spacing-lg);
+  background: transparent;
+  padding: var(--spacing-xs);
+  border-radius: var(--radius-lg);
+}
+
+.sub-menu button {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-weight: 600;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sub-menu button:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.sub-menu button.active {
+  background: var(--accent-black);
+  color: var(--text-light);
+}
+
+/* === Modal Styling === */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: var(--bg-panel);
+  border-radius: var(--panel-radius);
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  animation: modalSlideIn 0.2s ease;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  align-items: center;
+  background: var(--bg-card);
+}
+
+.modal-header input,
+.modal-header select {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.modal-header span#closeModal {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface, #f8f8f8);
+  border-radius: 50%;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  border: 1px solid var(--border-light);
+}
+
+.modal-header span#closeModal:hover {
+  background: var(--accent-coral-dark);
+  color: var(--text-light);
+  border-color: var(--accent-coral-dark);
+}
+
+/* Modal List */
+.modal-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  max-height: 60vh;
+}
+
+.modal-list div {
+  padding: var(--spacing-md);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.modal-list div:hover {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: var(--accent-black);
+}
+
+/* Confirmation Modal */
+#modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+#modal {
+  background: var(--bg-panel);
+  padding: var(--spacing-2xl);
+  border-radius: var(--panel-radius);
+  text-align: center;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--border-color);
+  min-width: 280px;
+}
+
+#modal p {
+  margin: 0 0 var(--spacing-lg) 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+#modal button {
+  margin: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-xl);
+  min-width: 80px;
+}
+
+#modal button.yes {
+  background: var(--accent-coral-dark);
+  color: var(--text-light);
+  border: none;
+  font-weight: 600;
+}
+
+#modal button.no {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+}
+
+/* === ESHU Arena Specific === */
+.middle-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent-black);
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 13px;
+  z-index: 5;
+  cursor: pointer;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  user-select: none;
+  color: var(--text-light);
+  box-shadow: var(--shadow-md);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 3px solid var(--bg-panel);
+}
+
+.middle-button:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+  box-shadow: var(--shadow-lg);
+}
+
+#gamesButton {
+  top: 68%;
+  width: 80px;
+  height: 80px;
+  font-size: 11px;
+  background: var(--accent-coral);
+}
+
+#gamesButton:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Comment styling */
+.comment-section {
+  display: flex;
+  flex-direction: column-reverse;
+  height: 120px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  gap: var(--spacing-sm);
+  border: 1px solid var(--border-color);
+}
+
+.comment-section p {
+  margin: 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-surface, #f8f8f8);
+  border-radius: var(--radius-lg);
+  word-wrap: break-word;
+  font-size: 12px;
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+}
+
+.comment-form {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.comment-input {
+  flex-grow: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.comment-input:focus {
+  border-color: var(--accent-black);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+}
+
+.comment-button,
+.draw-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  border-radius: var(--control-radius);
+  background: var(--accent-black);
+  color: var(--text-light);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.draw-button {
+  background: var(--accent-coral);
+}
+
+.comment-button:hover {
+  background: #333333;
+}
+
+.draw-button:hover {
+  background: var(--accent-coral-dark);
+}
+
+/* === Timestamps === */
+time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* === Badges === */
+.item-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: var(--radius-xs);
+  color: var(--text-light);
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1;
+}
+
+.item-badge.liked { background: var(--accent-black); }
+.item-badge.followed { background: var(--accent-coral); }
+
+/* Primary indicator badges */
+.primary-btn {
+  pointer-events: none;
+  font-size: 11px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+}
+
+.primary-btn.public {
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.primary-btn.private {
+  background: var(--neutral-btn);
+  color: var(--text-light);
+}
+
+.primary-btn.primary {
+  background: var(--accent-black);
+  color: var(--text-light);
+}
+
+/* === Collapsible sections (Profile) === */
+.collapsible {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: var(--spacing-md);
+  width: 100%;
+  border: 1px solid var(--border-color);
+  text-align: left;
+  outline: none;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-sm);
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.collapsible:hover,
+.collapsible.active {
+  background: var(--accent-black);
+  color: var(--text-light);
+  border-color: var(--accent-black);
+}
+
+.content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--spacing-sm);
+  border: 1px solid var(--border-light);
+}
+
+.content p {
+  margin: var(--spacing-xs) 0;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.content p:last-child {
+  border-bottom: none;
+}
+
+/* === XP Decay Active State === */
+.xp-counter.xp-decaying {
+  color: var(--accent-coral);
+  animation: xpPulse 2s ease-in-out infinite;
+}
+
+@keyframes xpPulse {
+  0%, 100% { color: var(--accent-coral); }
+  50% { color: var(--accent-coral-dark); }
+}
+
+/* === Play Button with Progress Ring === */
+.play-btn-wrapper {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.play-btn-wrapper svg.progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 46px;
+  height: 46px;
+  transform: rotate(-90deg);
+}
+
+.play-btn-wrapper .progress-ring-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.08);
+  stroke-width: 3;
+}
+
+.play-btn-wrapper .progress-ring-fill {
+  fill: none;
+  stroke: var(--accent-coral);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s linear;
+}
+
+.play-btn-wrapper a.play-link {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-coral);
+  color: var(--text-light);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  z-index: 1;
+  transition: background var(--transition-fast), transform var(--transition-fast);
+  letter-spacing: 0.04em;
+}
+
+.play-btn-wrapper a.play-link:hover {
+  background: var(--accent-coral-dark);
+  transform: scale(1.05);
+}
+
+/* === Hide XP Decay Visual Elements === */
+.xp-decay-display {
+  display: none !important;
+}
+
+.xp-graph {
+  display: none !important;
+}
+
+/* === Responsive Design === */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    min-height: auto;
+  }
+
+  #gamesButton {
+    position: static;
+    top: auto;
+    left: auto;
+    transform: none;
+    margin: var(--spacing-sm) auto var(--spacing-md);
+  }
+
+  #gamesButton:hover {
+    transform: scale(1.04);
+  }
+  
+  .form-container,
+  .list-container,
+  .left-panel,
+  .right-panel {
+    min-height: 300px;
+  }
+  
+  .top-nav {
+    height: auto;
+    min-height: 56px;
+    padding: var(--spacing-sm);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+  }
+  
+  .nav-buttons {
+    order: 2;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .xp-counter {
+    order: 1;
+  }
+}
+
+@media (max-width: 600px) {
+  .hex-button {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-size: 11px;
+  }
+  
+  .container {
+    padding: var(--spacing-md);
+    gap: var(--spacing-md);
+  }
+  
+  .form-container,
+  .list-container,
+  .left-panel,
+  .right-panel {
+    padding: var(--spacing-md);
+  }
+  
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .middle-button {
+    width: 80px;
+    height: 80px;
+    font-size: 12px;
+  }
+  
+  #gamesButton {
+    width: 60px;
+    height: 60px;
+    font-size: 10px;
+  }
+}
+
+/* ===== Burned Item Modal ===== */
+.burned-modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(2px);
+}
+
+.burned-modal {
+  background: var(--bg-panel);
+  border-radius: var(--radius-xl);
+  width: 90%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  animation: burnedModalSlideIn 0.25s ease-out;
+}
+
+@keyframes burnedModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.burned-modal-close {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: #050607;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl, 8px);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.burned-modal-close:hover {
+  background: #0d1013;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.burned-modal-header {
+  background: var(--accent-coral-dark);
+  color: var(--text-light);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+}
+
+.burned-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.burned-modal-body {
+  padding: var(--spacing-lg);
+}
+
+.burned-item-content {
+  background: #e53935;
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 6px;
+  margin-bottom: var(--spacing-lg);
+  border: none;
+}
+
+.burned-item-label {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.25);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-bottom: 8px;
+}
+
+.burned-item-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  word-break: break-word;
+  color: #fff;
+}
+
+.burned-item-details {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.burned-item-details p {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.burned-item-details strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.burned-modal-voting h3,
+.burned-modal-comment h3 {
+  font-size: 0.95rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
+}
+
+.optional-label {
+  font-weight: 400;
+  color: var(--text-secondary);
+  font-size: 0.85em;
+}
+
+.voting-buttons {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+}
+
+.vote-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-md);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  color: var(--text-primary);
+}
+
+.vote-btn:hover {
+  border-color: var(--accent-blue);
+  background: var(--bg-body);
+}
+
+.vote-btn.selected {
+  border-color: var(--accent-black);
+  background: rgba(17, 17, 17, 0.04);
+}
+
+.vote-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.vote-icon {
+  font-size: 1.5rem;
+}
+
+.vote-label {
+  font-size: 0.85rem;
+  text-align: center;
+  font-weight: 500;
+}
+
+.vote-keep .vote-icon { color: var(--accent-coral); }
+.vote-restore .vote-icon { color: var(--accent-green); }
+
+.burned-comment-input {
+  width: 100%;
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.burned-comment-input:focus {
+  outline: none;
+  border-color: var(--accent-black);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+}
+
+.burned-modal-actions {
+  margin-top: var(--spacing-lg);
+}
+
+.burned-submit-btn {
+  width: 100%;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--accent-black);
+  color: var(--text-light);
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.burned-submit-btn:hover:not(:disabled) {
+  background: #333;
+}
+
+.burned-submit-btn:disabled {
+  background: var(--border-color);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.burned-modal-feedback {
+  display: none;
+  margin-top: var(--spacing-md);
+}
+
+.feedback-success {
+  background: rgba(46, 125, 50, 0.1);
+  color: var(--accent-green);
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* Dark theme adjustments for burned modal */
+html[data-theme="dark"] .burned-modal {
+  background: var(--bg-panel);
+}
+
+html[data-theme="dark"] .burned-modal-close {
+  background: #050607;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+html[data-theme="dark"] .vote-btn {
+  background: var(--bg-card);
+}
+
+html[data-theme="dark"] .vote-btn:hover {
+  background: var(--bg-body);
+}
+
+/* Vote count badges */
+.vote-count {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+/* Burned comments section */
+.burned-comments-section {
+  margin-bottom: var(--spacing-lg);
+  display: none;
+}
+
+.burned-comments-section h3 {
+  font-size: 0.95rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--text-primary);
+}
+
+.burned-comments-list {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.burned-comment-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 0.85rem;
+}
+
+.burned-comment-item.keep {
+  border-left: 3px solid var(--accent-coral-dark);
+}
+
+.burned-comment-item.restore {
+  border-left: 3px solid var(--accent-green);
+}
+
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-xs);
+  font-size: 0.75rem;
+}
+
+.comment-vote-type {
+  font-weight: 500;
+}
+
+.comment-time {
+  color: var(--text-secondary);
+}
+
+.comment-text {
+  color: var(--text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.comments-more {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin: var(--spacing-sm) 0 0 0;
+}
+
+/* ==============================================================
+   DARK MODE — FINAL FORCING BLOCK
+   Many legacy stylesheets bypass the design tokens with hard-coded
+   greys (#0d0d0d, #111, #1a1a1a, #222, #252525, #2e2e2e, #0d1013…).
+   Rather than chase each one individually across nine stylesheets,
+   we pin every common surface container to pure black and lift their
+   inherited text to white in dark mode. Brand accents (coral red,
+   green badges, blue links) keep their colour because we deliberately
+   target containers and structural text — not every descendant.
+   This block must remain the LAST dark-mode rule in the file.
+   ============================================================== */
+html[data-theme="dark"] body,
+html[data-theme="dark"] .page-container,
+html[data-theme="dark"] .container,
+html[data-theme="dark"] main,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .modal,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .modal-footer,
+html[data-theme="dark"] .messages-panel-card,
+html[data-theme="dark"] .message-item,
+html[data-theme="dark"] .toast-history-item,
+html[data-theme="dark"] .toast,
+html[data-theme="dark"] .global-play-modal-content,
+html[data-theme="dark"] .global-play-modal-header,
+html[data-theme="dark"] .global-play-modal-body,
+html[data-theme="dark"] .global-play-modal-close,
+html[data-theme="dark"] .global-play-item,
+html[data-theme="dark"] .global-play-item:hover,
+html[data-theme="dark"] .award-diamond-empty,
+html[data-theme="dark"] .u-card,
+html[data-theme="dark"] .u-card-body,
+html[data-theme="dark"] .u-thumb-card,
+html[data-theme="dark"] .creation-card,
+html[data-theme="dark"] .group-item,
+html[data-theme="dark"] .game-item,
+html[data-theme="dark"] .creation-item,
+html[data-theme="dark"] .item,
+html[data-theme="dark"] .gf-body,
+html[data-theme="dark"] .gf-game-right,
+html[data-theme="dark"] .gf-chamfer-content,
+html[data-theme="dark"] .grf-body,
+html[data-theme="dark"] .eshu-page-wrap,
+html[data-theme="dark"] .eshu-overlay,
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Inherited text inside dark surfaces. Targeting structural elements
+   only — never `*` — so accent text (red errors, green status pills,
+   blue links) is left alone. */
+html[data-theme="dark"] body,
+html[data-theme="dark"] .page-container,
+html[data-theme="dark"] .container,
+html[data-theme="dark"] main,
+html[data-theme="dark"] p,
+html[data-theme="dark"] li,
+html[data-theme="dark"] dt,
+html[data-theme="dark"] dd,
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4,
+html[data-theme="dark"] h5,
+html[data-theme="dark"] h6,
+html[data-theme="dark"] label,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .modal-body,
+html[data-theme="dark"] .modal-header,
+html[data-theme="dark"] .messages-panel-card,
+html[data-theme="dark"] .message-item,
+html[data-theme="dark"] .message-text,
+html[data-theme="dark"] .message-title,
+html[data-theme="dark"] .toast-history-item,
+html[data-theme="dark"] .global-play-modal-header,
+html[data-theme="dark"] .global-play-item-title,
+html[data-theme="dark"] .u-card,
+html[data-theme="dark"] .u-card-body,
+html[data-theme="dark"] .u-card-title,
+html[data-theme="dark"] .u-card-subtitle,
+html[data-theme="dark"] .u-card-meta,
+html[data-theme="dark"] .gf-body,
+html[data-theme="dark"] .grf-body,
+html[data-theme="dark"] .eshu-page-wrap,
+html[data-theme="dark"] .form-section,
+html[data-theme="dark"] .form-section label,
+html[data-theme="dark"] .form-section span:not([class*="badge"]):not([class*="pill"]):not([class*="status"]):not([class*="tag"]) {
+  color: #ffffff !important;
+}
+
+/* Borders on the same containers stay legible without going harsh
+   white. Tokenised value, easy to retune in one place. */
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .messages-panel-card,
+html[data-theme="dark"] .global-play-modal-content,
+html[data-theme="dark"] .u-card,
+html[data-theme="dark"] .global-play-modal-close,
+html[data-theme="dark"] .global-play-modal-controls input,
+html[data-theme="dark"] .global-play-modal-controls select,
+html[data-theme="dark"] .award-diamond-empty,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  border-color: #333333 !important;
+}
+
+/* Selected card — must override the !important rules above */
+html[data-theme="dark"] .u-card.selected {
+  background-color: #2d2d2d !important;
+  border-color: #ffffff !important;
+  border-width: 3px !important;
+  box-shadow: inset 5px 0 0 #ffffff !important;
+  color: #ffffff !important;
+}
+html[data-theme="dark"] .u-card.selected .u-card-title {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* ==============================================================
+   DARK MODE — LOGO / FRAME-OVERLAY VISIBILITY
+   The diamond, hex, and ESHU logos are shipped as black-on-transparent
+   SVG files, so in dark mode they vanish on a black background.
+   `filter: invert(1)` flips black → white while leaving the transparent
+   areas untouched.
+   The inline frame overlays (drawn around real card images) use a
+   hard-coded `stroke="#000"`; we override that stroke directly.
+   ============================================================== */
+html[data-theme="dark"] img.game-placeholder-logo,
+html[data-theme="dark"] img.group-placeholder-logo,
+html[data-theme="dark"] .empty-state-icon > img,
+html[data-theme="dark"] .eshu-logo {
+  filter: invert(1);
+}
+
+html[data-theme="dark"] .diamond-image-overlay g,
+html[data-theme="dark"] .hex-image-overlay g {
+  stroke: #ffffff !important;
+}

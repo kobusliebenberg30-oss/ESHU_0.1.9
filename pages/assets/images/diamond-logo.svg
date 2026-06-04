@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <g fill="none" stroke="#000" stroke-linejoin="miter" stroke-linecap="butt">
+    <!-- Cap: peaked chevron above the diamond.
+         Matches hex-cap uniformity: 98px perpendicular offset from body, 78 stroke. -->
+    <polyline points="215,470 512,174 809,470" stroke-width="78" />
+    <!-- Main diamond (rotated square) -->
+    <polygon points="512,312 790,590 512,868 234,590" stroke-width="44" />
+  </g>
+</svg>

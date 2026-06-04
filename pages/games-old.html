@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ESHU - Games</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<style>
+html, body { height:100%; overflow:hidden; }
+.container { height:calc(100vh - 56px); }
+
+/* ESHU Platform Header - Dark Style */
+.top-nav {
+  background: #f5f5f5 !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  height: 56px;
+  padding: 0 var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Left section: Home + text links */
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-lg);
+}
+.nav-home {
+  font-size: 20px;
+  text-decoration: none;
+  padding: var(--spacing-sm);
+}
+.nav-link {
+  color: #333;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+.nav-link:hover {
+  color: var(--accent-black);
+}
+
+/* Center section: Action buttons */
+.nav-center {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+.action-btn {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #fff;
+  border: 3px solid #333;
+  transition: transform 0.15s ease;
+}
+.action-btn:hover {
+  transform: scale(1.08);
+}
+.action-btn .btn-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.play-btn {
+  background: var(--accent-black);
+  border-color: var(--accent-green-dark);
+}
+.upload-btn {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange-dark);
+}
+.create-game-btn {
+  background: #6b7280;
+  border-color: #4b5563;
+}
+.create-group-btn {
+  background: #6b7280;
+  border-color: #4b5563;
+}
+
+/* Right section: XP + Profile */
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+.top-nav .xp-counter {
+  display: flex !important;
+  background: transparent;
+  color: #333;
+  font-weight: 700;
+  font-size: 14px;
+  padding: var(--spacing-sm) var(--spacing-md);
+}
+.top-nav .xp-counter::before {
+  display: none;
+}
+.top-nav #profileBtn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #111111;
+  border: 2px solid #333;
+}
+
+/* DateTime Picker Wrapper */
+.datetime-picker-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.datetime-picker-wrapper input[type="text"] {
+  flex: 1;
+  cursor: pointer;
+  background: var(--bg-input);
+}
+.datetime-picker-wrapper input[type="text"]:hover {
+  border-color: var(--accent-black);
+}
+.clear-datetime-btn {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.clear-datetime-btn:hover {
+  color: var(--accent-coral-dark);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Timing Trigger Button */
+.timing-trigger-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #f5f5f5;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.timing-trigger-btn:hover {
+  border-color: var(--accent-black);
+  background: #f0f9f0;
+}
+.timing-trigger-btn .timing-icon { font-size: 20px; }
+.timing-trigger-btn .timing-label { color: #666; font-size: 14px; }
+.timing-trigger-btn.has-timing {
+  border-style: solid;
+  border-color: var(--accent-black);
+  background: #f0f9f0;
+}
+.timing-trigger-btn.has-timing .timing-label { color: #333; font-weight: 500; }
+
+/* Timing Modal */
+.timing-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.timing-modal-overlay.open { display: flex; }
+
+.timing-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 340px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.timing-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eee;
+}
+.timing-modal-icon { font-size: 20px; }
+.timing-modal-title { font-size: 16px; font-weight: 600; flex: 1; }
+.timing-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+  padding: 4px;
+}
+.timing-modal-close:hover { color: #333; }
+
+.timing-modal-body { padding: 20px; }
+
+.timing-section { margin-bottom: 20px; }
+.timing-section:last-child { margin-bottom: 0; }
+.timing-section-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.timing-radio-group {
+  display: flex;
+  gap: 20px;
+}
+.timing-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.timing-radio input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-black);
+}
+.timing-radio .radio-label { font-size: 14px; color: #555; }
+
+.custom-start-picker {
+  margin-top: 10px;
+}
+.custom-start-picker input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Duration Picker */
+.duration-picker {
+  display: flex;
+  gap: 8px;
+}
+.duration-column {
+  flex: 1;
+  text-align: center;
+}
+.duration-values {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.duration-btn {
+  padding: 8px 4px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.duration-btn:hover { background: #e8e8e8; }
+.duration-btn.selected {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+.duration-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+}
+
+/* Schedule Preview */
+.schedule-preview {
+  display: flex;
+  gap: 8px;
+}
+.schedule-item {
+  flex: 1;
+  padding: 10px 8px;
+  border-radius: 6px;
+  text-align: center;
+}
+.schedule-item.green { background: #2e7d32; color: #fff; }
+.schedule-item.yellow { background: #eab308; color: #fff; }
+.schedule-item.red { background: #e53935; color: #fff; }
+.schedule-item-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+.schedule-item-time {
+  font-size: 14px;
+  font-weight: 700;
+}
+.schedule-item-date {
+  font-size: 10px;
+  opacity: 0.9;
+  margin-top: 2px;
+}
+
+.timing-modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #eee;
+}
+.timing-set-btn {
+  width: 100%;
+  padding: 12px;
+  background: #333;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.timing-set-btn:hover { background: #555; }
+
+/* Searchable Select Dropdown */
+.searchable-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+.searchable-select-input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+}
+.searchable-select-input:focus {
+  outline: none;
+  border-color: var(--accent-black);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.searchable-select-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-top: none;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.searchable-select-dropdown.open {
+  display: block;
+}
+.searchable-select-option {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.searchable-select-option:hover,
+.searchable-select-option.highlighted {
+  background: var(--hover-bg);
+}
+.searchable-select-option.selected {
+  background: var(--accent-black);
+  color: #fff;
+}
+.searchable-select-empty {
+  padding: var(--spacing-sm) var(--spacing-md);
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Finished Game State */
+.game-item.finished {
+  opacity: 0.7;
+  border-color: var(--text-muted);
+}
+.game-item.finished .creation-header strong::after {
+  content: ' (Finished)';
+  font-size: 0.75em;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+.game-item.finished .button-group button:not(.view-btn) {
+  display: none !important;
+}
+
+/* Time display styling */
+.time-remaining {
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+.time-remaining.running {
+  color: var(--accent-black);
+}
+.time-remaining.starting {
+  color: var(--accent-orange);
+}
+.time-remaining.finished {
+  color: var(--text-muted);
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.loading-overlay.active {
+  display: flex;
+}
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link">Your Games</a>
+    <a href="groups.html" class="nav-link">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <a href="games.html?action=play" class="action-btn play-btn" title="Play Game">
+      <span class="btn-label">PLAY<br>GAME</span>
+    </a>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation">
+      <span class="btn-label">UPLOAD<br>CREATION</span>
+    </a>
+    <a href="games.html" class="action-btn create-game-btn" title="Create Game">
+      <span class="btn-label">CREATE<br>GAME</span>
+    </a>
+    <a href="groups.html" class="action-btn create-group-btn" title="Create Group">
+      <span class="btn-label">CREATE<br>GROUP</span>
+    </a>
+    <div class="xp-counter" id="xpCounter">0 XP +</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="form-container">
+    <h1>Game Form</h1>
+    <form id="gameForm" autocomplete="off">
+      <label for="gameName">Name</label>
+      <input type="text" id="gameName" required />
+      <label for="gameDesc">Description</label>
+      <textarea id="gameDesc" rows="3"></textarea>
+      <label for="hostGroup">Host Group</label>
+      <div class="searchable-select-wrapper" id="hostGroupWrapper">
+        <input type="text" id="hostGroupSearch" class="searchable-select-input" placeholder="Type to search or select..." autocomplete="off" />
+        <input type="hidden" id="hostGroup" required />
+        <div class="searchable-select-dropdown" id="hostGroupDropdown"></div>
+      </div>
+      <label>Timing</label>
+      <button type="button" id="openTimingBtn" class="timing-trigger-btn">
+        <span class="timing-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></span>
+        <span class="timing-label" id="timingLabel">Click to set timing</span>
+      </button>
+      <input type="hidden" id="startTime" />
+      <input type="hidden" id="endTime" />
+      <div style="display:flex; gap:0.5rem; margin-top:var(--spacing-lg);">
+        <button type="submit" id="saveBtn">Save Game</button>
+        <button type="button" id="updateBtn" style="display:none;">Update Game</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="list-container">
+    <h2>Saved Games</h2>
+    <div class="search-filter-container">
+      <input type="text" id="searchBox" class="search-box" placeholder="Search games..." />
+      <select id="groupFilter" class="search-box">
+        <option value="">-- Filter by Group --</option>
+      </select>
+    </div>
+    <div id="gameList"></div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<!-- Timing Modal -->
+<div class="timing-modal-overlay" id="timingModalOverlay">
+  <div class="timing-modal">
+    <div class="timing-modal-header">
+      <span class="timing-modal-icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42A8.962 8.962 0 0012 4c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/></svg></span>
+      <span class="timing-modal-title">Timing</span>
+      <button type="button" class="timing-modal-close" id="timingModalClose"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+    
+    <div class="timing-modal-body">
+      <div class="timing-section">
+        <div class="timing-section-label">Game starts</div>
+        <div class="timing-radio-group">
+          <label class="timing-radio">
+            <input type="radio" name="startType" value="now" checked />
+            <span class="radio-label">Now</span>
+          </label>
+          <label class="timing-radio">
+            <input type="radio" name="startType" value="custom" />
+            <span class="radio-label">Custom</span>
+          </label>
+        </div>
+        <div class="custom-start-picker" id="customStartPicker" style="display:none;">
+          <input type="datetime-local" id="customStartTime" />
+        </div>
+      </div>
+
+      <div class="timing-section">
+        <div class="timing-section-label">Game runs for</div>
+        <div class="duration-picker">
+          <div class="duration-column">
+            <div class="duration-values">
+              <button type="button" class="duration-btn" data-unit="weeks" data-value="0">0</button>
+              <button type="button" class="duration-btn" data-unit="weeks" data-value="1">1</button>
+              <button type="button" class="duration-btn selected" data-unit="weeks" data-value="2">2</button>
+              <button type="button" class="duration-btn" data-unit="weeks" data-value="3">3</button>
+              <button type="button" class="duration-btn" data-unit="weeks" data-value="4">4</button>
+            </div>
+            <div class="duration-label">Weeks</div>
+          </div>
+          <div class="duration-column">
+            <div class="duration-values">
+              <button type="button" class="duration-btn" data-unit="days" data-value="0">0</button>
+              <button type="button" class="duration-btn" data-unit="days" data-value="1">1</button>
+              <button type="button" class="duration-btn" data-unit="days" data-value="3">3</button>
+              <button type="button" class="duration-btn selected" data-unit="days" data-value="5">5</button>
+              <button type="button" class="duration-btn" data-unit="days" data-value="7">7</button>
+            </div>
+            <div class="duration-label">Days</div>
+          </div>
+          <div class="duration-column">
+            <div class="duration-values">
+              <button type="button" class="duration-btn" data-unit="hours" data-value="0">0</button>
+              <button type="button" class="duration-btn" data-unit="hours" data-value="1">1</button>
+              <button type="button" class="duration-btn" data-unit="hours" data-value="6">6</button>
+              <button type="button" class="duration-btn" data-unit="hours" data-value="12">12</button>
+              <button type="button" class="duration-btn selected" data-unit="hours" data-value="23">23</button>
+            </div>
+            <div class="duration-label">Hours</div>
+          </div>
+          <div class="duration-column">
+            <div class="duration-values">
+              <button type="button" class="duration-btn" data-unit="mins" data-value="0">0</button>
+              <button type="button" class="duration-btn" data-unit="mins" data-value="15">15</button>
+              <button type="button" class="duration-btn" data-unit="mins" data-value="30">30</button>
+              <button type="button" class="duration-btn selected" data-unit="mins" data-value="45">45</button>
+              <button type="button" class="duration-btn" data-unit="mins" data-value="59">59</button>
+            </div>
+            <div class="duration-label">Mins</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timing-section">
+        <div class="timing-section-label">Schedule</div>
+        <div class="schedule-preview">
+          <div class="schedule-item green">
+            <div class="schedule-item-label">Game starts</div>
+            <div class="schedule-item-time" id="scheduleStart">--:--</div>
+            <div class="schedule-item-date" id="scheduleStartDate">--</div>
+          </div>
+          <div class="schedule-item yellow">
+            <div class="schedule-item-label">Submissions close</div>
+            <div class="schedule-item-time" id="scheduleSubmissions">--:--</div>
+            <div class="schedule-item-date" id="scheduleSubmissionsDate">--</div>
+          </div>
+          <div class="schedule-item red">
+            <div class="schedule-item-label">Game over</div>
+            <div class="schedule-item-time" id="scheduleEnd">--:--</div>
+            <div class="schedule-item-date" id="scheduleEndDate">--</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="timing-modal-footer">
+      <button type="button" class="timing-set-btn" id="timingSetBtn">Set it</button>
+    </div>
+  </div>
+</div>
+
+<!-- Foundation Modules -->
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/state-manager.js"></script>
+<script src="assets/core/storage.js"></script>
+<script src="assets/components/toast.js"></script>
+<script src="assets/utils/debounce.js"></script>
+
+<!-- Legacy modules (still needed for XP and wheel picker) -->
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/burned-modal.js"></script>
+<script src="assets/wheel-picker.js"></script>
+
+<script src="assets/pages/games.page.js"></script>
+
+</body>
+</html>

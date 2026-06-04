@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="eshu-api-base" content="http://localhost:3000/api">
+<title>ESHU - Groups</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<link rel="stylesheet" href="assets/styles/layout-shared.css">
+<link rel="stylesheet" href="assets/styles/games-page.css">
+<link rel="stylesheet" href="assets/styles/groups-page.css">
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link">Your Games</a>
+    <a href="groups.html" class="nav-link active">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <a href="games.html?action=play" class="action-btn play-btn" title="Play Game"><span class="btn-label">PLAY<br>GAME</span></a>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation"><span class="btn-label">UPLOAD<br>CREATION</span></a>
+    <a href="games.html?action=create" class="action-btn create-game-btn" title="Create Game"><span class="btn-label">CREATE<br>GAME</span></a>
+    <a href="groups.html?action=create" class="action-btn create-group-btn" id="createGroupBtn" title="Create Group"><span class="btn-label">CREATE<br>GROUP</span></a>
+    <div class="xp-display" id="xpCounter">0 XP</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="page-container">
+  <!-- Left Panel -->
+  <div class="left-panel" id="leftPanel">
+    <!-- Groups List View -->
+    <div class="groups-list-wrapper" id="groupsListWrapper">
+      <div style="display:flex;flex-direction:column;flex:1;min-height:0;padding:16px;gap:12px;">
+        <div class="gf-tab-toolbar">
+          <select class="gf-tab-filter" id="scopeFilter">
+            <option value="mine">Your Groups</option>
+            <option value="all">All Groups</option>
+            <option value="public">Public Groups</option>
+            <option value="private">Private Groups</option>
+            <option value="byGame">By Game</option>
+          </select>
+          <input type="text" class="gf-tab-search" id="searchBox" placeholder="Search groups..." />
+          <span class="gf-tab-count" id="groupsCountLabel"></span>
+        </div>
+        <div class="u-card-list" id="groupsList" style="flex:1;overflow-y:auto;">
+          <!-- Groups rendered here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Mode: Group Image Panel (left side) -->
+    <div class="group-image-panel" id="groupImagePanel">
+      <div class="image-panel-header">
+        <button type="button" class="back-btn" id="backBtn"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+        <div class="image-panel-title" id="imagePanelTitle">Group Image</div>
+      </div>
+      <div class="image-panel-content">
+        <div>
+          <div class="group-image-large clickable" id="imageUploadArea">
+            <img src="assets/images/hex-logo-v2.svg" alt="" class="group-placeholder-logo" id="imagePreview">
+          </div>
+          <div class="image-upload-hint">Click image to change</div>
+          <input type="file" id="groupImageInput" accept="image/*" style="display:none;" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel" id="rightPanel">
+    <!-- Default: Empty State -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon"><img src="assets/images/hex-logo-v2.svg" alt=""></div>
+      <div class="empty-state-text">Select a group to view details</div>
+    </div>
+
+    <!-- Edit/Create Panel (right side form) -->
+    <div class="edit-panel" id="editPanel">
+      <div class="edit-header">
+        <div class="edit-title" id="editPanelTitle">Create Group</div>
+      </div>
+
+      <div class="edit-content">
+        <div class="form-group">
+          <label class="form-label">Title</label>
+          <input type="text" class="form-input" id="groupName" placeholder="Give your group a title" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Description</label>
+          <textarea class="form-input" id="groupDescription" placeholder="Describe your group"></textarea>
+        </div>
+
+        <!-- Group Type -->
+        <div class="form-group">
+          <label class="form-label">Group Type</label>
+          <div class="type-options" id="typeOptions">
+            <div class="type-option" data-type="creative">
+              <div class="type-option-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10c.55 0 1-.45 1-1 0-.28-.11-.53-.29-.71a.986.986 0 01-.29-.71c0-.55.45-1 1-1h1.17C17.73 18.58 20 16.31 20 13.5 20 7.36 16.42 2 12 2zM6.5 12c-.83 0-1.5-.67-1.5-1.5S5.67 9 6.5 9 8 9.67 8 10.5 7.33 12 6.5 12zm3-4C8.67 8 8 7.33 8 6.5S8.67 5 9.5 5s1.5.67 1.5 1.5S10.33 8 9.5 8zm5 0c-.83 0-1.5-.67-1.5-1.5S13.67 5 14.5 5s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></div>
+              <div class="type-option-label">Creative</div>
+            </div>
+            <div class="type-option" data-type="gaming">
+              <div class="type-option-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-10 7H8v3H6v-3H3v-2h3V8h2v3h3v2zm4.5 2c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm4-3c-.83 0-1.5-.67-1.5-1.5S18.67 9 19.5 9s1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg></div>
+              <div class="type-option-label">Gaming</div>
+            </div>
+            <div class="type-option" data-type="social">
+              <div class="type-option-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg></div>
+              <div class="type-option-label">Social</div>
+            </div>
+            <div class="type-option" data-type="educational">
+              <div class="type-option-icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/></svg></div>
+              <div class="type-option-label">Educational</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Privacy</label>
+          <div class="toggle-options">
+            <label class="toggle-option">
+              <input type="radio" name="privacy" value="public" checked />
+              <span>Public</span>
+            </label>
+            <label class="toggle-option">
+              <input type="radio" name="privacy" value="private" />
+              <span>Private</span>
+            </label>
+          </div>
+          <div class="privacy-info" id="privacyInfo">
+            <div class="privacy-tag green">Anyone can find and join</div>
+            <div class="privacy-tag coral">All content is visible</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="edit-footer">
+        <button type="button" class="cancel-btn" id="cancelEditBtn">Cancel</button>
+        <button type="button" class="save-btn" id="saveGroupBtn">Create</button>
+      </div>
+    </div>
+
+    <!-- Single Tap: Group Preview -->
+    <div class="group-preview-panel" id="groupPreviewPanel">
+      <div class="preview-header">
+        <div class="preview-title" id="previewTitle">Group Details</div>
+        <div class="preview-actions">
+          <div class="preview-action-icons">
+            <button type="button" class="u-card-like-btn" id="previewLikeBtn" title="Like"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+            <button type="button" class="u-card-follow-btn" id="previewFollowBtn" title="Follow">
+              <svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"></polygon><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"></polygon></svg>
+            </button>
+            <button type="button" class="u-card-options-btn" id="previewSettingsBtn" title="Options"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+          </div>
+        </div>
+      </div>
+      <div class="preview-body">
+        <div class="preview-image-area">
+          <div class="preview-image" id="previewImage">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="currentColor" style="opacity:0.5;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          </div>
+        </div>
+        <div class="preview-game-title" id="previewName">Group Name</div>
+        <div class="group-preview-badges" id="groupPreviewBadges">
+          <span class="u-card-primary-badge" id="previewPrimaryBadge" style="display:none;">Primary Group</span>
+          <span class="u-card-privacy-badge" id="previewPrivacyBadge">Public</span>
+        </div>
+        <div class="group-preview-cta-row" id="groupPreviewCtaRow">
+          <button type="button" class="group-preview-cta invite" id="previewInviteBtn">INVITE</button>
+          <button type="button" class="group-preview-cta join" id="previewJoinBtn">JOIN</button>
+          <button type="button" class="group-preview-cta primary" id="previewSetPrimaryBtn">SET PRIMARY</button>
+          <button type="button" class="group-preview-cta leave" id="previewLeaveBtn">LEAVE</button>
+        </div>
+      </div>
+      <div class="preview-info-bar">
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Type</span>
+          <span class="preview-info-value" id="previewType">General</span>
+        </div>
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Members</span>
+          <span class="preview-info-value" id="previewMembers">0</span>
+        </div>
+        <div class="preview-info-chip">
+          <span class="preview-info-label">Games</span>
+          <span class="preview-info-value" id="previewGames">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+</div>
+
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="assets/core/eshu-sync.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/app-runtime.js"></script>
+<script src="assets/components/xp-history.js"></script>
+<script src="assets/components/modal.js"></script>
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/core/state-manager.js"></script>
+<script src="assets/components/toast.js"></script>
+<script src="assets/utils/debounce.js"></script>
+<script src="assets/burned-modal.js"></script>
+
+<script src="assets/components/card-options.js"></script>
+<script src="assets/pages/groups.page.js"></script>
+</body>
+</html>

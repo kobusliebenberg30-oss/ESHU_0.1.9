@@ -1,0 +1,762 @@
+/**
+ * ESHU Design Tokens
+ * Monochromatic-forward system with red accent
+ * Premium, high-contrast, flat with definition
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+:root {
+  /* === Surfaces  /* === Background Colors - Pure White === */
+  --bg-primary: #ffffff;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #ffffff;
+  --bg-panel: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-hover: #f0f0f0;
+  --bg-surface: #ffffff;
+  --bg-inset: #ffffff;
+  --bg-nav: #ffffff;
+  
+  /* === Text Colors - Pure Black === */
+  --text-primary: #000000;
+  --text-secondary: #616161;
+  --text-tertiary: #9e9e9e;
+  --text-muted: #bdbdbd;
+  --text-inverse: #ffffff;
+  --text-inverse: #ffffff;
+  
+  /* === Borders — clear definition  /* === Border Colors - Subtle Grey Lines === */
+  --border-color: #e0e0e0;
+  --border-light: #eeeeee;
+  --border-dark: #bdbdbd;
+  --border-focus: #000000;
+  
+  /* === Primary Accent — Red (the single pop color) === */
+  --accent-primary: #e53935;
+  --accent-primary-dark: #c62828;
+  --accent-primary-light: #ef5350;
+  --accent-primary-subtle: rgba(229, 57, 53, 0.08);
+  
+  /* === Functional  /* === Color Primitives - Pure Black & White === */
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #eeeeee;
+  --color-gray-300: #e0e0e0;
+  --color-gray-400: #bdbdbd;
+  --color-gray-500: #9e9e9e;
+  --color-gray-600: #757575;
+  --color-gray-700: #616161;
+  --color-gray-800: #424242;
+  --color-gray-900: #212121;
+  --color-gray-950: #000000;
+  
+  /* === Legacy accent aliases (for existing code compatibility) === */
+  --color-accent-green: #2e7d32;
+  --color-accent-green-dark: #1b5e20;
+  --color-accent-blue: #1565c0;
+  --color-accent-orange: #f57c00;
+  --color-accent-orange-dark: #e65100;
+  --color-accent-coral: #e53935;
+  --color-accent-coral-dark: #c62828;
+  --color-accent-purple: #7b1fa2;
+  
+  /* === Status Colors === */
+  --status-live: #2e7d32;
+  --status-upcoming: #f57c00;
+  --status-ended: #e53935;
+  --status-draft: #757575;
+  --status-finished: #9e9e9e;
+  
+  /* === Timeline Colors === */
+  --timeline-starts: #2e7d32;
+  --timeline-close: #f57c00;
+  --timeline-over: #e53935;
+  
+  /* === Spacing — 4px base grid === */
+  --spacing-2xs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 48px;
+  
+  /* === Typography — Inter/System stack === */
+  --font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'SF Mono', Monaco, Consolas, monospace;
+  
+  --font-size-2xs: 10px;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 15px;
+  --font-size-xl: 18px;
+  --font-size-2xl: 22px;
+  --font-size-3xl: 28px;
+  --font-size-4xl: 36px;
+  
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-black: 800;
+  
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+  
+  --letter-spacing-tight: -0.02em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.04em;
+  --letter-spacing-caps: 0.08em;
+  
+  /* === Border Radius — brutalist square === */
+  --radius-xs: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-full: 0;
+  
+  /* === Shadows — flat brutalist, borders only === */
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+  --shadow-inset: none;
+  
+  /* === Z-Index === */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+  --z-toast: 1000;
+  
+  /* === Transitions === */
+  --transition-fast: 100ms ease;
+  --transition-base: 180ms ease;
+  --transition-slow: 350ms ease;
+  
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* === Component Tokens === */
+  --control-height-xs: 26px;
+  --control-height-sm: 32px;
+  --control-height-md: 36px;
+  --control-height-lg: 42px;
+  --control-padding-x: 12px;
+  --control-radius: 0;
+  --panel-radius: 0;
+  
+  --navbar-height: 56px;
+  --modal-max-width: 560px;
+  --modal-max-width-lg: 720px;
+
+  /* Body page backdrop - Pure White */
+  --bg-body: #ffffff;
+}
+
+/* === Dark Theme - Pure Black & White === */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-body: #000000;
+  --bg-primary: #000000;
+  --bg-secondary: #000000;
+  --bg-tertiary: #000000;
+  --bg-panel: #000000;
+  --bg-card: #000000;
+  --bg-input: #000000;
+  --bg-hover: #0d0d0d;
+  --bg-surface: #000000;
+  --bg-inset: #000000;
+  --bg-nav: #000000;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #aaaaaa;
+  --text-tertiary: #777777;
+  --text-muted: #555555;
+  
+  --border-color: #2a2a2a;
+  --border-light: #1a1a1a;
+  --border-dark: #3a3a3a;
+  --border-focus: #ffffff;
+  
+  --shadow-xs: none;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
+  --shadow-2xl: none;
+}
+
+/* Border Radius */
+.rounded-sm { border-radius: 0; }
+.rounded-md { border-radius: 0; }
+.rounded-lg { border-radius: 0; }
+.rounded-xl { border-radius: 0; }
+.rounded-full { border-radius: 0; }
+
+/* Shadows */
+.shadow-sm { box-shadow: none; }
+.shadow-md { box-shadow: none; }
+.shadow-lg { box-shadow: none; }
+.shadow-xl { box-shadow: none; }
+
+/* === BRUTALIST OVERRIDE — square corners, no shadows === */
+*, *::before, *::after {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Display */
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.grid { display: grid; }
+.hidden { display: none; }
+
+/* Flex Utilities */
+.flex-row { flex-direction: row; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.items-start { align-items: flex-start; }
+.items-end { align-items: flex-end; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.justify-end { justify-content: flex-end; }
+.gap-xs { gap: var(--spacing-xs); }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-lg { gap: var(--spacing-lg); }
+
+/* Accessibility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* ==============================================================
+   DARK THEME COMPATIBILITY OVERRIDES
+   Patches hard-coded light surfaces / colors so they adapt to the
+   dark palette. These are scoped under html[data-theme="dark"] so
+   they are completely inert in light mode.
+   ============================================================== */
+
+/* --- Panel-level surfaces: pure black to match the rest of the page --- */
+html[data-theme="dark"] .gf-body,
+html[data-theme="dark"] .gf-game-right {
+  background: #000000 !important;
+}
+
+/* --- Thumbnail / preview / empty-state blocks ---
+       These were previously lifted to --bg-tertiary (#0a0a0a) for a
+       "card on body" elevation cue, but on the 240×240 logo previews
+       that hint reads as a visible grey square. Flatten to pure black
+       so the diamond/hex outlines float on the page background. */
+html[data-theme="dark"] .u-thumb-card,
+html[data-theme="dark"] .creation-card,
+html[data-theme="dark"] .preview-image,
+html[data-theme="dark"] .empty-state-icon,
+html[data-theme="dark"] .game-image-preview,
+html[data-theme="dark"] .progress-bar,
+html[data-theme="dark"] .gf-chamfer-content {
+  background: #000000 !important;
+}
+
+/* --- Leaderboard tiles & rank chip --- */
+html[data-theme="dark"] .gf-lb-item,
+html[data-theme="dark"] .gf-lb-rank {
+  background: #000000 !important;
+}
+html[data-theme="dark"] .gf-lb-placeholder {
+  color: var(--text-muted) !important;
+}
+
+/* --- Chamfer upload button (game-front center) ---
+       High-contrast dark-mode treatment: transparent fill with a
+       white outline + white text so the button is just "lines on
+       black", matching the rest of the dark theme. Hover inverts
+       to a solid white fill with black text for clear feedback. */
+html[data-theme="dark"] .gf-chamfer-upload {
+  background: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid #ffffff !important;
+}
+html[data-theme="dark"] .gf-chamfer-upload:hover {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+html[data-theme="dark"] .gf-chamfer-content {
+  background: transparent !important;
+}
+
+/* Chamfer triangle backdrop in dark mode → pure black so it disappears
+   into the page background, leaving only the chamfered diagonal edge
+   and the inset content (PLAY / UPLOAD / status text) visible. */
+html[data-theme="dark"] .gf-chamfer-overlay .gf-chamfer-bg {
+  background: #000000 !important;
+}
+
+/* --- Comment options popover panel + buttons --- */
+html[data-theme="dark"] .comment-options-panel {
+  background: var(--bg-panel) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+html[data-theme="dark"] .comment-options-title {
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .comment-option-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .comment-option-btn:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-focus) !important;
+}
+html[data-theme="dark"] .comment-option-btn.danger {
+  color: var(--color-danger) !important;
+  border-color: rgba(229, 57, 53, 0.45) !important;
+}
+html[data-theme="dark"] .comment-option-btn.danger:hover {
+  background: rgba(229, 57, 53, 0.14) !important;
+  border-color: var(--color-danger) !important;
+}
+html[data-theme="dark"] .comment-options-close {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* --- Inline comment action buttons (✎ etc.) --- */
+html[data-theme="dark"] .comment-action-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .comment-action-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+/* --- Deleted / booted comment tint - inverted in dark mode (black text on white) --- */
+html[data-theme="dark"] .eshu-comment-item.deleted,
+html[data-theme="dark"] .focus-comment-item.deleted {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+html[data-theme="dark"] .eshu-comment-item.deleted *,
+html[data-theme="dark"] .focus-comment-item.deleted * {
+  color: #000000 !important;
+}
+
+/* --- Card deleted state: white "Edit" pill stays readable
+       (keep light button on black card for contrast) --- */
+html[data-theme="dark"] .u-card.deleted .u-card-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* --- Game-item boot button (white pill in light theme) --- */
+html[data-theme="dark"] .game-item-actions .boot-btn,
+html[data-theme="dark"] .game-item.deleted .boot-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .game-item-actions .boot-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+/* --- Wizard / form navigation buttons hover (#f5f5f5) --- */
+html[data-theme="dark"] .btn-cancel:hover,
+html[data-theme="dark"] .btn-back:hover,
+html[data-theme="dark"] .image-buttons button:hover,
+html[data-theme="dark"] .change-timing-btn:hover,
+html[data-theme="dark"] .game-item-actions .edit-btn:hover {
+  background: var(--bg-hover) !important;
+}
+
+/* --- Cream-coloured warning boxes --- */
+html[data-theme="dark"] .timing-mode-message.warning,
+html[data-theme="dark"] .size-warning {
+  background: rgba(229, 57, 53, 0.12) !important;
+  border-color: rgba(229, 57, 53, 0.45) !important;
+  color: var(--text-primary) !important;
+}
+
+/* --- Soft accent tag (cream/yellow) --- */
+html[data-theme="dark"] .u-card-tag.accent-yellow {
+  background: rgba(245, 124, 0, 0.16) !important;
+  color: #ffb74d !important;
+  border-color: rgba(245, 124, 0, 0.45) !important;
+}
+
+/* --- Home profile sidebar fine-tuning --- */
+html[data-theme="dark"] .profile-bio p {
+  color: var(--text-secondary) !important;
+}
+html[data-theme="dark"] .group-card {
+  background: var(--bg-inset) !important;
+}
+
+/* --- Home avatar/profile-switcher rail (hard-coded #d0d0d0) --- */
+html[data-theme="dark"] .avatar-sidebar {
+  background: var(--bg-nav) !important;
+  border-right-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .avatar-item {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-dark) !important;
+}
+html[data-theme="dark"] .avatar-add-item {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .badge {
+  background: var(--bg-tertiary) !important;
+}
+html[data-theme="dark"] .list-item:hover,
+html[data-theme="dark"] .split-item:hover {
+  border-color: var(--border-dark) !important;
+}
+
+/* --- Creation upload form spinner text (hard-coded #111) --- */
+html[data-theme="dark"] .loading-text {
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .loading-spinner {
+  border-color: var(--border-color) !important;
+  border-top-color: var(--text-primary) !important;
+}
+
+/* --- Form placeholder contrast --- */
+html[data-theme="dark"] .form-group input::placeholder,
+html[data-theme="dark"] .form-group textarea::placeholder,
+html[data-theme="dark"] .split-search::placeholder,
+html[data-theme="dark"] .comment-input::placeholder,
+html[data-theme="dark"] .comment-edit-input::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* --- Modal body default text (improve contrast over --text-secondary) --- */
+html[data-theme="dark"] .modal-body {
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .modal-body label,
+html[data-theme="dark"] .modal-body p,
+html[data-theme="dark"] .modal-body span:not([class]),
+html[data-theme="dark"] .modal-body li,
+html[data-theme="dark"] .modal-body dd,
+html[data-theme="dark"] .modal-body dt {
+  color: var(--text-primary);
+}
+html[data-theme="dark"] .modal-body input,
+html[data-theme="dark"] .modal-body textarea,
+html[data-theme="dark"] .modal-body select {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* --- Edit/Create panel (groups wizard): header + image upload hover --- */
+html[data-theme="dark"] .edit-panel-header {
+  background: var(--bg-surface) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .edit-panel-footer {
+  background: var(--bg-panel) !important;
+  border-top-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .image-upload-area:hover {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-focus) !important;
+}
+html[data-theme="dark"] .image-upload-hint {
+  color: var(--text-tertiary) !important;
+}
+
+/* --- Cancel buttons (groups + games wizards) hard-coded #e5e5e5 --- */
+html[data-theme="dark"] .btn-cancel {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+html[data-theme="dark"] .btn-cancel:hover {
+  background: var(--bg-tertiary) !important;
+  border-color: var(--border-dark) !important;
+}
+
+/* --- Play Game / Create Game modal items (hard-coded #111 / #666 / #888) --- */
+html[data-theme="dark"] .play-game-item-title,
+html[data-theme="dark"] .create-form-group label {
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .play-game-item-meta,
+html[data-theme="dark"] .privacy-info,
+html[data-theme="dark"] .timing-note,
+html[data-theme="dark"] .step-indicator {
+  color: var(--text-secondary) !important;
+}
+html[data-theme="dark"] .create-modal-content {
+  background: var(--bg-panel) !important;
+  border: 1px solid var(--border-color) !important;
+}
+html[data-theme="dark"] .create-modal-header,
+html[data-theme="dark"] .create-modal-footer {
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .create-modal-header h2 {
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .step-instruction {
+  color: var(--text-primary) !important;
+}
+
+/* Search + list inside Play Game modal */
+html[data-theme="dark"] .modal-search-input {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .modal-search-input::placeholder {
+  color: var(--text-tertiary) !important;
+}
+html[data-theme="dark"] .group-list-container {
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .group-list-header {
+  background: var(--bg-surface) !important;
+  color: var(--text-secondary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .group-list-item {
+  border-bottom-color: var(--border-light) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .group-list-item:hover,
+html[data-theme="dark"] .group-list-item.selected {
+  background: var(--bg-hover) !important;
+}
+html[data-theme="dark"] .group-list-item .group-icon {
+  background: #000000 !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .group-list-item .group-icon img {
+  filter: invert(1) !important;
+}
+html[data-theme="dark"] .group-list-item .check-mark {
+  color: var(--text-primary) !important;
+}
+
+/* Create-form fields inside the modal */
+html[data-theme="dark"] .create-form-group input,
+html[data-theme="dark"] .create-form-group textarea,
+html[data-theme="dark"] .create-form-group select {
+  background: var(--bg-input) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .create-form-group input::placeholder,
+html[data-theme="dark"] .create-form-group textarea::placeholder {
+  color: var(--text-tertiary) !important;
+}
+
+/* Timing/privacy warning boxes inside Create Game modal */
+html[data-theme="dark"] .timing-warning {
+  background: rgba(229, 57, 53, 0.14) !important;
+  color: #ff8a80 !important;
+}
+
+/* ============================================================
+   FINAL PASS — remaining hardcoded light surfaces/colors
+   ============================================================ */
+
+/* --- Home page main container (#e8e8e8) --- */
+html[data-theme="dark"] .main-container {
+  background: var(--bg-body) !important;
+}
+html[data-theme="dark"] .followed-item-icon {
+  background: var(--bg-tertiary) !important;
+}
+
+/* --- Home split-view action buttons (same pattern as .boot-btn) --- */
+html[data-theme="dark"] .split-action-btn.edit-btn,
+html[data-theme="dark"] .split-action-btn.boot-btn,
+html[data-theme="dark"] .split-item-group .split-action-btn.edit-btn,
+html[data-theme="dark"] .split-item-group .split-action-btn.boot-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .split-action-btn.edit-btn:hover,
+html[data-theme="dark"] .split-action-btn.boot-btn:hover,
+html[data-theme="dark"] .split-item-group .split-action-btn.edit-btn:hover,
+html[data-theme="dark"] .split-item-group .split-action-btn.boot-btn:hover {
+  background: var(--bg-hover) !important;
+}
+html[data-theme="dark"] .split-item.deleted .boot-btn,
+html[data-theme="dark"] .split-item-group.deleted .boot-btn {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+}
+
+/* --- Home cream pastel tags --- */
+html[data-theme="dark"] .split-tag.liked {
+  background: rgba(229, 57, 53, 0.16) !important;
+  color: #ff8a80 !important;
+}
+html[data-theme="dark"] .split-tag.followed {
+  background: rgba(46, 125, 50, 0.16) !important;
+  color: #81c784 !important;
+}
+
+/* --- Game-front side rail + thumb cards --- */
+html[data-theme="dark"] .gf-side-rail {
+  background: var(--bg-secondary) !important;
+  border-right-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .gf-thumb-card {
+  background: var(--bg-tertiary) !important;
+}
+
+/* --- Game-front main area + empty state backdrops (#f8f8f8) --- */
+html[data-theme="dark"] .gf-main,
+html[data-theme="dark"] .gf-empty,
+html[data-theme="dark"] .gf-empty-content {
+  background: var(--bg-surface) !important;
+}
+
+/* --- Warn action button hover + comment-draw button --- */
+html[data-theme="dark"] .gf-action-btn.warn:hover {
+  background: rgba(229, 57, 53, 0.14) !important;
+}
+html[data-theme="dark"] .gf-game-comments-unit .comment-draw-button {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .gf-game-comments-unit .comment-draw-button:hover {
+  background: var(--bg-hover) !important;
+}
+
+/* --- Player name hard-coded #222 --- */
+html[data-theme="dark"] .gf-player-name {
+  color: var(--text-primary) !important;
+}
+
+/* --- Generic .cancel-btn alongside .btn-cancel --- */
+html[data-theme="dark"] .cancel-btn {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+html[data-theme="dark"] .cancel-btn:hover {
+  background: var(--bg-tertiary) !important;
+}
+
+/* --- Cream warning/highlight tags --- */
+html[data-theme="dark"] .timing-extension-tag.extended {
+  background: rgba(234, 179, 8, 0.18) !important;
+  color: #fbc02d !important;
+}
+
+/* --- Group-front hero + badges (#e0e0e0 / #f2f2f2) --- */
+html[data-theme="dark"] .grf-hero-image {
+  background: var(--bg-tertiary) !important;
+}
+html[data-theme="dark"] .grf-badge {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* --- Nav messages dropdown: unread highlight (#f8f8f8) --- */
+html[data-theme="dark"] .message-item.unread {
+  background: var(--bg-tertiary) !important;
+  border-left-color: var(--border-focus) !important;
+}
+
+/* --- Disabled buttons (#eeeeee / #aaaaaa) --- */
+html[data-theme="dark"] button:disabled {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-tertiary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* --- Editing creation highlight (#fff5f5) --- */
+html[data-theme="dark"] .creation-item.editing,
+html[data-theme="dark"] .item.edit-focus {
+  background: rgba(229, 57, 53, 0.12) !important;
+  border-color: var(--accent-primary) !important;
+}
+
+/* --- Booted state background (#e8e8e8 in light) --- */
+html[data-theme="dark"] .item.booted,
+html[data-theme="dark"] .creation-item.booted {
+  background: #ffffff !important;
+  border-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* --- Profile-image-container dark placeholder sits fine on dark;
+       ensure profile-avatar-large default doesn't clash --- */
+html[data-theme="dark"] .profile-avatar-large {
+  background: var(--bg-tertiary) !important;
+}
+
+/* --- Top-nav context text/secondary elements (#888/#999/#aaa)
+       map to tertiary for legibility --- */
+html[data-theme="dark"] .profile-stats,
+html[data-theme="dark"] .group-info .group-meta,
+html[data-theme="dark"] .followed-item-type {
+  color: var(--text-tertiary) !important;
+}
+
+/* --- Native scrollbars blend better in dark --- */
+html[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--bg-inset); }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--border-dark); }
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--border-color); }
+

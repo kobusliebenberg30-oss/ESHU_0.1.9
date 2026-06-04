@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ESHU - Creation Details</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg-body, #f5f5f5); }
+
+.top-nav { z-index: 20; }
+
+.page-container {
+  display: flex;
+  height: calc(100vh - 56px);
+  margin-top: 56px;
+  background: var(--bg-body, #f5f5f5);
+  gap: 0;
+  padding: 0;
+}
+
+/* --- Left Panel: Image Preview --- */
+.left-panel {
+  flex: 1;
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border-color, #e0e0e0);
+}
+
+/* --- Right Panel: Details --- */
+.right-panel {
+  width: 420px;
+  min-width: 340px;
+  max-width: 480px;
+  background: var(--bg-card, #fff);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* --- Panel Headers --- */
+.left-panel-header,
+.right-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-card, #fff);
+  flex-shrink: 0;
+}
+
+.back-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl, 8px);
+  background: #050607;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.back-btn:hover {
+  background: #0d1013;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.back-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: #fff;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.header-action-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl, 8px);
+  background: #050607;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s, border-color 0.15s;
+}
+.header-action-btn:hover {
+  background: #0d1013;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.header-action-btn.liked {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: #fff;
+}
+.header-action-btn.liked:hover { background: #1b5e20; }
+.header-action-btn.followed {
+  background: #42a5f5;
+  border-color: #42a5f5;
+  color: #fff;
+}
+.header-action-btn.followed:hover { background: #1e88e5; }
+.header-action-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* --- Image Area --- */
+.image-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  min-height: 0;
+}
+
+.image-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0;
+  background: var(--bg-panel, #f8f8f8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: none;
+}
+
+.image-placeholder {
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: 13px;
+  padding: 16px;
+}
+
+/* --- Details Body --- */
+.details-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+}
+
+.details-section {
+  margin-bottom: 24px;
+}
+
+.details-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-light, #e0e0e0);
+}
+
+.details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.detail-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light, #f0f0f0);
+}
+.detail-item:last-child { border-bottom: none; }
+
+.detail-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  min-width: 90px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  font-size: 13px;
+  color: var(--text-primary, #111);
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* --- Details Actions Bar --- */
+.details-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-card, #fff);
+  flex-shrink: 0;
+}
+.details-action-btn {
+  flex: 1;
+  height: 38px;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #111);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: background 0.1s;
+}
+.details-action-btn:hover { background: var(--bg-hover, #f5f5f5); }
+.details-action-btn.primary {
+  background: var(--accent-black, #111);
+  color: #fff;
+  border-color: var(--accent-black, #111);
+}
+.details-action-btn.primary:hover { background: #333; }
+.details-action-btn.active {
+  background: #e53935;
+  border-color: #e53935;
+  color: #fff;
+}
+.details-action-btn.active:hover { background: #c62828; }
+
+@media (max-width: 900px) {
+  .page-container {
+    flex-direction: column;
+    height: calc(100vh - 56px);
+  }
+  .left-panel {
+    width: 100%;
+    height: 40%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+  }
+  .right-panel {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    height: 60%;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link">Your Games</a>
+    <a href="groups.html" class="nav-link">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <a href="games.html?action=play" class="action-btn play-btn" title="Play Game"><span class="btn-label">PLAY<br>GAME</span></a>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation"><span class="btn-label">UPLOAD<br>CREATION</span></a>
+    <a href="games.html?action=create" class="action-btn create-game-btn" title="Create Game"><span class="btn-label">CREATE<br>GAME</span></a>
+    <a href="groups.html?action=create" class="action-btn create-group-btn" title="Create Group"><span class="btn-label">CREATE<br>GROUP</span></a>
+    <div class="xp-display" id="xpCounter">0 XP</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="page-container">
+  <div class="left-panel">
+    <div class="left-panel-header">
+      <button class="back-btn" id="backBtn" type="button"><svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></button>
+      <span class="panel-title">Creation Snapshot</span>
+      <div class="header-actions" id="leftHeaderActions"></div>
+    </div>
+    <div class="image-area">
+      <div class="image-frame">
+        <img id="detailsImage" alt="Creation image">
+        <div class="image-placeholder" id="imagePlaceholder">No image available</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="right-panel-header">
+      <span class="panel-title">Creation Details</span>
+      <div class="header-actions" id="headerActions"></div>
+    </div>
+    <div class="details-body">
+      <div class="details-section">
+        <div class="details-section-title">Information</div>
+        <div class="details-grid" id="detailsGrid"></div>
+      </div>
+      <div class="details-section" id="detailsMetaSection" style="display:none;">
+        <div class="details-section-title">Metadata</div>
+        <div class="details-grid" id="detailsMetaGrid"></div>
+      </div>
+    </div>
+    <div class="details-actions" id="detailsActions"></div>
+  </div>
+</div>
+
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/app-runtime.js"></script>
+<script src="assets/components/xp-history.js"></script>
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/core/media-store.js"></script>
+<script src="assets/core/image-migrator.js"></script>
+<script src="assets/pages/creation-details.page.js"></script>
+
+</body>
+</html>

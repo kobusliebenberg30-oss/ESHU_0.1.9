@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ESHU - Group Front</title>
+<link rel="icon" href="data:,">
+<script src="assets/core/theme-init.js"></script>
+<link rel="stylesheet" href="assets/styles/design-tokens.css">
+<link rel="stylesheet" href="assets/eshu-styles.css">
+<link rel="stylesheet" href="assets/styles/layout-shared.css">
+<link rel="stylesheet" href="assets/styles/nav.css">
+<link rel="stylesheet" href="assets/styles/games-page.css">
+<link rel="stylesheet" href="assets/styles/group-front-page.css">
+<link rel="stylesheet" href="assets/styles/animation-draw.css">
+</head>
+<body>
+
+<div class="top-nav">
+  <div class="nav-left">
+    <a href="home.html" class="nav-home" title="Home"><svg viewBox="0 0 24 24"><path d="M12 3L2 12h3v8h6v-5h2v5h6v-8h3L12 3z"/></svg></a>
+    <a href="games.html" class="nav-link">Your Games</a>
+    <a href="groups.html" class="nav-link">Your Groups</a>
+  </div>
+  <div class="nav-center">
+    <a href="games.html?action=play" class="action-btn play-btn" title="Play Game"><span class="btn-label">PLAY<br>GAME</span></a>
+    <a href="creations.html" class="action-btn upload-btn" title="Upload Creation"><span class="btn-label">UPLOAD<br>CREATION</span></a>
+    <a href="games.html?action=create" class="action-btn create-game-btn" title="Create Game"><span class="btn-label">CREATE<br>GAME</span></a>
+    <a href="groups.html?action=create" class="action-btn create-group-btn" title="Create Group"><span class="btn-label">CREATE<br>GROUP</span></a>
+    <div class="xp-display" id="xpCounter">0 XP</div>
+  </div>
+  <div class="nav-right">
+    <div class="messages-wrapper">
+      <button class="header-icon-btn" id="messagesBtn" title="Messages"><svg viewBox="0 0 24 24"><path d="M2 4h20v16H2V4zm2 2v1l8 5 8-5V6H4zm0 3.5V18h16V9.5l-8 5-8-5z"/></svg></button>
+      <div class="messages-dropdown" id="messagesDropdown">
+        <div class="messages-dropdown-header">Messages</div>
+        <div class="messages-dropdown-content">
+          <div class="message-item">No new messages</div>
+        </div>
+      </div>
+    </div>
+    <button class="header-icon-btn settings-btn" id="settingsBtn" title="Settings"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+    <button class="header-icon-btn follow-btn" id="followedBtn" title="Followed"><svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"/><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"/></svg></button>
+    <span class="profile-name-display" id="profileNameNav">Player</span>
+    <button class="profile-btn-nav" id="profileBtn" title="Profile"></button>
+  </div>
+</div>
+
+<div class="group-front-page" id="groupFrontPage">
+  <div class="grf-inner">
+  <div class="grf-header">
+    <div class="grf-header-left">
+      <div class="grf-icon" id="grfGroupIcon"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+      <div class="grf-header-info">
+        <span class="grf-label">Group</span>
+        <span class="grf-title" id="grfGroupTitle">Group Title</span>
+      </div>
+    </div>
+    <div class="grf-header-right">
+      <button class="grf-header-btn grf-like-btn" id="grfLikeBtn" title="Like"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></button>
+      <button class="grf-header-btn grf-follow-btn" id="grfFollowBtn" title="Follow">
+        <svg viewBox="0 0 24 24"><polygon points="1,6 9,1 9,4 23,4 23,8 9,8 9,11"></polygon><polygon points="23,18 15,13 15,16 1,16 1,20 15,20 15,23"></polygon></svg>
+      </button>
+      <button class="grf-header-btn grf-settings-btn" id="grfSettingsBtn" title="Options"><svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg></button>
+      <button class="grf-header-btn grf-close-btn" id="grfBackBtn"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+    </div>
+  </div>
+
+  <div class="grf-body">
+    <!-- Group Hero Header -->
+    <div class="grf-hero" id="grfHero">
+      <div class="grf-hero-image" id="grfHeroImage"><svg viewBox="0 0 24 24" width="48" height="48" fill="currentColor" style="opacity:0.5;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+      <div class="grf-hero-info">
+        <h1 class="grf-hero-title" id="grfHeroTitle">Group Title</h1>
+        <p class="grf-hero-meta" id="grfHeroMeta">0 players &middot; 0 games</p>
+        <div class="grf-hero-badges" id="grfHeroBadges"></div>
+        <p class="grf-hero-desc" id="grfHeroDesc">No description provided.</p>
+      </div>
+    </div>
+
+    <!-- Games List -->
+    <div class="grf-games-section">
+      <div style="display:flex;flex-direction:column;height:auto;padding:16px;gap:12px;">
+        <div class="gf-tab-toolbar">
+          <input type="text" class="gf-tab-search" id="grfGamesSearch" placeholder="Search group games..." />
+          <span class="gf-tab-count" id="grfGamesCount">0 games</span>
+        </div>
+        <div class="u-card-list" id="grfGamesGrid">
+          <!-- Games rendered here -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Comments Section (pinned at bottom) -->
+  <div class="grf-comments-section" id="grfCommentsSection">
+    <div class="comment-wrapper">
+      <div class="comment-toolbar">
+        <span class="comment-count" id="grfCommentsCount">0 comments</span>
+        <button class="grf-comments-toggle" id="grfCommentsToggle" title="Maximize comments"></button>
+      </div>
+      <div class="comment-section" id="grfCommentsList">
+        <div class="comment-empty">No comments yet.</div>
+      </div>
+      <div class="comment-form">
+        <textarea class="comment-input" id="grfCommentsInput" placeholder="Add a comment about this group..."></textarea>
+        <button class="comment-button" type="button" id="grfCommentsSubmit">Send</button>
+      </div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<script src="assets/core/api.js"></script>
+<script src="assets/core/asset-uploader.js"></script>
+<script src="assets/core/comments-store.js"></script>
+<script src="assets/core/comments-actions.js"></script>
+<script src="assets/eshu-db.js"></script>
+<script src="assets/core/remote-storage-driver.js"></script>
+<script src="assets/core/eshu-sync.js"></script>
+<script src="/vendor/supabase.js"></script>
+<script src="/assets/core/supabase-config.js"></script>
+<script src="assets/core/supabase-browser.js"></script>
+<script src="assets/components/auth-overlay.js"></script>
+<script src="assets/components/auth-chip.js"></script>
+<script src="assets/core/app-runtime.js"></script>
+<script src="assets/components/xp-history.js"></script>
+<script src="assets/components/modal.js"></script>
+<script src="assets/components/account-tools.js"></script>
+<script src="assets/components/settings-dropdown.js"></script>
+<script src="assets/components/messages-dropdown.js"></script>
+<script src="assets/components/toast.js"></script>
+<script src="assets/components/card-options.js"></script>
+<script src="assets/core/drawing-compositor.js"></script>
+<script src="assets/components/animation-draw.js"></script>
+<script src="assets/components/animation-player.js"></script>
+<script src="assets/pages/group-front.page.js"></script>
+</body>
+</html>

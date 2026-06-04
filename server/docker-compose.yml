@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eshu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eshu
+      POSTGRES_PASSWORD: eshu_dev
+      POSTGRES_DB: eshu
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eshu -d eshu"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

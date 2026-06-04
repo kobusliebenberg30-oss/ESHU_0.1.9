@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Random Color and Tone with Volume Control and Description</title>
+<link rel="icon" href="data:,">
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      font-family: Arial, sans-serif;
+      transition: background-color 0.3s ease;
+      position: relative;
+    }
+    #descriptionContainer {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 50px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      width: 90vw;
+      max-width: 800px;
+      min-height: 150px;
+      max-height: 60vh;
+      overflow-y: auto;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      cursor: text;
+      user-select: text;
+      z-index: 50;
+      pointer-events: auto;
+      box-sizing: border-box;
+    }
+    #descriptionContainer.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #description {
+      background: rgba(255, 255, 255, 0.7);
+      padding: 15px 20px;
+      border-radius: 12px;
+      width: 100%;
+      min-height: 120px;
+      max-height: 50vh;
+      overflow-y: auto;
+      outline: none;
+      font-size: calc(14px + 0.4vw);
+      color: #333;
+      line-height: 1.4;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+      box-sizing: border-box;
+      resize: vertical;
+    }
+    #buttonsContainer {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      width: 100%;
+    }
+    #saveDescriptionBtn, #newDescriptionBtn {
+      border: none;
+      color: white;
+      padding: 10px 25px;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      user-select: none;
+      width: 100px;
+      transition: background-color 0.3s ease;
+    }
+    #saveDescriptionBtn {
+      background-color: #007bff;
+    }
+    #saveDescriptionBtn:hover {
+      background-color: #0056b3;
+    }
+    #newDescriptionBtn {
+      background-color: #28a745;
+    }
+    #newDescriptionBtn:hover {
+      background-color: #1e7e34;
+    }
+    .volume-slider {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 220px;
+      background-color: #ffffff;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      opacity: 0.9;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+      user-select: none;
+      z-index: 10;
+      visibility: visible;
+      pointer-events: auto;
+    }
+    .volume-slider.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .volume-slider:hover {
+      opacity: 1;
+    }
+    .volume-slider label {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 14px;
+      color: #333333;
+      cursor: pointer;
+    }
+    .volume-slider input[type="range"] {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      background-color: #eeeeee;
+      height: 8px;
+      border-radius: 5px;
+      outline: none;
+      transition: background-color 0.3s ease;
+      cursor: pointer;
+    }
+    .volume-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: #007bff;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .volume-slider input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: #007bff;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    .instructions-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: #222222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-size: 18px;
+      z-index: 1000;
+    }
+    .instructions-content {
+      text-align: center;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 320px;
+      user-select: none;
+    }
+    .instructions-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      border: none;
+      color: #ffffff;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+      user-select: none;
+    }
+    .instructions-button:hover {
+      background-color: #0056b3;
+    }
+    #saveNotification {
+      position: fixed;
+      top: -60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #007bff;
+      color: white;
+      padding: 12px 25px;
+      border-radius: 0 0 20px 20px;
+      font-size: 16px;
+      opacity: 0;
+      pointer-events: none;
+      user-select: none;
+      transition: top 0.5s ease, opacity 0.5s ease;
+      z-index: 1001;
+    }
+    #saveNotification.show {
+      top: 0;
+      opacity: 0.95;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="instructions-overlay" id="instructionsOverlay">
+    <div class="instructions-content">
+      <p>Type, Save and Interact</p>
+      <button class="instructions-button" id="enterInstructionsBtn">Enter</button>
+    </div>
+  </div>
+
+  <div id="descriptionContainer">
+    <div id="description" contenteditable="true" aria-label="Editable description" spellcheck="true" role="textbox" tabindex="0">Write your description here...</div>
+    <div id="buttonsContainer">
+      <button id="saveDescriptionBtn" aria-label="Save description">Save</button>
+      <button id="newDescriptionBtn" aria-label="New description">New</button>
+    </div>
+  </div>
+
+  <div class="volume-slider" id="volumeSlider">
+    <label for="volume">Volume:</label>
+    <input type="range" id="volume" min="0" max="1" step="0.01" value="0.2" />
+  </div>
+
+  <div id="saveNotification" role="alert" aria-live="assertive">Description saved!</div>
+
+  <script>
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Per-creation storage keys
+    const urlParams = new URLSearchParams(window.location.search);
+    const creationId = urlParams.get('creationId') || '';
+    const descKey = creationId ? `colorTone_desc_${creationId}` : 'savedDescription';
+    const colorKey = creationId ? `colorTone_color_${creationId}` : 'savedColor';
+
+    let volume = 0.2;
+    let volumeChanged = false;
+    let hideVolumeTimeout;
+    let colorChangeEnabled = false;
+
+    function playTone(frequency) {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.95);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 1);
+    }
+
+    function getRandomColor() {
+      const letters = '0123456789ABCDEF';
+      let color = '#';
+      for (let i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
+
+    function getRandomFrequency() {
+      return Math.floor(Math.random() * (2000 - 200) + 200);
+    }
+
+    function hideVolumeControl() {
+      const volumeSlider = document.getElementById('volumeSlider');
+      volumeSlider.classList.add('hidden');
+    }
+
+    function showVolumeControl() {
+      const volumeSlider = document.getElementById('volumeSlider');
+      volumeSlider.classList.remove('hidden');
+      clearTimeout(hideVolumeTimeout);
+      hideVolumeTimeout = setTimeout(hideVolumeControl, 7000);
+    }
+
+    function closeInstructions() {
+      const instructionsOverlay = document.getElementById('instructionsOverlay');
+      instructionsOverlay.style.display = 'none';
+      descriptionContainer.classList.remove('hidden');
+      showVolumeControl();
+      placeCaretAtEnd(descriptionDiv);
+    }
+
+    const descriptionDiv = document.getElementById('description');
+    const descriptionContainer = document.getElementById('descriptionContainer');
+    const saveBtn = document.getElementById('saveDescriptionBtn');
+    const newBtn = document.getElementById('newDescriptionBtn');
+    const saveNotification = document.getElementById('saveNotification');
+    const enterInstructionsBtn = document.getElementById('enterInstructionsBtn');
+    const instructionsOverlay = document.getElementById('instructionsOverlay');
+
+    function placeCaretAtEnd(el) {
+      el.focus();
+      if (typeof window.getSelection != "undefined" && typeof document.createRange != "undefined") {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
+    // Enter key inside description to save
+    descriptionDiv.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey) {
+        event.preventDefault();
+        saveBtn.click();
+        descriptionDiv.blur();
+        setTimeout(() => {
+          descriptionContainer.classList.add('hidden');
+          hideVolumeControl();
+        }, 1500);
+      }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (event) => {
+      if (
+        event.key === ' ' &&
+        colorChangeEnabled &&
+        document.activeElement !== descriptionDiv
+      ) {
+        event.preventDefault();
+        const color = getRandomColor();
+        document.body.style.backgroundColor = color;
+        localStorage.setItem(colorKey, color);
+        playTone(getRandomFrequency());
+        descriptionContainer.classList.remove('hidden');
+        showVolumeControl();
+        placeCaretAtEnd(descriptionDiv);
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        descriptionContainer.classList.remove('hidden');
+        showVolumeControl();
+        placeCaretAtEnd(descriptionDiv);
+      }
+
+      if (instructionsOverlay.style.display !== 'none' && event.key === 'Enter') {
+        event.preventDefault();
+        enterInstructionsBtn.click();
+      }
+
+      if (
+        descriptionContainer.classList.contains('hidden') &&
+        event.key.length === 1 &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey
+      ) {
+        descriptionContainer.classList.remove('hidden');
+        showVolumeControl();
+        placeCaretAtEnd(descriptionDiv);
+      }
+    });
+
+    // Click outside interactions
+    document.body.addEventListener('click', (event) => {
+      const volumeSlider = document.getElementById('volumeSlider');
+      if (
+        volumeSlider.contains(event.target) ||
+        descriptionDiv.contains(event.target) ||
+        saveNotification.contains(event.target) ||
+        saveBtn.contains(event.target) ||
+        newBtn.contains(event.target) ||
+        enterInstructionsBtn.contains(event.target) ||
+        instructionsOverlay.contains(event.target)
+      ) {
+        return;
+      }
+
+      if (!volumeChanged) {
+        const color = getRandomColor();
+        const frequency = getRandomFrequency();
+        document.body.style.backgroundColor = color;
+        localStorage.setItem(colorKey, color);
+        playTone(frequency);
+      }
+      volumeChanged = false;
+      showVolumeControl();
+    });
+
+    document.getElementById('volume').addEventListener('input', (event) => {
+      volume = event.target.value;
+      volumeChanged = true;
+      showVolumeControl();
+    });
+
+    saveBtn.addEventListener('click', () => {
+      const text = descriptionDiv.innerText.trim();
+      localStorage.setItem(descKey, text);
+      colorChangeEnabled = true;
+      showSaveNotification();
+      descriptionDiv.blur();
+      setTimeout(() => {
+        descriptionContainer.classList.add('hidden');
+        hideVolumeControl();
+      }, 1500);
+    });
+
+    newBtn.addEventListener('click', () => {
+      descriptionDiv.innerText = '';
+      descriptionContainer.classList.remove('hidden');
+      showVolumeControl();
+      placeCaretAtEnd(descriptionDiv);
+    });
+
+    enterInstructionsBtn.addEventListener('click', () => {
+      closeInstructions();
+    });
+
+    function showSaveNotification() {
+      saveNotification.classList.add('show');
+      setTimeout(() => {
+        saveNotification.classList.remove('show');
+      }, 2500);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem(descKey);
+      const savedColor = localStorage.getItem(colorKey);
+      if (saved && saved.length > 0) {
+        descriptionDiv.innerText = saved;
+        colorChangeEnabled = true;
+        descriptionContainer.classList.remove('hidden');
+        showVolumeControl();
+      }
+      if (savedColor) {
+        document.body.style.backgroundColor = savedColor;
+      }
+      instructionsOverlay.style.display = 'flex';
+    });
+
+    // Listen for messages from parent to clear description
+    window.addEventListener('message', (event) => {
+      // You may check event.origin here if you want for security
+
+      if (event.data && event.data.action === 'clearData') {
+        descriptionDiv.innerText = '';
+        descriptionContainer.classList.remove('hidden');
+        showVolumeControl();
+        placeCaretAtEnd(descriptionDiv);
+      }
+    });
+  </script>
+</body>
+</html>

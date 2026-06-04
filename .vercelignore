@@ -1,0 +1,8 @@
+node_modules
+server/node_modules
+server/storage
+server/.env
+server/.env.test
+*.md
+!docs/DEPLOYMENT.md
+.git

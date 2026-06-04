@@ -1,0 +1,323 @@
+// ESHU database schema
+// Pluggable storage: blob bytes live on disk (or S3) under `storageKey`.
+// Only metadata is stored here.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Users ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  username      String    @unique
+  passwordHash  String
+  displayName   String?
+  bio           String?
+  avatarAssetId String?   @unique
+  avatarAsset   Asset?    @relation("UserAvatar", fields: [avatarAssetId], references: [id])
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
+
+  assets   Asset[]      @relation("UserAssets")
+  sessions Session[]
+  profiles Profile[]    @relation("UserProfiles")
+  setting  UserSetting? @relation("UserSetting")
+
+  @@index([createdAt])
+}
+
+// ---------- Sessions ----------
+// Mirrors the table shape required by connect-pg-simple, with a userId column
+// added for ergonomic lookups (populated by app code on login).
+
+model Session {
+  sid    String   @id
+  sess   Json
+  expire DateTime
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expire])
+  @@index([userId])
+}
+
+// ---------- Assets ----------
+
+enum AssetKind {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  OTHER
+}
+
+model Asset {
+  id           String    @id @default(cuid())
+  ownerId      String
+  owner        User      @relation("UserAssets", fields: [ownerId], references: [id], onDelete: Cascade)
+  kind         AssetKind
+  mimeType     String
+  byteSize     Int
+  sha256       String
+  storageKey   String
+  width        Int?
+  height       Int?
+  durationMs   Int?
+  originalName String?
+  createdAt    DateTime  @default(now())
+
+  avatarOf      User?      @relation("UserAvatar")
+  profileAvatar Profile?   @relation("ProfileAvatar")
+  groupCover    Group?     @relation("GroupCover")
+  creationImage Creation?  @relation("CreationImage")
+
+  @@unique([ownerId, sha256], name: "ownerId_sha256")
+  @@index([ownerId, createdAt])
+  @@index([sha256])
+  @@index([kind])
+}
+
+// ---------- ESHU domain ----------
+//
+// Design notes:
+// - User accounts (auth) and Profiles (in-app player identities) are separate.
+//   One User may own multiple Profiles. Ownership of Groups/Games/Creations is
+//   by Profile, mirroring the shape used in pages/assets/eshu-db.js.
+// - Core indexed fields (status, foreign keys, timestamps) are columns.
+//   Less stable / evolving fields (members, timing offsets, preferences) live
+//   in `data Json` blobs to avoid migration churn while the frontend evolves.
+
+enum EntityStatus {
+  ACTIVE
+  DELETED
+  BURNED
+  FINISHED
+}
+
+model Profile {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation("UserProfiles", fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  description   String?
+  avatarAssetId String?  @unique
+  avatarAsset   Asset?   @relation("ProfileAvatar", fields: [avatarAssetId], references: [id])
+  xpPoints      Int      @default(0)
+  data          Json     @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ownedGroups       Group[]       @relation("GroupOwner")
+  ownedGames        Game[]        @relation("GameOwner")
+  ownedCreations    Creation[]    @relation("CreationOwner")
+  groupMembers      GroupMember[]
+  gameMembers       GameMember[]
+  commentsAuthored  Comment[]     @relation("CommentAuthor")
+
+  @@index([userId, createdAt])
+}
+
+model Group {
+  id              String       @id @default(cuid())
+  ownerProfileId  String?
+  ownerProfile    Profile?     @relation("GroupOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  name            String
+  description     String?
+  type            String       @default("social")
+  privacy         String       @default("public") // 'public' | 'private'
+  status          EntityStatus @default(ACTIVE)
+  isSystemDefault Boolean      @default(false)
+  coverAssetId    String?      @unique
+  coverAsset      Asset?       @relation("GroupCover", fields: [coverAssetId], references: [id])
+  members         Int          @default(0)
+  data            Json         @default("{}") // createdByProfileId, liked, followed, image (legacy), etc. Members live in GroupMember.
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  games       Game[]        @relation("GameHostGroup")
+  memberships GroupMember[]
+
+  @@index([ownerProfileId, status, createdAt])
+  @@index([privacy, status])
+}
+
+model Game {
+  id                   String       @id @default(cuid())
+  ownerProfileId       String?
+  ownerProfile         Profile?     @relation("GameOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  hostGroupId          String?
+  hostGroup            Group?       @relation("GameHostGroup", fields: [hostGroupId], references: [id], onDelete: SetNull)
+  hostGroupName        String?
+  name                 String
+  description          String?
+  rules                String?
+  privacy              String       @default("public")
+  gameType             String       @default("book") // 'book' | 'arena' | ...
+  timingMode           String       @default("infinite")
+  status               EntityStatus @default(ACTIVE)
+  startTime            DateTime?
+  submissionCloseTime  DateTime?
+  endTime              DateTime?
+
+  // Editor-time relative offsets (durations) used to schedule the absolute
+  // *Time fields above. Stored as milliseconds; the wire format expands these
+  // back into `{ weeks, days, hours, mins }` triples for the legacy frontend.
+  timingStartOffsetMs       Int @default(0)
+  timingSubmissionOffsetMs  Int @default(0)
+  timingEndOffsetMs         Int @default(0)
+
+  data                 Json         @default("{}") // liked, followed, ad-hoc extras. Members → GameMember; offsets/extensions → typed columns + GameTimingExtension.
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  creations         Creation[]            @relation("CreationHostGame")
+  memberships       GameMember[]
+  timingExtensions  GameTimingExtension[]
+
+  @@index([ownerProfileId, status, createdAt])
+  @@index([hostGroupId, status])
+  @@index([status, endTime])
+}
+
+model Creation {
+  id             String       @id @default(cuid())
+  ownerProfileId String?
+  ownerProfile   Profile?     @relation("CreationOwner", fields: [ownerProfileId], references: [id], onDelete: SetNull)
+  hostGameId     String?
+  hostGame       Game?        @relation("CreationHostGame", fields: [hostGameId], references: [id], onDelete: SetNull)
+  name           String
+  description    String?
+  devices        String?
+  tags           String?
+  dateMade       String?
+  status         EntityStatus @default(ACTIVE)
+  imageAssetId   String?      @unique
+  imageAsset     Asset?       @relation("CreationImage", fields: [imageAssetId], references: [id])
+  data           Json         @default("{}") // imageRef fallback, liked, followed, custom fields
+  timestamp      BigInt       @default(0) // ms epoch from frontend; preserved for ordering parity
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([ownerProfileId, status, createdAt])
+  @@index([hostGameId, status])
+}
+
+// One row per User: the `values` blob from the legacy local DB plus typed fields.
+model UserSetting {
+  userId           String   @id
+  user             User     @relation("UserSetting", fields: [userId], references: [id], onDelete: Cascade)
+  uiTheme          String   @default("light") // 'light' | 'dark'
+  primaryGroupId   String?
+  currentProfileId String?
+  data             Json     @default("{}") // forward-compat key/value bag
+  updatedAt        DateTime @updatedAt
+}
+
+// ---------- Membership join tables ----------
+//
+// Replaces the legacy `data.memberProfileIds: string[]` on Group / Game.
+// Composite primary keys give us idempotent inserts and clean cascade
+// deletes when a profile or its parent is removed.
+
+model GroupMember {
+  groupId   String
+  profileId String
+  joinedAt  DateTime @default(now())
+  role      String?  // optional, e.g. 'owner' | 'admin' | 'member'
+
+  group   Group   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, profileId])
+  @@index([profileId])
+}
+
+// Append-only audit log of timing changes on a Game. Replaces the legacy
+// `data.timingExtensions: object[]` array. The frontend records:
+//   - *_extended events when an existing absolute timestamp moves outwards
+//     (uses prevTime/nextTime/happenedAt)
+//   - future_start events when a brand-new game is scheduled to start later
+//     (uses nextTime + happenedAt; prevTime is null)
+enum GameTimingExtensionType {
+  start_extended
+  submission_extended
+  end_extended
+  future_start
+}
+
+model GameTimingExtension {
+  id         String                  @id @default(cuid())
+  gameId     String
+  game       Game                    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  type       GameTimingExtensionType
+  prevTime   DateTime?               // originalTime for *_extended; null for future_start
+  nextTime   DateTime?               // newTime for *_extended; scheduledFor for future_start
+  happenedAt DateTime                // extendedAt or setAt from the wire payload
+  createdAt  DateTime                @default(now())
+
+  @@index([gameId, createdAt])
+}
+
+model GameMember {
+  gameId    String
+  profileId String
+  joinedAt  DateTime @default(now())
+  role      String?
+
+  game    Game    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([gameId, profileId])
+  @@index([profileId])
+}
+
+// ---------- Comments ----------
+//
+// Replaces the client-only `localStorage["comments_*"]` storage. Comments
+// can be attached to a Creation, a Game, or a Group; the (targetKind, targetId)
+// discriminator keeps a single table even though the parents live in
+// different rows. No FK to the parent on purpose — the frontend already
+// soft-deletes parents, and we don't want a comment burst to cascade-block
+// a parent delete. Orphan comments are cleaned up periodically.
+enum CommentTargetKind {
+  CREATION
+  GAME
+  GROUP
+}
+
+model Comment {
+  id              String            @id @default(cuid())
+  authorProfileId String?
+  authorProfile   Profile?          @relation("CommentAuthor", fields: [authorProfileId], references: [id], onDelete: SetNull)
+  targetKind      CommentTargetKind
+  targetId        String
+  text            String
+  status          EntityStatus      @default(ACTIVE)
+  // Per-profile reactions, stored as JSON arrays of profile ids to match
+  // the legacy wire format the frontend already understands.
+  likedBy         Json              @default("[]")
+  followedBy      Json              @default("[]")
+  // Animation payload (arbitrary JSON the frontend renders). Keep the bytes
+  // small — heavyweight animation images should go through POST /api/assets
+  // and reference the resulting asset id from inside this blob.
+  animation       Json?
+  data            Json              @default("{}") // forward-compat key/value bag
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  editedAt        DateTime?
+
+  @@index([targetKind, targetId, createdAt])
+  @@index([authorProfileId, createdAt])
+  @@index([status])
+}

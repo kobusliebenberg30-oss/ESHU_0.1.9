@@ -1,0 +1,1185 @@
+/* Page: Eshu */
+
+/* ===== MAIN CONTENT (adjusted for fixed nav) ===== */
+.container {
+  width: 100%;
+  position: relative;
+  padding: 0;
+  gap: 0;
+}
+
+.side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  border: 4px solid transparent;
+  box-sizing: border-box;
+  padding: 40px 0 20px;
+  user-select: none;
+  gap: 20px;
+  transition: border 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--bg-body);
+}
+
+.side::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease;
+  z-index: 2;
+}
+
+.side.left:not(.chosen):hover { border: 4px solid #111111; }
+.side.right:not(.chosen):hover { border: 4px solid #ffffff; }
+.side.left.hover-preview:not(.chosen) { border: 4px solid #111111; }
+.side.right.hover-preview:not(.chosen) { border: 4px solid #ffffff; }
+.side.left:hover::after {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+}
+.side.right:hover::after {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+}
+.side.left.hover-preview::after {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+}
+.side.right.hover-preview::after {
+  opacity: 1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05));
+}
+.side.chosen { border-color: inherit !important; }
+
+/* Image box */
+.image-box {
+  width: 80%;
+  flex-grow: 1;
+  border-radius: var(--radius-xl);
+  transition: transform 0.4s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-panel);
+  box-sizing: border-box;
+  min-height: 350px;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.creation-display {
+  font-size: 16px;
+  padding: 20px;
+  text-align: center;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  width: 100%;
+  flex: 0 0 auto;
+  display: none;
+}
+
+.creation-display.fallback-active {
+  display: block;
+  height: 100%;
+  flex: 1 1 auto;
+  text-align: left;
+  overflow: auto;
+  padding: 14px;
+}
+
+.creation-fallback-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  min-height: 100%;
+}
+
+.creation-fallback-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.creation-fallback-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.creation-fallback-desc,
+.creation-fallback-extra {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.creation-image {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: calc(100% - 90px);
+  object-fit: contain;
+  display: none;
+}
+
+/* Liked indicator (top-right, next to fullscreen) */
+.eshu-liked-indicator {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: calc(var(--spacing-sm) + 48px);
+  width: 40px;
+  height: 40px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  background: #2e7d32;
+  border: 1px solid #2e7d32;
+  border-radius: var(--radius-xl, 8px);
+  z-index: 60;
+  pointer-events: none;
+}
+.eshu-liked-indicator.active {
+  display: flex;
+}
+
+/* Followed indicator (top-right, next to liked) */
+.eshu-followed-indicator {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: calc(var(--spacing-sm) + 96px);
+  width: 40px;
+  height: 40px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  background: #42a5f5;
+  border: 1px solid #42a5f5;
+  border-radius: var(--radius-xl, 8px);
+  z-index: 60;
+  pointer-events: none;
+}
+.eshu-followed-indicator.active {
+  display: flex;
+}
+
+.eshu-trend-indicator {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px) scale(0.86);
+  width: 24px;
+  height: 24px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  z-index: 65;
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+}
+
+.eshu-trend-indicator.up {
+  color: #37d67a;
+  animation: eshuTrendUp 760ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.eshu-trend-indicator.down {
+  color: #ef4444;
+  transform: translateX(-50%) translateY(-8px) rotate(180deg) scale(0.86);
+  animation: eshuTrendDown 760ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes eshuTrendUp {
+  0% { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.78); }
+  24% { opacity: 1; transform: translateX(-50%) translateY(-4px) scale(1.06); }
+  70% { opacity: 1; transform: translateX(-50%) translateY(-12px) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-20px) scale(0.96); }
+}
+
+@keyframes eshuTrendDown {
+  0% { opacity: 0; transform: translateX(-50%) translateY(-12px) rotate(180deg) scale(0.78); }
+  24% { opacity: 1; transform: translateX(-50%) translateY(4px) rotate(180deg) scale(1.06); }
+  70% { opacity: 1; transform: translateX(-50%) translateY(12px) rotate(180deg) scale(1); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(20px) rotate(180deg) scale(0.96); }
+}
+
+/* Overlay action button SVG sizing */
+.eshu-overlay-action-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Fullscreen button */
+.fullscreen-btn {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  max-width: 28px !important;
+  max-height: 28px !important;
+  background: #050607;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+  cursor: pointer;
+  z-index: 60;
+  padding: 0 !important;
+  outline: none;
+  box-sizing: border-box;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.fullscreen-btn svg { display: none; }
+
+.fullscreen-btn::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.fullscreen-btn.is-exit::before {
+  top: auto;
+  bottom: 5px;
+}
+
+.image-box .fullscreen-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.image-box:hover .fullscreen-btn,
+.image-box:focus-within .fullscreen-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fullscreen-btn:hover {
+  background: #1a1d20;
+  border-color: rgba(255,255,255,0.45);
+}
+
+.image-box:fullscreen .eshu-hover-overlay,
+.image-box:-webkit-full-screen .eshu-hover-overlay,
+.image-box:fullscreen .fullscreen-btn,
+.image-box:-webkit-full-screen .fullscreen-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* When UI is visible in fullscreen: show overlay but keep it pointer-transparent
+ * so image panning still works. Only the panel inside should capture clicks. */
+.image-box:fullscreen.fullscreen-ui-visible .eshu-hover-overlay,
+.image-box:-webkit-full-screen.fullscreen-ui-visible .eshu-hover-overlay {
+  opacity: 1 !important;
+  pointer-events: none !important; /* Allow drag-to-pan on image underneath */
+}
+.image-box:fullscreen.fullscreen-ui-visible .eshu-hover-overlay .eshu-overlay-panel,
+.image-box:-webkit-full-screen.fullscreen-ui-visible .eshu-hover-overlay .eshu-overlay-panel {
+  pointer-events: auto !important; /* Only interactive panel captures clicks */
+}
+.image-box:fullscreen.fullscreen-ui-visible .fullscreen-btn,
+.image-box:-webkit-full-screen.fullscreen-ui-visible .fullscreen-btn {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.eshu-hover-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--spacing-md);
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+  z-index: 22;
+}
+
+.image-box:hover .eshu-hover-overlay,
+.image-box:focus-within .eshu-hover-overlay {
+  opacity: 1;
+  /* Overlay itself stays pointer-transparent so drag-to-pan on the image
+   * underneath isn't intercepted by the (mostly empty) full-bleed overlay
+   * region. Only the actual interactive child — the bottom info/action
+   * panel — re-enables pointer events. */
+  pointer-events: none;
+}
+
+.image-box:hover .eshu-hover-overlay .eshu-overlay-panel,
+.image-box:focus-within .eshu-hover-overlay .eshu-overlay-panel {
+  pointer-events: auto;
+}
+
+.eshu-overlay-panel {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  background: #050607;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl, 8px);
+  padding: 10px 12px;
+  color: #fff;
+}
+
+.eshu-overlay-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 12px;
+}
+
+.eshu-overlay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.eshu-overlay-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.eshu-overlay-value {
+  font-size: 12px;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.eshu-overlay-note {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: #fff;
+  font-size: 10px;
+  text-align: left;
+  border-radius: var(--radius-xl, 8px);
+  padding: 5px 8px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.eshu-overlay-note:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.eshu-overlay-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.eshu-overlay-action-btn {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-xl, 8px);
+  background: #050607;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.eshu-overlay-action-btn:hover {
+  background: #0d1013;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.eshu-overlay-action-btn.liked {
+  background: #2e7d32;
+  border-color: #2e7d32;
+  color: #fff;
+}
+
+.eshu-overlay-action-btn.followed {
+  background: #42a5f5;
+  border-color: #42a5f5;
+  color: #fff;
+}
+
+.middle-controls-stack {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 12;
+}
+
+.middle-controls-stack .middle-button {
+  position: static !important;
+  transform: none !important;
+  width: 74px;
+  height: 74px;
+  font-size: 12px;
+  border-radius: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-width: 1px;
+}
+
+.middle-controls-stack .middle-button:hover {
+  transform: translateY(-1px) scale(1.05) !important;
+  border-color: rgba(255,255,255,0.35);
+}
+
+.middle-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#gamesButton {
+  width: 82px;
+  height: 82px;
+  margin-bottom: 2px;
+  border-radius: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+  background: #050607;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 0;
+}
+
+.games-btn-logo {
+  width: 52px;
+  height: 52px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.games-btn-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.middle-choice-btn {
+  position: static !important;
+  transform: none !important;
+  width: 68px;
+  height: 68px;
+  font-size: 13px;
+  font-weight: 700;
+  z-index: 12;
+  border-radius: 0;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.middle-choice-left {
+  left: auto !important;
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.middle-choice-right {
+  left: auto !important;
+  background: #111111;
+  border-color: #111111;
+  color: #ffffff;
+}
+
+.middle-choice-left:hover,
+.middle-choice-left:focus-visible {
+  background: #ffffff;
+  color: #111111;
+  border-color: #ffffff;
+}
+
+.middle-choice-right:hover,
+.middle-choice-right:focus-visible {
+  background: #ffffff;
+  color: #111111;
+  border-color: #ffffff;
+}
+
+.current-game-thumb-btn {
+  width: 112px;
+  min-height: 118px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(10, 12, 14, 0.78);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.current-game-thumb-btn:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.game-thumb-logo-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.game-thumb-img {
+  position: absolute;
+  left: 22.85%;
+  top: 30.47%;
+  width: 54.30%;
+  height: 54.30%;
+  object-fit: cover;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  display: none;
+  z-index: 1;
+}
+/* When a real game image is loaded, let the thumbnail fill the tile and
+   drop the diamond clip so the artwork reads clearly at this small size. */
+.game-thumb-logo-wrap.has-image .game-thumb-img {
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  clip-path: none;
+}
+
+.game-thumb-logo-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: rgba(255,255,255,0.8);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.current-game-thumb-title {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.current-game-info-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.56);
+  z-index: 4500;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+}
+
+.current-game-info-modal.open {
+  display: flex;
+}
+
+.current-game-info-content {
+  width: min(268px, 90vw);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-panel);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.16);
+  padding: 10px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.current-game-info-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  background: #050607;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: var(--radius-xl, 8px);
+  cursor: pointer;
+  padding: 0;
+  font-size: 0;
+  color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.current-game-info-close::before,
+.current-game-info-close::after {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  top: 50%;
+  left: 50%;
+}
+.current-game-info-close::before { transform: translate(-50%, -50%) rotate(45deg); }
+.current-game-info-close::after  { transform: translate(-50%, -50%) rotate(-45deg); }
+.current-game-info-close:hover {
+  background: #0d1013;
+  border-color: rgba(255,255,255,0.28);
+}
+
+.current-game-info-header {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.current-game-info-image-wrap {
+  border: none;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+  position: relative;
+}
+
+.current-game-info-image-wrap .diamond-image-frame {
+  position: absolute;
+  inset: 0;
+  color: var(--text-primary);
+}
+
+.current-game-info-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.current-game-info-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+.cgi-phase {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.06);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.cgi-phase .cgi-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #9aa0a6;
+}
+
+.cgi-phase.live { color: #6ee07a; border-color: rgba(110,224,122,0.35); }
+.cgi-phase.live .cgi-dot { background: #6ee07a; box-shadow: 0 0 8px #6ee07a; }
+
+.cgi-phase.ended { color: #ff7a7a; border-color: rgba(255,122,122,0.35); }
+.cgi-phase.ended .cgi-dot { background: #ff7a7a; }
+
+.cgi-phase.starting { color: #ffd166; border-color: rgba(255,209,102,0.35); }
+.cgi-phase.starting .cgi-dot { background: #ffd166; }
+
+.cgi-phase.burned, .cgi-phase.booted { color: #ff7a7a; border-color: rgba(255,122,122,0.35); }
+
+.cgi-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.cgi-grid .cgi-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(255,255,255,0.06);
+}
+
+.cgi-grid .cgi-row:last-child { border-bottom: none; }
+
+.cgi-label {
+  color: var(--text-muted, #888);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.cgi-value {
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.current-game-info-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.current-game-info-actions button {
+  border: none;
+  border-radius: 6px;
+  background: var(--accent-black);
+  color: #fff;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.current-game-info-actions button.is-accent {
+  background: var(--accent-coral, #e53935);
+  color: #fff;
+}
+.current-game-info-actions button.is-accent:hover {
+  filter: brightness(1.1);
+}
+
+/* Winner cross animation */
+.winner-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 120px;
+  font-weight: 900;
+  color: #cfcfcf;
+  pointer-events: none;
+  opacity: 0;
+  user-select: none;
+  animation-fill-mode: forwards;
+  text-shadow: 0 0 10px rgba(0,0,0,0.75), 0 0 2px rgba(255,255,255,0.5);
+  z-index: 80;
+}
+
+.winner-cross.right { color: #ffffff; text-shadow: 0 0 10px rgba(255,255,255,0.55); }
+
+@keyframes ascendFade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%,-50%) scale(0.8);
+    color: #bdbdbd;
+    text-shadow: 0 0 8px rgba(0,0,0,0.75);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%,-50%) scale(1);
+    color: #d8d8d8;
+    text-shadow: 0 0 10px rgba(0,0,0,0.8), 0 0 4px rgba(255,255,255,0.35);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-50%,-50%) scale(1.04);
+    color: #ffffff;
+    text-shadow: 0 0 14px rgba(255,255,255,0.75), 0 0 6px rgba(255,255,255,0.55);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%,-50%) scale(1.12);
+    color: #ffffff;
+    text-shadow: 0 0 16px rgba(255,255,255,0.8);
+  }
+}
+
+.animate-cross { animation: ascendFade 1.2s ease forwards; }
+
+/* Comments */
+.comment-wrapper {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 20px;
+  user-select: text;
+}
+
+.comment-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Toggle button (maximize/minimize) */
+.eshu-comments-toggle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  background: #050607;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.eshu-comments-toggle:hover {
+  background: #0d1013;
+  border-color: rgba(255,255,255,0.28);
+}
+.eshu-comments-toggle::before {
+  content: '';
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: #fff;
+  border-radius: 1px;
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.eshu-comments-toggle.is-exit::before {
+  top: auto;
+  bottom: 6px;
+}
+.comment-wrapper.maximized {
+  flex: 1;
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+.comment-wrapper.maximized .comment-section {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+.comment-wrapper.maximized .comment-form {
+  margin-top: auto;
+  flex: 0 0 auto;
+}
+
+.side.comments-maximized {
+  gap: 0;
+}
+
+/* Collapsed image-box */
+.image-box.collapsed {
+  flex: 0;
+  min-height: 0;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+.comment-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.comment-section {
+  display: flex;
+  flex-direction: column;
+  height: 140px;
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  gap: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.comment-section::-webkit-scrollbar { width: 6px; }
+.comment-section::-webkit-scrollbar-track { background: var(--bg-card); border-radius: 3px; }
+.comment-section::-webkit-scrollbar-thumb { background: #999999; border-radius: 3px; }
+
+.comment-empty {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 24px;
+}
+
+.comment-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comment-input {
+  flex-grow: 1;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  height: 34px;
+  min-height: 34px;
+  max-height: 34px;
+  resize: none;
+  box-sizing: border-box;
+  line-height: 34px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.comment-input:focus { outline: none; border-color: var(--accent-black, #111); }
+
+.comment-button, .draw-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 88px;
+  padding: 0 14px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-radius: var(--radius-lg);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.comment-button { background: var(--accent-black); color: var(--text-light); }
+.comment-button:hover { background: #333333; }
+.draw-button { background: var(--accent-orange); color: var(--text-light); }
+
+/* Chamfer buttons */
+.chamfer-button {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  display: none;
+  z-index: 10;
+}
+
+.side:hover .chamfer-button {
+  display: block;
+}
+.side.hover-preview .chamfer-button {
+  display: block;
+}
+
+.chamfer-button.left { bottom: 0; left: 0; background: rgba(17,17,17,0.85); clip-path: polygon(0 100%,0 0,100% 100%); }
+.chamfer-button.right { bottom: 0; right: 0; background: rgba(17,17,17,0.85); clip-path: polygon(100% 100%,100% 0,0 100%); }
+.chamfer-button:hover { background: rgba(30,30,30,0.95); }
+
+/* Draw overlay — covers full .side panel (not just .image-box) */
+.draw-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #111;
+  z-index: 100;
+  border-radius: 0;
+}
+
+.draw-overlay iframe { width: 100%; height: 100%; border: none; }
+
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+    height: auto;
+    min-height: calc(100vh - 56px);
+  }
+
+  .side {
+    padding: 16px 0;
+    min-height: 480px;
+  }
+
+  .image-box,
+  .comment-wrapper {
+    width: 92%;
+  }
+
+  .image-box {
+    min-height: 260px;
+  }
+
+  .middle-controls-stack {
+    position: static;
+    transform: none;
+    padding: 10px 0;
+  }
+
+  .middle-choice-btn {
+    width: 56px;
+    height: 56px;
+    font-size: 12px;
+  }
+
+  #gamesButton {
+    width: 66px;
+    height: 66px;
+  }
+
+  .current-game-thumb-btn {
+    width: 100px;
+    min-height: 104px;
+  }
+
+  .current-game-thumb-btn img,
+  .current-game-thumb-fallback {
+    width: 84px;
+    height: 54px;
+  }
+
+  .winner-cross {
+    font-size: 88px;
+  }
+
+  .comment-section {
+    height: 120px;
+  }
+}
+
+/* ============================
+   DARK THEME — eshu-page
+   ============================ */
+html[data-theme="dark"] .current-game-info-content {
+  background: var(--bg-panel);
+  border-color: var(--border-color);
+}
+html[data-theme="dark"] .current-game-info-close {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+html[data-theme="dark"] .current-game-info-close:hover {
+  background: var(--bg-hover);
+}
+html[data-theme="dark"] .cgi-phase {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+html[data-theme="dark"] .cgi-grid .cgi-row {
+  border-bottom-color: rgba(255,255,255,0.04);
+}
+html[data-theme="dark"] .comment-section::-webkit-scrollbar-thumb {
+  background: #555;
+}
+
+@media (max-width: 640px) {
+  .side {
+    min-height: 420px;
+  }
+
+  .eshu-overlay-panel {
+    padding: 8px;
+  }
+
+  .eshu-overlay-note {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .comment-form {
+    flex-wrap: wrap;
+  }
+
+  .comment-input {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .draw-button,
+  .comment-button {
+    flex: 1 1 calc(50% - 4px);
+  }
+}

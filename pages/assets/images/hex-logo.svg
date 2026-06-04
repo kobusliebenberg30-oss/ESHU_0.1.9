@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" fill="none" stroke="#000" stroke-width="40" stroke-linejoin="miter">
+  <!-- Upper arc / "brim" (open hexagon top) -->
+  <polyline points="180,360 300,140 724,140 844,360" />
+  <!-- Main hexagon -->
+  <polygon points="260,260 764,260 884,480 764,780 260,780 140,480" transform="translate(0,0)" />
+  <!-- Re-draw cleanly with centered geometry -->
+</svg>

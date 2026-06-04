@@ -1,0 +1,213 @@
+import express, { type Express } from 'express';
+import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import helmet from 'helmet';
+import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
+import { pinoHttp } from 'pino-http';
+import rateLimit from 'express-rate-limit';
+
+import { env } from './env.js';
+import { logger } from './lib/logger.js';
+import { getSupabasePublicConfig } from './lib/supabase.js';
+import { errorHandler, notFound } from './middleware/error.js';
+
+import authRoutes from './modules/auth/auth.routes.js';
+import userRoutes from './modules/users/users.routes.js';
+import assetRoutes from './modules/assets/assets.routes.js';
+import profileRoutes from './modules/profiles/profiles.routes.js';
+import groupRoutes from './modules/groups/groups.routes.js';
+import gameRoutes from './modules/games/games.routes.js';
+import creationRoutes from './modules/creations/creations.routes.js';
+import commentRoutes from './modules/comments/comments.routes.js';
+import settingRoutes from './modules/settings/settings.routes.js';
+import syncRoutes from './modules/sync/sync.routes.js';
+import xpRoutes from './modules/xp/xp.routes.js';
+
+const WEB_ROOT = resolve(import.meta.dirname, '../../pages');
+const DEFAULT_ENTRY = resolve(WEB_ROOT, 'eshu.html');
+const SUPABASE_UMD_CANDIDATES = [
+  resolve(import.meta.dirname, '../../node_modules/@supabase/supabase-js/dist/umd/supabase.js'),
+  resolve(import.meta.dirname, '../node_modules/@supabase/supabase-js/dist/umd/supabase.js'),
+  resolve(import.meta.dirname, '../../../node_modules/@supabase/supabase-js/dist/umd/supabase.js'),
+  resolve(process.cwd(), 'node_modules/@supabase/supabase-js/dist/umd/supabase.js'),
+  resolve(process.cwd(), 'server/node_modules/@supabase/supabase-js/dist/umd/supabase.js'),
+];
+const SUPABASE_UMD: string =
+  SUPABASE_UMD_CANDIDATES.find((c) => existsSync(c)) ?? SUPABASE_UMD_CANDIDATES[0]!;
+
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+function vercelPreviewOrigins(): string[] {
+  const out: string[] = [];
+  const url = process.env.VERCEL_URL;
+  if (url) {
+    out.push(`https://${url}`);
+  }
+  const branch = process.env.VERCEL_BRANCH_URL;
+  if (branch) {
+    out.push(`https://${branch}`);
+  }
+  return out;
+}
+
+function isAllowedCorsOrigin(origin?: string): boolean {
+  if (!origin) return true;
+  if (env.CORS_ORIGIN.includes(origin)) return true;
+  if (vercelPreviewOrigins().includes(origin)) return true;
+  if (env.NODE_ENV === 'production') return false;
+  try {
+    const parsed = new URL(origin);
+    return LOOPBACK_HOSTS.has(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+
+export const buildApp = (): Express => {
+  const app = express();
+  const PgStore = connectPgSimple(session);
+
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+
+  app.use(pinoHttp({
+    logger,
+    // Suppress noisy per-request header dumps in dev; log only method+url+status+time
+    serializers: {
+      req: (req: { method?: string; url?: string }) => ({ method: req.method, url: req.url }),
+      res: (res: { statusCode?: number }) => ({ statusCode: res.statusCode }),
+    },
+    // Don't log successful health-check / auth-me polling
+    autoLogging: {
+      ignore: (req: { url?: string }) => req.url === '/healthz',
+    },
+  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        },
+      },
+    }),
+  );
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (isAllowedCorsOrigin(origin)) {
+      next();
+      return;
+    }
+    res.status(403).json({ error: 'CORS_ORIGIN_BLOCKED', message: 'Origin not allowed.' });
+  });
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+    }
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    const requestedHeaders = req.headers['access-control-request-headers'];
+    if (requestedHeaders) {
+      res.setHeader('Access-Control-Allow-Headers', String(requestedHeaders));
+    }
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+  // JSON body limit is sized for the bulk /api/sync push, which today still
+  // carries base64 image previews inside `data.image` for groups, games, and
+  // (after Checkpoint A) creations. 1 MB silently 413'd a single full-res
+  // image; 12 MB comfortably fits a snapshot with several. Once the asset
+  // pipeline (POST /api/assets, multipart, bound by STORAGE_MAX_BYTES) owns
+  // every image upload path this can be tightened back down.
+  app.use(express.json({ limit: '12mb' }));
+  app.use(express.urlencoded({ extended: false }));
+
+  app.use(
+    session({
+      name: env.SESSION_COOKIE_NAME,
+      secret: env.SESSION_SECRET,
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        sameSite: env.SESSION_COOKIE_SAME_SITE,
+        secure: env.NODE_ENV === 'production' || env.SESSION_COOKIE_SAME_SITE === 'none',
+        maxAge: env.SESSION_MAX_AGE_MS,
+      },
+      store: new PgStore({
+        conString: env.DATABASE_URL,
+        tableName: 'Session',
+        createTableIfMissing: false,
+      }),
+    }),
+  );
+
+  // Exposes NODE_ENV so external smoke scripts can refuse to run against a
+  // dev/prod server. Intentionally does NOT leak DATABASE_URL, secrets, etc.
+  // Mounted before the rate limiter so smoke preflights never get throttled.
+  app.get('/healthz', (_req, res) =>
+    res.json({ ok: true, env: process.env.NODE_ENV ?? 'development' }),
+  );
+
+  // Soft rate-limit, scoped to the API surface only. Previously this was a
+  // global `app.use(rateLimit(...))`, which counted every static asset GET
+  // (HTML, CSS, JS, image) toward the same 300/min budget — a single hard
+  // refresh of a page like games.html could push the limiter over and the
+  // browser would render the bare "Too many requests" plain-text response
+  // because even the HTML payload was being throttled. Static files no
+  // longer count; only `/api/*` calls do, and the response is JSON so the
+  // client can show a friendly toast instead of a wall of plain text.
+  app.use(
+    '/api',
+    rateLimit({
+      windowMs: 60 * 1000,
+      limit: 300,
+      standardHeaders: 'draft-7',
+      legacyHeaders: false,
+      handler: (_req, res) => {
+        res.status(429).json({
+          error: 'RATE_LIMIT',
+          message: 'Too many requests — slow down tiger! Please try again in a moment.',
+        });
+      },
+    }),
+  );
+
+  app.use('/api/auth', authRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/assets', assetRoutes);
+  app.use('/api/profiles', profileRoutes);
+  app.use('/api/groups', groupRoutes);
+  app.use('/api/games', gameRoutes);
+  app.use('/api/creations', creationRoutes);
+  app.use('/api/comments', commentRoutes);
+  app.use('/api/settings', settingRoutes);
+  app.use('/api/sync', syncRoutes);
+  app.use('/api/xp', xpRoutes);
+
+  app.get('/assets/core/supabase-config.js', (_req, res) => {
+    res.type('application/javascript');
+    res.send(
+      `window.ESHU_SUPABASE_CONFIG = ${JSON.stringify(getSupabasePublicConfig())};`,
+    );
+  });
+  app.get('/vendor/supabase.js', (_req, res) => {
+    res.sendFile(SUPABASE_UMD);
+  });
+
+  app.use(express.static(WEB_ROOT));
+  app.get('/', (_req, res) => {
+    res.sendFile(DEFAULT_ENTRY);
+  });
+
+  app.use(notFound);
+  app.use(errorHandler);
+
+  return app;
+};

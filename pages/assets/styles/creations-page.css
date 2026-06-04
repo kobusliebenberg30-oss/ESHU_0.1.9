@@ -1,0 +1,447 @@
+/* ================================================================
+   creations-page.css — Image Studio Upload Page
+   ================================================================ */
+
+/* ── Page Container ──────────────────────────────────────────── */
+.studio-shell {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Choose Image button ─────────────────────────────────────── */
+.cu-upload-trigger {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  height: 32px;
+  background: #111;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.cu-upload-trigger:hover { background: #333; }
+
+/* ── Preview Area ────────────────────────────────────────────── */
+.cu-preview-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, var(--bg-tertiary, #f2f2f2) 0%, var(--bg-body, #f5f5f5) 100%);
+  overflow: hidden;
+  min-height: 0;
+}
+.cu-preview-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+}
+.cu-preview-canvas {
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  max-width: calc(100% - 28px);
+  max-height: calc(100% - 28px);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  image-rendering: auto;
+}
+.cu-preview-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #888;
+}
+.cu-preview-empty-icon { font-size: 40px; }
+.cu-preview-empty-text { font-size: 13px; font-weight: 600; color: #aaa; }
+.cu-preview-empty-hint { font-size: 11px; color: #666; }
+.cu-preview-canvas.hidden { display: none; }
+
+/* ── Card Preview Thumbnail ──────────────────────────────────── */
+.cu-card-preview {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(0,0,0,0.55);
+  border-radius: 8px;
+  padding: 6px 7px 5px;
+  backdrop-filter: blur(4px);
+  z-index: 10;
+}
+.cu-card-preview.hidden { display: none; }
+.cu-card-preview-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+}
+.cu-card-preview-canvas {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  display: block;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* ── Tool Panels ─────────────────────────────────────────────── */
+.cu-tools {
+  overflow-y: auto;
+  flex-shrink: 0;
+  max-height: 42%;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background: var(--bg-panel, #fff);
+  scrollbar-width: thin;
+  padding-bottom: 8px;
+}
+
+.cu-tool-section { border-bottom: 1px solid var(--border-color, #e0e0e0); }
+
+.cu-tool-header {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 11px 14px;
+  cursor: pointer;
+  background: var(--bg-secondary, #fafafa);
+  box-sizing: border-box;
+  user-select: none;
+}
+.cu-tool-header:hover { background: var(--bg-hover, #f0f0f0); }
+.cu-tool-header-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-primary, #111);
+}
+.cu-tool-header-arrow {
+  font-size: 13px;
+  color: #888;
+  transition: transform 0.15s;
+}
+.cu-tool-header.open .cu-tool-header-arrow { transform: rotate(180deg); }
+
+.cu-tool-panel {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  background: var(--bg-panel, #fff);
+}
+.cu-tool-panel.open { display: flex; }
+
+.cu-subgroup-title {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #666);
+  margin-top: 2px;
+}
+
+/* ── Control rows ────────────────────────────────────────────── */
+.cu-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cu-row-col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.cu-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #666);
+  min-width: 78px;
+  flex-shrink: 0;
+}
+.cu-row-col .cu-label { min-width: unset; }
+.cu-value {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-primary, #111);
+  min-width: 44px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.cu-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: #111;
+  cursor: pointer;
+}
+
+/* ── Ratio bar ───────────────────────────────────────────────── */
+.cu-ratio-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cu-ratio-btn {
+  all: unset;
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid var(--border-color, #ddd);
+  cursor: pointer;
+  color: var(--text-primary, #111);
+  background: var(--bg-secondary, #ffffff);
+}
+.cu-ratio-btn:hover { background: var(--bg-hover, #f0f0f0); }
+.cu-ratio-btn.active { background: #111; color: #fff; border-color: #111; }
+
+.cu-actions-row {
+  gap: 8px;
+  padding-top: 2px;
+}
+
+/* ── Toggle ──────────────────────────────────────────────────── */
+.cu-toggle {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+.cu-toggle input { opacity: 0; width: 0; height: 0; }
+.cu-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border-dark, #bdbdbd);
+  transition: background 0.15s;
+}
+.cu-toggle input:checked + .cu-toggle-track { background: #111; }
+.cu-toggle-track::before {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  transition: transform 0.15s;
+}
+.cu-toggle input:checked + .cu-toggle-track::before { transform: translateX(16px); }
+
+/* ── Border controls disabled state ─────────────────────────── */
+.cu-border-controls { opacity: 0.35; pointer-events: none; transition: opacity 0.15s; }
+.cu-border-controls.enabled { opacity: 1; pointer-events: auto; }
+
+/* ── Swatch palette ──────────────────────────────────────────── */
+.cu-palette-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.cu-swatch-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  flex: 1;
+  min-width: 150px;
+}
+.cu-swatch {
+  all: unset;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #b6b6b2;
+  cursor: pointer;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  transition: outline 0.08s;
+}
+.cu-swatch:hover { outline: 2px solid #888; outline-offset: 1px; }
+.cu-swatch.active { outline: 2px solid #111; outline-offset: 1px; }
+
+/* ── Color custom row ────────────────────────────────────────── */
+.cu-color-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cu-color-input {
+  all: unset;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #b6b6b2;
+  cursor: pointer;
+  padding: 2px;
+  box-sizing: border-box;
+}
+.cu-color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.cu-color-input::-webkit-color-swatch { border: none; }
+.cu-color-hex {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--text-primary, #111);
+  letter-spacing: 0.04em;
+}
+
+.cu-btn-secondary {
+  all: unset;
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: 1px solid var(--border-color, #ddd);
+  cursor: pointer;
+  color: var(--text-primary, #111);
+  background: var(--bg-secondary, #fafafa);
+  align-self: flex-start;
+}
+.cu-btn-secondary:hover { background: var(--bg-hover, #eee); }
+
+.cu-btn-apply {
+  all: unset;
+  display: inline-block;
+  padding: 6px 14px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: #111;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cu-btn-apply:hover { background: #333; }
+
+.cu-hint {
+  font-size: 10px;
+  color: var(--text-tertiary, #888);
+  font-style: italic;
+  margin: 0;
+  line-height: 1.35;
+}
+
+/* ── Upload footer (lock hint area in left panel) ────────────── */
+.upload-footer {
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--bg-panel, #fff);
+  flex-shrink: 0;
+}
+.upload-lock-hint {
+  flex: 1;
+  font-size: 11px;
+  color: var(--text-secondary, #666);
+}
+
+/* ── Right Panel — Creation Edit Panel ───────────────────────── */
+.creation-edit-panel {
+  width: 100%;
+  height: 100%;
+  align-self: stretch;
+  background: var(--bg-card, #fff);
+}
+
+/* ── Searchable Game Dropdown (page-specific overrides) ──────── */
+.game-dropdown-trigger.locked {
+  opacity: 0.65;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.game-dropdown-search input:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: var(--bg-muted, #f4f4f4);
+}
+.host-field-locked {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* ── Loading Overlay ─────────────────────────────────────────── */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.85);
+  z-index: 9999;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.active { display: flex; }
+.loading-content { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  background: #111;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  animation: diamondSpin 0.7s linear infinite;
+}
+.loading-text { font-size: 12px; font-weight: 600; color: #111; }
+@keyframes diamondSpin { to { transform: rotate(360deg); } }
+
+/* ── Dark theme ──────────────────────────────────────────────── */
+html[data-theme="dark"] .cu-btn-apply { background: #eee; color: #111; }
+html[data-theme="dark"] .cu-btn-apply:hover { background: #fff; }
+html[data-theme="dark"] .cu-upload-trigger { background: #eee; color: #111; }
+html[data-theme="dark"] .cu-upload-trigger:hover { background: #fff; }
+html[data-theme="dark"] .cu-tool-header-arrow { color: #666; }
+html[data-theme="dark"] .loading-overlay { background: rgba(0,0,0,0.85); }
+html[data-theme="dark"] .loading-spinner { background: #eee; }
+html[data-theme="dark"] .loading-text { color: #eee; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .cu-tools { max-height: 50%; }
+  .image-panel-header,
+  .edit-header {
+    padding: 12px 14px;
+  }
+  .edit-content {
+    padding: 14px;
+  }
+}
+@media (max-width: 640px) {
+  .edit-footer {
+    flex-wrap: wrap;
+  }
+  .edit-footer button {
+    width: 100%;
+  }
+}

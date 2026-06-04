@@ -1,0 +1,152 @@
+/*
+ * ESHU image-viewer overlay
+ *
+ * Renders a compact zoom-control cluster in the top-left of any container
+ * (typically `.image-box`) the JS `ESHU_IMAGE_VIEWER.attach()` helper has
+ * been pointed at. Hidden until the user hovers/focuses the image, or as
+ * soon as the image has been zoomed past fit.
+ */
+.image-viewer-overlay {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+
+.image-box:hover .image-viewer-overlay,
+.image-box:focus-within .image-viewer-overlay,
+.image-viewer-overlay.zoomed,
+.image-viewer-overlay:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.image-viewer-overlay .iv-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: inherit;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+}
+
+.image-viewer-overlay .iv-btn:hover {
+  background: rgba(0, 0, 0, 0.78);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.image-viewer-overlay .iv-btn:active {
+  transform: translateY(1px);
+}
+
+.image-viewer-overlay .iv-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.image-viewer-overlay .iv-reset {
+  font-size: 16px;
+}
+
+/* Prevent text selection on zoomed images during drag panning */
+.image-box img[style*="cursor: grab"],
+.image-box img[style*="cursor: grabbing"] {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Fullscreen mode support:
+ * In fullscreen, hover doesn't work the same way, so we rely on the
+ * .fullscreen-ui-visible class (set by JS on mouse movement) and the
+ * .zoomed class (when image is zoomed in) to show the overlay.
+ */
+
+/* Hide zoom controls in fullscreen by default (hide together with other UI) */
+.image-box:fullscreen .image-viewer-overlay,
+.image-box:-webkit-full-screen .image-viewer-overlay {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: 2147483647;
+}
+
+/* When fullscreen UI is visible (mouse movement detected), show overlay.
+ * Use !important to override any page-specific !important rules (eshu-page.css). */
+.image-box:fullscreen.fullscreen-ui-visible .image-viewer-overlay,
+.image-box:-webkit-full-screen.fullscreen-ui-visible .image-viewer-overlay,
+/* Also always show when zoomed, regardless of fullscreen UI timer */
+.image-box:fullscreen .image-viewer-overlay.zoomed,
+.image-box:-webkit-full-screen .image-viewer-overlay.zoomed {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Mesh/Grid overlay - appears when zoomed past original size
+ * Positioned absolute within the image-box container (not fixed to viewport)
+ * so it only covers the image area, not the whole website.
+ * Matches the langebaan-nessie video grid overlay style.
+ */
+.image-viewer-mesh {
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.22s ease;
+  /* Exact pattern from langebaan-nessie mesh overlay */
+  background-image:
+    /* Dense radial dot grid */
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.36) 0.48px, transparent 0.82px),
+    /* Horizontal scanlines */
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.18) 1px, transparent 1px),
+    /* Subtle gradient overlay */
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.05));
+  background-size:
+    3px 3px,        /* Dense dot spacing */
+    100% 4px,       /* Horizontal line spacing */
+    100% 100%;      /* Gradient covers full area */
+  background-position: center center, center center, center center;
+  mix-blend-mode: multiply;
+}
+
+/* Show mesh when active (zoomed past original size) */
+.image-viewer-mesh.active {
+  opacity: 0.64;
+}
+
+/* Fullscreen mode: mesh must cover the fullscreen container */
+.image-box:fullscreen .image-viewer-mesh,
+.image-box:-webkit-full-screen .image-viewer-mesh {
+  z-index: 2147483640; /* Just below the zoom controls but above everything else */
+}
+
+/* Dark theme adjustments - lighter grid for dark backgrounds */
+body.dark .image-viewer-mesh {
+  background-image:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.45) 0.48px, transparent 0.82px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.22) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(0, 0, 0, 0.08));
+  mix-blend-mode: screen;
+}
+
+body.dark .image-viewer-mesh.active {
+  opacity: 0.7;
+}

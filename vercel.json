@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "npm install && npm install --prefix server --include=dev",
+  "buildCommand": "npm run vercel-build",
+  "framework": null,
+  "outputDirectory": "pages",
+  "functions": {
+    "api/index.mjs": {
+      "maxDuration": 60,
+      "includeFiles": "server/dist/**,server/node_modules/.prisma/client/**,server/node_modules/@prisma/engines/**,node_modules/@supabase/supabase-js/dist/umd/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api" },
+    { "source": "/healthz", "destination": "/api" },
+    { "source": "/vendor/(.*)", "destination": "/api" },
+    { "source": "/assets/core/supabase-config.js", "destination": "/api" }
+  ],
+  "redirects": [
+    { "source": "/", "destination": "/play.html", "permanent": false }
+  ]
+}

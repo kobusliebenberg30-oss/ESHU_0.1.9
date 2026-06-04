@@ -1,0 +1,30 @@
+{
+  "name": "eshu",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "ESHU — repo-root dev orchestration. Frontend (pages/) + backend (server/) one-command runner.",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev:api": "npm run dev --prefix server",
+    "dev:web": "http-server pages -p 8080 -c-1 --cors --silent",
+    "dev": "npm run dev:api",
+    "dev:split": "concurrently --kill-others-on-fail --names api,web --prefix-colors blue,magenta \"npm:dev:api\" \"npm:dev:web\"",
+    "test": "npm test --prefix server",
+    "install:all": "npm install && npm install --prefix server",
+    "supabase:init": "node scripts/supabase-client.mjs",
+    "supabase:test": "node scripts/test-supabase-query.mjs",
+    "vercel-build": "node scripts/vercel-build.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

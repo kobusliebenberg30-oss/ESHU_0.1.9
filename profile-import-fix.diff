@@ -1,0 +1,35 @@
+diff --git a/pages/assets/pages/profile.page.js b/pages/assets/pages/profile.page.js
+--- a/pages/assets/pages/profile.page.js
++++ b/pages/assets/pages/profile.page.js
+@@
+           let restoredAssets = 0;
+           if (indexedImages.length > 0 && window.ESHU_MEDIA) {
+             try {
+               if (typeof window.ESHU_MEDIA.clearAllImages === 'function') {
+                 await window.ESHU_MEDIA.clearAllImages();
+               }
+               if (typeof window.ESHU_MEDIA.importImages === 'function') {
+                 restoredAssets = await window.ESHU_MEDIA.importImages(indexedImages);
+               }
+             } catch (assetErr) {
++              console.warn('Failed to restore creation images:', assetErr);
++            }
++          }
++
++          ESHU_DB.ensure();
++          ensureDefaultProfile();
++          loadFormFromActiveProfile();
++          updateXPDisplay();
++          renderRightPanel();
++          updateNavProfile();
++          MODAL.alert({
++            title: 'Loaded',
++            message: restoredAssets > 0
++              ? `Profile state loaded. Restored ${restoredAssets} creation image(s).`
++              : 'Profile state loaded successfully.'
++          });
+         } catch (err) {
+           console.error(err);
+           MODAL.alert({ title: 'Error', message: 'Invalid file. Could not load profile state.' });
+         }
+       };
