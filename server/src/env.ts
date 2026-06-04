@@ -19,8 +19,8 @@ const schema = z.object({
   // Set to 'none' when running split-origin dev (pages on :8080, API on :3000);
   // 'none' requires secure:true so the browser must be on HTTPS or localhost.
   SESSION_COOKIE_SAME_SITE: z.enum(['lax', 'none', 'strict']).default('lax'),
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_ANON_KEY: z.string().min(1).optional(),
+  SUPABASE_URL: z.string().trim().url().optional(),
+  SUPABASE_ANON_KEY: z.string().trim().min(1).optional(),
 
   CORS_ORIGIN: z
     .string()

@@ -21,14 +21,14 @@ function isSupabaseUser(value: unknown): value is SupabaseUser {
 }
 
 async function fetchSupabaseUser(accessToken: string): Promise<unknown> {
-  const url = new URL('/auth/v1/user', env.SUPABASE_URL);
+  const url = new URL('/auth/v1/user', env.SUPABASE_URL?.trim());
 
   return await new Promise((resolve, reject) => {
     const req = request(url, {
       method: 'GET',
       agent: supabaseAgent,
       headers: {
-        apikey: env.SUPABASE_ANON_KEY,
+        apikey: env.SUPABASE_ANON_KEY?.trim(),
         authorization: `Bearer ${accessToken}`,
       },
     }, (res) => {
@@ -56,14 +56,14 @@ async function fetchSupabaseUser(accessToken: string): Promise<unknown> {
 }
 
 export function isSupabaseEnabled(): boolean {
-  return !!(env.SUPABASE_URL && env.SUPABASE_ANON_KEY);
+  return !!(env.SUPABASE_URL?.trim() && env.SUPABASE_ANON_KEY?.trim());
 }
 
 export function getSupabasePublicConfig() {
   return {
     enabled: isSupabaseEnabled(),
-    url: env.SUPABASE_URL ?? null,
-    anonKey: env.SUPABASE_ANON_KEY ?? null,
+    url: env.SUPABASE_URL?.trim() ?? null,
+    anonKey: env.SUPABASE_ANON_KEY?.trim() ?? null,
   };
 }
 

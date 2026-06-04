@@ -10,6 +10,7 @@
   function readInlineConfig() {
     const cfg = window.ESHU_SUPABASE_CONFIG;
     if (!cfg || typeof cfg !== 'object') return null;
+    if (cfg.enabled === false) return null;
     return cfg;
   }
 
