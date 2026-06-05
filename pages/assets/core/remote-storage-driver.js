@@ -205,6 +205,20 @@
     return adoptServer(pulled, local);
   }
 
+  // Whether a cached local snapshot is rich enough to render the page from
+  // immediately (optimistic activation). We require a profile + a current
+  // profile pointer so list filters resolve to the right owner; otherwise we
+  // fall back to the blocking pull so a fresh login never flashes empty UI.
+  function hasUsableData(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return false;
+    const tables = snapshot.tables && typeof snapshot.tables === 'object' ? snapshot.tables : null;
+    if (!tables) return false;
+    const profiles = Array.isArray(tables.profiles) ? tables.profiles : [];
+    const hasProfile = profiles.some((p) => p && p.id);
+    const hasCurrent = !!(snapshot.values && snapshot.values.currentProfileId);
+    return hasProfile && hasCurrent;
+  }
+
   function hasServerProgress(snapshot) {
     const tables = snapshot && typeof snapshot === 'object' && snapshot.tables && typeof snapshot.tables === 'object'
       ? snapshot.tables
@@ -356,6 +370,15 @@
 
       subscribe(fn) {
         return () => {};
+      },
+
+      // Replace the in-memory cache with a reconciled snapshot (used by the
+      // background-pull phase of activation). Does NOT schedule a push — the
+      // snapshot already reflects server truth; callers decide whether to push
+      // (e.g. when local-only rows were unioned in).
+      __applySnapshot(snapshotObj) {
+        try { cache = JSON.stringify(snapshotObj || {}); } catch { return; }
+        writeLocalMirror();
       },
 
       // Test/diagnostic hook. Marks dirty first so that if this push is still
@@ -739,23 +762,54 @@
       return;
     }
 
+    const cacheKey = accountCacheKey(dbKey, me.user || {});
+
+    // ----- PHASE 1 (instant): render from the local mirror, no network wait -----
+    // If this browser already holds a cached snapshot for THIS signed-in user
+    // (a returning session), register the remote driver seeded from it and let
+    // the page render immediately. The authoritative /api/sync pull then runs
+    // in the BACKGROUND (phase 2) and reconciles. This is what makes signed-in
+    // feel like offline: no staring at a loader for the ~3-4s pull on every
+    // navigation. First-ever login (no usable cache) skips this and uses the
+    // blocking path below so we never flash an empty UI.
+    let driver = null;
+    let phase1Rendered = false;
+    try {
+      const localSnap = safeParseJson(localStorage.getItem(cacheKey))
+        || safeParseJson(localStorage.getItem(dbKey));
+      if (hasUsableData(localSnap)) {
+        driver = createRemoteDriver(localSnap, dbKey, cacheKey);
+        window.ESHU_DB.registerStorageDriver('remote', () => driver);
+        window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
+        try { window.ESHU_AUTH = { user: me.user || null }; } catch {}
+        phase1Rendered = true;
+        emit('eshu:remote-activated', { user: me.user || null });
+        console.info('[ESHU remote] activated (cached) for user', (me.user && me.user.username) || '(unknown)');
+      }
+    } catch (err) {
+      console.warn('[ESHU remote] optimistic activation failed; falling back to blocking pull', err);
+      driver = null;
+      phase1Rendered = false;
+    }
+
+    // ----- PHASE 2: pull the authoritative snapshot (background if phase 1 ran) -----
     let initial;
     try {
       initial = await window.ESHU_API.sync.pull();
     } catch (err) {
-      console.error('[ESHU remote] initial /api/sync pull failed', err);
+      console.error('[ESHU remote] /api/sync pull failed', err);
       preflightDiagnose('sync-pull-error');
       emit('eshu:sync-error', { error: err });
+      // If we already rendered from cache, keep showing it — the next
+      // navigation (or the keepalive flush) retries. Only a no-cache first
+      // login is left without data here.
       return;
     }
 
-    // Phase 1: rewrite legacy local profile ids (e.g. 'profile_default') to the
-    // server's canonical profile id BEFORE reconciliation. This eliminates the
-    // dual-id ghost-profile / membership-lookup class of bugs. Idempotent and
-    // a no-op when there's nothing to rewrite.
+    // Rewrite legacy local profile ids (e.g. 'profile_default') to the server's
+    // canonical id BEFORE reconciliation. Idempotent; no-op when nothing to do.
     let migrationOccurred = false;
     try {
-      const cacheKey = accountCacheKey(dbKey, me.user || {});
       const seenKeys = new Set();
       [cacheKey, dbKey].forEach((key) => {
         if (!key || seenKeys.has(key)) return;
@@ -777,20 +831,31 @@
       console.warn('[ESHU remote] migration step failed, continuing without remap', err);
     }
 
-    const cacheKey = accountCacheKey(dbKey, me.user || {});
     const resolved = resolveInitialSnapshot(cacheKey, dbKey, initial);
-    const driver = createRemoteDriver(resolved.snapshot, dbKey, cacheKey);
+    const needsPush = resolved.source === 'local' || resolved.source === 'merged' || migrationOccurred;
+
     try {
-      window.ESHU_DB.registerStorageDriver('remote', () => driver);
-      window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
-      try { window.ESHU_AUTH = { user: me.user || null }; } catch {}
-      if (resolved.source === 'local' || resolved.source === 'merged' || migrationOccurred) {
-        driver.__forcePushNow();
+      if (phase1Rendered && driver) {
+        // Reconcile the already-rendered page with the authoritative snapshot.
+        // Re-configuring the same driver invalidates ESHU_DB's in-memory cache
+        // so getTable re-reads; sync-success makes open pages rehydrate.
+        driver.__applySnapshot(resolved.snapshot);
+        window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
+        if (needsPush) driver.__forcePushNow();
+        emit('eshu:sync-success');
+      } else {
+        // No usable cache (first login): register now with the resolved
+        // snapshot — the original blocking behavior.
+        driver = createRemoteDriver(resolved.snapshot, dbKey, cacheKey);
+        window.ESHU_DB.registerStorageDriver('remote', () => driver);
+        window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
+        try { window.ESHU_AUTH = { user: me.user || null }; } catch {}
+        if (needsPush) driver.__forcePushNow();
+        emit('eshu:remote-activated', { user: me.user || null });
+        console.info('[ESHU remote] activated for user', (me.user && me.user.username) || '(unknown)');
       }
-      emit('eshu:remote-activated', { user: me.user || null });
-      console.info('[ESHU remote] activated for user', (me.user && me.user.username) || '(unknown)');
     } catch (err) {
-      console.error('[ESHU remote] failed to register driver', err);
+      console.error('[ESHU remote] failed to register/reconcile driver', err);
       emit('eshu:sync-error', { error: err });
     }
   }
