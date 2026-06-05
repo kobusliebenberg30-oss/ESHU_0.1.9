@@ -606,6 +606,17 @@
     if (query) {
       activeGames = activeGames.filter(g => String(g.name || '').toLowerCase().includes(query));
     }
+    activeGames.sort((a, b) => {
+      const aDefault = a.id === DEFAULT_GAME_ID;
+      const bDefault = b.id === DEFAULT_GAME_ID;
+      if (aDefault && !bDefault) return 1;
+      if (!aDefault && bDefault) return -1;
+      const aMine = a.ownerProfileId === activeProfileId || a.createdByProfileId === activeProfileId;
+      const bMine = b.ownerProfileId === activeProfileId || b.createdByProfileId === activeProfileId;
+      if (aMine && !bMine) return -1;
+      if (!aMine && bMine) return 1;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
     if (activeGames.length === 0) {
       gameDropdownList.innerHTML = '<div class="game-dropdown-empty">No games found</div>';
@@ -790,7 +801,7 @@
   }
 
   function setSubmitDisabled(disabled) {
-    const baseDisabled = !!disabled || !uploadUnlocked;
+    const baseDisabled = !!disabled || (!uploadUnlocked && !canUploadToSelectedOnboardingGame());
     if (createBtn) createBtn.disabled = baseDisabled;
   }
 

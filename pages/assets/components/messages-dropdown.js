@@ -51,6 +51,25 @@
     });
   }
 
+  function hasGameCreationUnlocked(profileId) {
+    if (!profileId || typeof ESHU_DB === 'undefined') return false;
+    const xp = getProfileXpSafe(profileId);
+    if (xp >= CREATION_UPLOAD_UNLOCK_XP) return true;
+    const defaultJoinKey = 'defaultGroupJoinXpAwarded_' + profileId;
+    if (ESHU_DB.getValue && ESHU_DB.getValue(defaultJoinKey)) return true;
+    const groups = ESHU_DB.getTable ? (ESHU_DB.getTable('groups') || []) : [];
+    const defaultGroup = groups.find(g => g && g.id === 'group_default');
+    if (defaultGroup) {
+      const members = Array.isArray(defaultGroup.memberProfileIds) ? defaultGroup.memberProfileIds.filter(Boolean) : [];
+      if (members.includes(profileId)) return true;
+    }
+    const games = ESHU_DB.getTable ? (ESHU_DB.getTable('games') || []) : [];
+    return games.some(g => {
+      if (!g || g.status === 'deleted' || g.status === 'burned') return false;
+      return g.ownerProfileId === profileId || g.createdByProfileId === profileId;
+    });
+  }
+
   function getProfileXpSafe(profileId) {
     if (typeof ESHU_DB === 'undefined' || !ESHU_DB.getProfileXp) return 0;
     return parseInt(ESHU_DB.getProfileXp(profileId) || 0, 10);
@@ -430,7 +449,7 @@
         const activeProfileId = ESHU_DB.getActiveProfileId
           ? ESHU_DB.getActiveProfileId()
           : (ESHU_DB.getValue ? ESHU_DB.getValue('currentProfileId') : null);
-        if (remoteReady && !hasJoinedAnyGroup(activeProfileId)) {
+        if (remoteReady && !hasJoinedAnyGroup(activeProfileId) && !hasGameCreationUnlocked(activeProfileId)) {
           e.preventDefault();
           e.stopPropagation();
           e.stopImmediatePropagation();

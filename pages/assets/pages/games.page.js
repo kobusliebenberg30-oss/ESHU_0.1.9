@@ -178,6 +178,37 @@
     });
   }
 
+  function isDefaultGroup(groupOrId) {
+    const id = typeof groupOrId === 'string' ? groupOrId : groupOrId?.id;
+    return id === 'group_default';
+  }
+
+  function hasGameCreationUnlocked(profileId) {
+    if (!profileId) return false;
+    const xp = parseInt(ESHU_DB.getProfileXp(profileId) || 0, 10);
+    if (xp >= CREATION_UPLOAD_UNLOCK_XP) return true;
+    const defaultJoinKey = `defaultGroupJoinXpAwarded_${profileId}`;
+    if (ESHU_DB.getValue && ESHU_DB.getValue(defaultJoinKey)) return true;
+    const groups = ESHU_DB.getTable ? (ESHU_DB.getTable('groups') || []) : [];
+    const defaultGroup = groups.find(group => group && group.id === 'group_default');
+    if (defaultGroup && isGroupMember(defaultGroup, profileId)) return true;
+    const games = ESHU_DB.getTable ? (ESHU_DB.getTable('games') || []) : [];
+    return games.some(game => {
+      if (!game || game.status === 'deleted' || game.status === 'burned') return false;
+      return game.ownerProfileId === profileId || game.createdByProfileId === profileId;
+    });
+  }
+
+  function redirectToGroupSetupForCreate(activeProfileId) {
+    if (hasGameCreationUnlocked(activeProfileId)) {
+      TOAST.info('Choose or create a group to host your next game.');
+      window.location.href = 'groups.html?action=create&return=create-game';
+      return;
+    }
+    TOAST.info('Start by joining the Default Group. That unlocks the Default Game and Create Game.');
+    window.location.href = 'groups.html?onboarding=join-default';
+  }
+
   function canUploadCreation(profileId) {
     const xp = parseInt(ESHU_DB.getProfileXp(profileId) || 0, 10);
     if (xp >= CREATION_UPLOAD_UNLOCK_XP) return true;
@@ -4346,14 +4377,9 @@
     }
   }
 
-  // Resolve the "best guess" host group for the active profile. Used to
-  // pre-select the create-game host so the user doesn't have to re-pick a
-  // group they already chose elsewhere. Priority:
-  //   1. sourceGroupContextId — set from URL params or current page context;
-  //      only honoured if the profile is still a member.
-  //   2. primaryGroupByProfileId from local DB — the sticky "home" group.
-  //   3. The profile's only joined group, if exactly one.
-  // Returns { id, name } or null.
+  // Resolve the "best guess" host group without letting the onboarding group
+  // trap later game creation. Explicit context wins, then a non-default
+  // primary group, then the only available non-default group.
   function resolveDefaultHostGroup(activeProfileId) {
     if (!activeProfileId) return null;
     const groups = (STATE.get('groups') || []).filter((g) => {
@@ -4362,16 +4388,15 @@
       return isGroupMember(g, activeProfileId);
     });
     if (!groups.length) return null;
+    const nonDefaultGroups = groups.filter((g) => !isDefaultGroup(g));
 
     const pickById = (id) => groups.find((g) => g && g.id === id) || null;
 
-    // 1. Source-group context (e.g. coming from a group's "create game" CTA).
     if (sourceGroupContextId) {
       const ctx = pickById(sourceGroupContextId);
       if (ctx) return { id: ctx.id, name: ctx.name };
     }
 
-    // 2. Primary group for this profile.
     let primaryMap = null;
     try {
       primaryMap = ESHU_DB.getValue ? ESHU_DB.getValue('primaryGroupByProfileId') : null;
@@ -4379,10 +4404,14 @@
     const primaryId = primaryMap && typeof primaryMap === 'object' ? primaryMap[activeProfileId] : null;
     if (primaryId) {
       const primary = pickById(primaryId);
-      if (primary) return { id: primary.id, name: primary.name };
+      if (primary && (!isDefaultGroup(primary) || nonDefaultGroups.length === 0)) {
+        return { id: primary.id, name: primary.name };
+      }
     }
 
-    // 3. Only joined group → no real choice to make.
+    if (nonDefaultGroups.length === 1) {
+      return { id: nonDefaultGroups[0].id, name: nonDefaultGroups[0].name };
+    }
     if (groups.length === 1) {
       return { id: groups[0].id, name: groups[0].name };
     }
@@ -4393,7 +4422,7 @@
     rehydrateFromStorage();
     const activeProfileId = getActiveProfileId();
     if (!hasJoinedAnyGroup(activeProfileId)) {
-      TOAST.error('You need to join a Group to Create a Game');
+      redirectToGroupSetupForCreate(activeProfileId);
       return;
     }
 
@@ -4445,6 +4474,11 @@
     if (createGroupSearchQuery) {
       activeGroups = activeGroups.filter(group => (group.name || '').toLowerCase().includes(createGroupSearchQuery));
     }
+    activeGroups.sort((a, b) => {
+      if (isDefaultGroup(a) && !isDefaultGroup(b)) return 1;
+      if (!isDefaultGroup(a) && isDefaultGroup(b)) return -1;
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 
     if (activeGroups.length === 0) {
       createGroupList.innerHTML = createGroupSearchQuery
@@ -4492,8 +4526,7 @@
       const activeProfileId = getActiveProfileId();
 
       if (!hasJoinedAnyGroup(activeProfileId)) {
-        TOAST.info('Start by joining the Default Group. That unlocks the Default Game and Create Game.');
-        window.location.href = 'groups.html?onboarding=join-default';
+        redirectToGroupSetupForCreate(activeProfileId);
         return;
       }
 

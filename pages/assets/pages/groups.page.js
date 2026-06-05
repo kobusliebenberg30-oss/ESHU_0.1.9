@@ -1565,23 +1565,51 @@
           createdByProfileId: activeProfileId
         };
 
+        let savedGroup = newGroup;
+        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && ESHU_API.groups && typeof ESHU_API.groups.create === 'function') {
+          try {
+            savedGroup = await ESHU_SYNC.mutate({
+              entity: 'groups',
+              call: () => ESHU_API.groups.create({
+                name: newGroup.name,
+                description: newGroup.description,
+                type: newGroup.type,
+                privacy: newGroup.privacy,
+                image: newGroup.image,
+                ...(newGroup.coverAssetId !== undefined ? { coverAssetId: newGroup.coverAssetId } : {}),
+                members: newGroup.members,
+                memberProfileIds: newGroup.memberProfileIds
+              }),
+              pick: (resp) => {
+                const serverGroup = resp && resp.group ? resp.group : resp;
+                return { ...newGroup, ...serverGroup };
+              },
+              refresh: true
+            }) || newGroup;
+          } catch (err) {
+            console.warn('[groups.save] server create failed, falling back to local:', err);
+          }
+        }
+
         const groups = STATE.get('groups') || [];
-        const nextGroups = [newGroup, ...groups];
+        const nextGroups = [savedGroup, ...groups.filter(group => group && group.id !== savedGroup.id)];
 
         ESHU_DB.setTable('groups', nextGroups);
-        selectedGroupId = newGroup.id;
-        // Auto-assign as primary only if the user has none yet.
-        const existingPrimaryId = getPrimaryGroupIdForProfile(activeProfileId);
-        const existingPrimary = existingPrimaryId
-          ? nextGroups.find(g => g && g.id === existingPrimaryId && g.status !== 'burned' && g.status !== 'deleted' && isGroupMember(g, activeProfileId))
-          : null;
-        if (!existingPrimary) setPrimaryGroup(newGroup.id);
+        selectedGroupId = savedGroup.id;
+        // Creating a group is an explicit branch away from onboarding, so make
+        // it the active host for subsequent game creation.
+        setPrimaryGroup(savedGroup.id);
         STATE.set('groups', nextGroups);
         if (scopeFilter) scopeFilter.value = 'mine';
         renderGroupsList();
-        selectGroup(newGroup.id);
+        selectGroup(savedGroup.id);
 
         TOAST.success(`Group "${name}" created!`);
+        const returnMode = new URLSearchParams(window.location.search).get('return');
+        if (returnMode === 'create-game') {
+          window.location.href = `games.html?action=create&groupId=${encodeURIComponent(savedGroup.id)}&sourceGroupId=${encodeURIComponent(savedGroup.id)}`;
+          return;
+        }
 
       } else if (currentMode === 'edit') {
         const groups = STATE.get('groups') || [];
@@ -1614,8 +1642,34 @@
           updatedByProfileId: activeProfileId
         };
 
+        let savedGroup = updatedGroup;
+        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && ESHU_API.groups && typeof ESHU_API.groups.update === 'function') {
+          try {
+            savedGroup = await ESHU_SYNC.mutate({
+              entity: 'groups',
+              call: () => ESHU_API.groups.update(updatedGroup.id, {
+                name: updatedGroup.name,
+                description: updatedGroup.description,
+                type: updatedGroup.type,
+                privacy: updatedGroup.privacy,
+                image: updatedGroup.image,
+                ...(updatedGroup.coverAssetId !== undefined ? { coverAssetId: updatedGroup.coverAssetId } : {}),
+                members: updatedGroup.members,
+                memberProfileIds: updatedGroup.memberProfileIds
+              }),
+              pick: (resp) => {
+                const serverGroup = resp && resp.group ? resp.group : resp;
+                return { ...updatedGroup, ...serverGroup };
+              },
+              refresh: true
+            }) || updatedGroup;
+          } catch (err) {
+            console.warn('[groups.save] server update failed, falling back to local:', err);
+          }
+        }
+
         const newGroups = [...groups];
-        newGroups[groupIndex] = updatedGroup;
+        newGroups[groupIndex] = savedGroup;
         ESHU_DB.setTable('groups', newGroups);
         STATE.set('groups', newGroups);
 

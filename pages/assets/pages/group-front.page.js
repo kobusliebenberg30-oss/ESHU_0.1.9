@@ -74,6 +74,10 @@
   const grfCommentsSubmit = document.getElementById('grfCommentsSubmit');
   const grfCommentsSection = document.getElementById('grfCommentsSection');
   const grfCommentsToggle = document.getElementById('grfCommentsToggle');
+  const createGameLink = document.querySelector('.create-game-btn');
+  if (createGameLink && groupId) {
+    createGameLink.href = `games.html?action=create&groupId=${encodeURIComponent(groupId)}&sourceGroupId=${encodeURIComponent(groupId)}`;
+  }
 
   function getProfiles() {
     return runtime?.getProfiles?.() || [];
