@@ -1767,13 +1767,19 @@
             ? 'Creation uploaded. Comments are now unlocked!'
             : 'Creation uploaded successfully!');
         }
-        runHype('RIGHT ON!');
-
         const resolvedSourceGroupId = sourceGroupId || targetGame.hostGroupId || '';
         const sourceGroupPart = resolvedSourceGroupId
           ? `&sourceGroupId=${encodeURIComponent(resolvedSourceGroupId)}`
           : '';
-        window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
+        const returnToGameFront = () => {
+          window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
+        };
+        await new Promise((resolve) => {
+          runHype('RIGHT ON!', () => {
+            returnToGameFront();
+            resolve();
+          }, 1500);
+        });
       }
     } catch (err) {
       console.error('Create upload failed:', err);
