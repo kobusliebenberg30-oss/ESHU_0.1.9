@@ -101,6 +101,33 @@
   border-color: var(--accent-black, #111111);
   box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
 }
+#${ROOT_ID} .eshu-auth-password-wrap {
+  position: relative;
+}
+#${ROOT_ID} .eshu-auth-password-wrap input {
+  padding-right: 62px;
+}
+#${ROOT_ID} .eshu-auth-reveal {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--text-secondary, #555555);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+#${ROOT_ID} .eshu-auth-reveal:hover {
+  color: var(--text-primary, #111111);
+}
 #${ROOT_ID} .eshu-auth-remember {
   display: flex; align-items: center; gap: 8px;
   margin: 14px 0 0;
@@ -431,6 +458,24 @@
 
   function isEmailLike(value) {
     return /@/.test(String(value || ''));
+  }
+
+  function wrapPasswordReveal(input) {
+    const button = el('button', {
+      class: 'eshu-auth-reveal',
+      type: 'button',
+      text: 'Show',
+      'aria-label': 'Show password',
+      onclick: (event) => {
+        event.preventDefault();
+        const isRevealed = input.type === 'text';
+        input.type = isRevealed ? 'password' : 'text';
+        button.textContent = isRevealed ? 'Show' : 'Hide';
+        button.setAttribute('aria-label', isRevealed ? 'Show password' : 'Hide password');
+        try { input.focus(); } catch {}
+      },
+    });
+    return el('div', { class: 'eshu-auth-password-wrap' }, [input, button]);
   }
 
   function handleConfirmationHint() {
@@ -889,7 +934,7 @@
         fields.appendChild(signinUser);
         fields.appendChild(el('label', { for: 'eshu-auth-su-pass', text: 'Password' }));
         signinPass.id = 'eshu-auth-su-pass';
-        fields.appendChild(signinPass);
+        fields.appendChild(wrapPasswordReveal(signinPass));
         const rememberLabel = el('label', {
           class: 'eshu-auth-remember', for: 'eshu-auth-su-remember'
         }, [rememberCheckbox, document.createTextNode(' Stay signed in')]);
@@ -904,7 +949,7 @@
         fields.appendChild(regUser);
         fields.appendChild(el('label', { for: 'eshu-auth-rg-pass', text: 'Password' }));
         regPass.id = 'eshu-auth-rg-pass';
-        fields.appendChild(regPass);
+        fields.appendChild(wrapPasswordReveal(regPass));
         setTimeout(() => regEmail.focus(), 30);
       }
     }
