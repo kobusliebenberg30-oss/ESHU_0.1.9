@@ -3907,41 +3907,40 @@
         createdByProfileId: activeProfileId
       };
 
-      // Server-authoritative create when remote mode is active: the response
-      // is canonical, and refresh: true reconciles any side-effects (e.g.
-      // GameMember rows for the owner). Falls back to local-only mutation
-      // through the same helper so STATE and ESHU_DB never drift.
-      let persistedGame = null;
-      if (ESHU_SYNC.isRemote() && ESHU_API.games && typeof ESHU_API.games.create === 'function') {
-        try {
-          persistedGame = await ESHU_SYNC.mutate({
-            entity: 'games',
-            call: () => ESHU_API.games.create(newGame),
-            pick: (resp) => {
-              const serverGame = resp && resp.game ? resp.game : resp;
-              // Server-issued id wins; merge in client fields the server may
-              // not echo back (e.g. local-only flags). Update id on newGame so
-              // downstream navigation uses the canonical id.
-              return { ...newGame, ...serverGame };
-            },
-            refresh: true,
-          });
-          if (persistedGame && persistedGame.id) newGame.id = persistedGame.id;
-        } catch (err) {
-          console.warn('[createGame] server unavailable, falling back to local:', err);
-        }
-      }
-      if (!persistedGame) {
-        ESHU_SYNC.applyEntityResponse('games', newGame);
-      }
-      const awardResult = await ESHU_API.xp.awardSafe('game_created', newGame.id);
-      STATE.set('xpPoints', awardResult.xpPoints);
-      if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
+      // Optimistic create. The game is written into local state + cache
+      // immediately, so it exists the instant we leave this form — no waiting
+      // on a create round-trip or a full /api/sync pull (the old path awaited
+      // BOTH: ~4-6s on a high-latency link, during which the still-live Create
+      // button could be clicked again and mint a duplicate). Persistence is
+      // handled by the normal sync path: the client id is canonical end-to-end
+      // (the bulk /api/sync upsert keys on it and reconciles owner + membership
+      // from memberProfileIds), the pagehide keepalive flush is a best-effort
+      // head start, and the destination page's background reconcile
+      // union-pushes the not-yet-synced row via __forcePushNow. The in-flight
+      // guard in saveChanges() blocks double submits.
+      ESHU_SYNC.applyEntityResponse('games', newGame);
 
-      hideLoading();
+      // XP is the only server call left in the critical path: a single fast,
+      // idempotent transaction that does NOT require the game row to exist yet
+      // (it keys on (kind, refId) only), so it's safe before the game syncs.
+      // awardSafe falls back to a local award if the server is unreachable, and
+      // local XP reconciles upward (Math.max) on the next sync — total stays
+      // correct either way.
+      try {
+        const awardResult = await ESHU_API.xp.awardSafe('game_created', newGame.id);
+        if (awardResult && typeof awardResult.xpPoints === 'number') {
+          STATE.set('xpPoints', awardResult.xpPoints);
+        }
+        if (window.XP_ANIM && awardResult && awardResult.delta > 0) {
+          XP_ANIM.show(awardResult.delta);
+        }
+      } catch (err) {
+        console.warn('[createGame] XP award failed (non-fatal):', err);
+      }
+
       TOAST.success('Game created!');
       runHype('GAME ON!');
-      
+
       isCreateMode = false;
       const createdGameFrontUrl = buildGameFrontReturnUrl(newGame.id);
       if (createdGameFrontUrl) {
@@ -3949,6 +3948,7 @@
         return;
       }
 
+      hideLoading();
       exitEditMode();
     } else {
       // UPDATE EXISTING GAME
