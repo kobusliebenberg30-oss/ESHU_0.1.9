@@ -156,14 +156,12 @@
  }
 
 /* === Unified Loading Indicator === */
-/* Full-screen layer sits on top (z-index) with a transparent backdrop so
-   stale page content never bleeds through a milky overlay — only the
-   blinking black square is visible. pointer-events on .active blocks
-   interaction with content underneath while loading. */
+/* Solid page backdrop hides half-hydrated lists while the diamond blinks.
+   Not semi-transparent — that was letting stale/wrong content bleed through. */
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: transparent !important;
+  background: var(--bg-body, #ffffff) !important;
   display: none;
   align-items: center;
   justify-content: center;
@@ -176,17 +174,24 @@
   pointer-events: auto;
 }
 
+/* Diamond tile: rotated square with a full border, like the game image tile. */
 .loading-spinner,
 .inline-loading-spinner,
 .eshu-busy-spinner {
-  width: var(--loader-square-size);
-  height: var(--loader-square-size);
+  width: 22px;
+  height: 22px;
   background: var(--loader-square-color);
-  border: 0 !important;
+  border: 2px solid var(--loader-square-color);
   border-radius: 0 !important;
   clip-path: none !important;
-  animation: eshuSquareBlink var(--loader-square-duration) linear infinite !important;
+  transform: rotate(45deg);
   transform-origin: 50% 50%;
+  animation: eshuDiamondBlink var(--loader-square-duration) linear infinite !important;
+}
+
+.loading-overlay .loading-spinner {
+  width: 30px;
+  height: 30px;
 }
 
 .eshu-busy-spinner {
@@ -227,21 +232,23 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: var(--loader-square-small);
-  height: var(--loader-square-small);
+  width: 10px;
+  height: 10px;
   background: var(--loader-square-color);
-  transform: translate(-50%, -50%);
-  animation: eshuButtonSquareBlink var(--loader-square-duration) linear infinite;
+  border: 2px solid var(--loader-square-color);
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  animation: eshuButtonDiamondBlink var(--loader-square-duration) linear infinite;
 }
 
-@keyframes eshuSquareBlink {
+@keyframes eshuDiamondBlink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
 
-@keyframes eshuButtonSquareBlink {
-  0%, 49% { opacity: 1; transform: translate(-50%, -50%); }
-  50%, 100% { opacity: 0; transform: translate(-50%, -50%); }
+@keyframes eshuButtonDiamondBlink {
+  0%, 49% { opacity: 1; transform: translate(-50%, -50%) rotate(45deg); }
+  50%, 100% { opacity: 0; transform: translate(-50%, -50%) rotate(45deg); }
 }
 
 /* === Base Reset === */

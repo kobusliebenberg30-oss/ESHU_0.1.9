@@ -168,6 +168,70 @@
   // here with the stamped query params, letting our bootstrap re-open the
   // same modal state the user left. Also provides a safe goBack() with fallback.
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // HUD prime — paint XP + profile name from localStorage the instant the nav
+  // elements are parsed (head script + MutationObserver), before first paint.
+  // Stops the visible 0 XP → N jump and "Player" → name flash on every page.
+  // ---------------------------------------------------------------------------
+  (function hudPrime() {
+    var HUD_XP_KEY = 'eshu.hud.xp';
+    var HUD_AUTH_KEY = 'eshu.hud.auth';
+
+    function readCachedXp() {
+      try {
+        var raw = localStorage.getItem(HUD_XP_KEY);
+        if (raw == null) return null;
+        var n = parseInt(raw, 10);
+        return isFinite(n) ? n : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function readCachedAuthName() {
+      try {
+        var raw = localStorage.getItem(HUD_AUTH_KEY);
+        if (!raw) return null;
+        var parsed = JSON.parse(raw);
+        return parsed && parsed.name ? parsed.name : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function paintHud() {
+      var painted = false;
+      var cachedXp = readCachedXp();
+      var xpEl = document.getElementById('xpCounter');
+      if (xpEl && cachedXp != null) {
+        xpEl.textContent = cachedXp + ' XP';
+        xpEl.dataset.hudPrimed = '1';
+        painted = true;
+      }
+      var name = readCachedAuthName();
+      if (name) {
+        var navName = document.getElementById('profileNameNav');
+        if (navName) navName.textContent = name;
+        painted = true;
+      }
+      return painted;
+    }
+
+    function watchHud() {
+      if (paintHud()) return;
+      try {
+        var obs = new MutationObserver(function () {
+          if (paintHud()) obs.disconnect();
+        });
+        obs.observe(document.documentElement, { childList: true, subtree: true });
+      } catch (e) {
+        document.addEventListener('DOMContentLoaded', paintHud, { once: true });
+      }
+    }
+
+    watchHud();
+  })();
+
   window.NAV_BACK = {
     /** Replace current history entry URL so Back from the next page lands here. */
     stamp(returnUrl) {

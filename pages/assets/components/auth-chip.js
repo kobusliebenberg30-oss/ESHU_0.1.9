@@ -195,19 +195,30 @@
 
   async function refresh() {
     if (!chipEl || !window.ESHU_API) return;
+    const cached = readCachedAuth();
     try {
       const me = await window.ESHU_API.auth.me();
       chipUser = me && me.user ? me.user : null;
       render(chipUser ? 'online' : 'offline', chipUser);
     } catch {
-      render('offline', null);
+      // Transient network errors during page load used to flash "Local only"
+      // even for signed-in users. Keep the cached identity until we know better.
+      if (cached) {
+        render('online', { displayName: cached.name, username: cached.name });
+      } else {
+        render('offline', null);
+      }
     }
   }
 
   function ensureChip(parent) {
     injectStyles();
     if (!chipEl) {
-      chipEl = el('div', { class: CHIP_CLASS, 'data-state': 'unknown' });
+      const cached = readCachedAuth();
+      chipEl = el('div', {
+        class: CHIP_CLASS,
+        'data-state': cached ? 'online' : 'unknown',
+      });
     }
     if (parent) {
       chipEl.dataset.mountedInline = 'true';
@@ -263,7 +274,11 @@
     if (slot) {
       injectStyles();
       if (!chipEl) {
-        chipEl = el('div', { class: CHIP_CLASS, 'data-state': 'unknown' });
+        const cached = readCachedAuth();
+        chipEl = el('div', {
+          class: CHIP_CLASS,
+          'data-state': cached ? 'online' : 'unknown',
+        });
       }
       chipEl.dataset.mountedInline = 'true';
       mountInto(slot);

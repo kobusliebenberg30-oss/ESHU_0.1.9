@@ -217,17 +217,29 @@
     try { localStorage.setItem(HUD_XP_KEY, String(n)); } catch {}
   }
 
+  function applyHudXp(n, options) {
+    const el = getXpCounterEl();
+    if (!el || !Number.isFinite(n)) return n;
+    const opts = options || {};
+    const prev = readCachedXp();
+    const next = opts.force
+      ? n
+      : (prev != null ? Math.max(prev, n) : n);
+    el.textContent = next + ' XP';
+    el.dataset.hudPrimed = '1';
+    cacheXp(next);
+    return next;
+  }
+
   function primeXpFromCache() {
     const el = getXpCounterEl();
     if (!el) return;
     const cached = readCachedXp();
     if (cached == null) return;
-    // Only override the placeholder so we never stomp a value a fast page
-    // boot already painted with its own formatting.
-    const current = parseInt(el.textContent || '', 10);
-    if (!Number.isFinite(current) || current === 0) {
-      el.textContent = cached + ' XP';
-    }
+    // Always restore the cached value — theme-init may have primed already,
+    // but page boot can briefly write a lower DB snapshot (optimistic XP
+    // awards, sync lag). The HUD stays monotonic until logout.
+    applyHudXp(cached, { force: true });
   }
 
   function observeXpCounter() {
@@ -235,10 +247,15 @@
     if (!el || typeof MutationObserver === 'undefined') return;
     const recache = () => {
       const n = parseInt(el.textContent || '', 10);
-      if (Number.isFinite(n)) {
-        const prev = readCachedXp();
-        if (prev !== n) cacheXp(n);
+      if (!Number.isFinite(n)) return;
+      const prev = readCachedXp();
+      // Revert visible dips from stale DB reads during hydration — the HUD
+      // stays monotonic until logout clears the cache key.
+      if (prev != null && n < prev) {
+        el.textContent = prev + ' XP';
+        return;
       }
+      if (prev !== n) cacheXp(n);
     };
     try {
       const obs = new MutationObserver(recache);
@@ -265,6 +282,7 @@
     getPlayerHeading,
     getActiveProfile,
     getProfileXpValue,
+    applyHudXp,
     completeNavigationLoading,
   };
 

@@ -55,7 +55,7 @@
   const runtime = window.ESHU_RUNTIME;
   let uploadUnlocked = false;
 
-  function runHype(message, onComplete, duration = 900) {
+  function runHype(message, onComplete, duration = 1500) {
     if (window.TOAST && typeof TOAST.hype === 'function') {
       TOAST.hype(message, { duration, onComplete });
       return;
