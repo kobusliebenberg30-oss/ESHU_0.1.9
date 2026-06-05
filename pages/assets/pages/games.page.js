@@ -2692,12 +2692,13 @@
     const groups = STATE.get('groups') || [];
     const activeProfileId = getActiveProfileId();
     if (!canAccessGame(game, activeProfileId, groups)) {
+      endFrontTransitionLoader();
       TOAST.error('You do not have access to this private game');
       return;
     }
 
     const modal = document.getElementById('gameFrontModal');
-    if (!modal) return;
+    if (!modal) { endFrontTransitionLoader(); return; }
 
     // Store current game ID for modal
     modal.dataset.gameId = gameId;
@@ -2757,6 +2758,9 @@
     // Show modal
     modal.classList.add('active');
     startGameFrontChamferTicker();
+    // Modal is now covering the page — safe to drop the transition loader so
+    // the front view is revealed instead of the YOUR GAMES list.
+    endFrontTransitionLoader();
   }
 
   function closeGameFrontModal() {
@@ -4539,6 +4543,50 @@
     });
   }
 
+  // ===== Front/create transition loader =====
+  // When we land on games.html targeting a specific game's Front page (or the
+  // Create Game flow), the YOUR GAMES list would otherwise paint first and
+  // then get covered by the modal — the visible "list flashes, then flips to
+  // the front page" flicker, both during onboarding (join Default Group ->
+  // Default Game) and right after creating a game (programmatic redirect). We
+  // hold a dedicated loading-overlay key from page boot until the modal
+  // actually opens, so the list never shows through. The overlay's own maxMs
+  // is a safety net in case the target never opens (e.g. game not found).
+  const FRONT_TRANSITION_KEY = 'games-front-transition';
+  let frontTransitionActive = false;
+
+  function frontTransitionTarget() {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const view = p.get('view');
+      const action = p.get('action');
+      if ((view === 'front' || action === 'view-front') && p.get('gameId')) return 'front';
+      if (action === 'create') return 'create';
+    } catch {}
+    return null;
+  }
+
+  function beginFrontTransitionLoader() {
+    if (frontTransitionActive) return;
+    if (!frontTransitionTarget()) return;
+    frontTransitionActive = true;
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.show === 'function') {
+        window.ESHU_LOADING.show({ key: FRONT_TRANSITION_KEY, maxMs: 12000 });
+      }
+    } catch {}
+  }
+
+  function endFrontTransitionLoader() {
+    if (!frontTransitionActive) return;
+    frontTransitionActive = false;
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.hide === 'function') {
+        window.ESHU_LOADING.hide({ key: FRONT_TRANSITION_KEY, force: true });
+      }
+    } catch {}
+  }
+
   // ===== Check URL for auto-open actions =====
   function checkUrlActions() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -4573,6 +4621,7 @@
         // Auto-open the Create Game modal
         openCreateModal();
       }
+      endFrontTransitionLoader();
 
       // Clean up URL without reloading
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -4602,7 +4651,7 @@
 
   // ===== Start =====
   function retryOpenGameFrontFromUrl(gameId, attemptsLeft = 12) {
-    if (!gameId) return;
+    if (!gameId) { endFrontTransitionLoader(); return; }
     try { rehydrateFromStorage(); } catch {}
     const game = getGameById(gameId);
     if (game) {
@@ -4610,7 +4659,11 @@
       window.history.replaceState({}, document.title, window.location.pathname);
       return;
     }
-    if (attemptsLeft <= 0) return;
+    if (attemptsLeft <= 0) {
+      // Game never materialized — reveal the list instead of an endless loader.
+      endFrontTransitionLoader();
+      return;
+    }
     setTimeout(() => retryOpenGameFrontFromUrl(gameId, attemptsLeft - 1), 250);
   }
 
@@ -4656,6 +4709,9 @@
   }
 
   function boot() {
+    // Cover the page before the list paints when we're heading straight to a
+    // game's Front page / Create flow, so the list never flashes underneath.
+    try { beginFrontTransitionLoader(); } catch {}
     try { init(); } catch(e) { console.error('games init error:', e); }
     try { initCreateModal(); } catch(e) { console.error('initCreateModal error:', e); }
     try { initPlayModal(); } catch(e) { console.error('initPlayModal error:', e); }
