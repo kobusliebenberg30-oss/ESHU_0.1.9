@@ -136,6 +136,27 @@
   display: none;
 }
 
+/* Centered diamond loader while a side's creation image is resolving */
+.image-box-loader {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.image-box-loader.active {
+  display: flex;
+}
+
+.image-box-loader .loading-spinner {
+  width: 30px;
+  height: 30px;
+}
+
 /* Liked indicator (top-right, next to fullscreen) */
 .eshu-liked-indicator {
   position: absolute;

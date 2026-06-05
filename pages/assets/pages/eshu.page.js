@@ -338,6 +338,77 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     `;
   }
 
+  const sideLoaderShownAt = { left: 0, right: 0 };
+  const SIDE_LOADER_MIN_MS = 160;
+
+  function getImageBoxLoader(side) {
+    return document.getElementById(`${side}ImageBoxLoader`);
+  }
+
+  function setSideImageLoading(side, loading) {
+    const loader = getImageBoxLoader(side);
+    if (!loader) return;
+    if (loading) {
+      sideLoaderShownAt[side] = Date.now();
+      loader.classList.add('active');
+      loader.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    const elapsed = Date.now() - (sideLoaderShownAt[side] || 0);
+    const hide = () => {
+      loader.classList.remove('active');
+      loader.setAttribute('aria-hidden', 'true');
+    };
+    if (elapsed < SIDE_LOADER_MIN_MS) {
+      setTimeout(hide, SIDE_LOADER_MIN_MS - elapsed);
+      return;
+    }
+    requestAnimationFrame(hide);
+  }
+
+  function bindCreationImageLoad(side, imageEl, expectedCreationId, onReady, onFail) {
+    if (!imageEl) return;
+    const cleanup = () => {
+      imageEl.onload = null;
+      imageEl.onerror = null;
+    };
+    imageEl.onload = () => {
+      if (imageEl.dataset.creationId !== expectedCreationId) return;
+      cleanup();
+      setSideImageLoading(side, false);
+      if (typeof onReady === 'function') onReady();
+    };
+    imageEl.onerror = () => {
+      if (imageEl.dataset.creationId !== expectedCreationId) return;
+      cleanup();
+      setSideImageLoading(side, false);
+      if (typeof onFail === 'function') onFail();
+    };
+  }
+
+  function showCreationImage(side, imageEl, textEl, src) {
+    if (!imageEl) return;
+    imageEl.src = src;
+    imageEl.style.display = 'block';
+    if (textEl) {
+      textEl.classList.remove('fallback-active');
+      textEl.style.display = 'none';
+    }
+    if (window.ESHU_IMAGE_VIEWER) window.ESHU_IMAGE_VIEWER.attach(imageEl);
+  }
+
+  function showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame) {
+    if (imageEl) {
+      imageEl.removeAttribute('src');
+      imageEl.style.display = 'none';
+    }
+    if (textEl) {
+      textEl.innerHTML = buildCreationFallbackMarkup(creation, gameName, hostGame);
+      textEl.classList.add('fallback-active');
+      textEl.style.display = 'block';
+    }
+  }
+
   function updateCreationVisual(side, creation) {
     const textEl = document.getElementById(`${side}Creation`);
     const imageEl = document.getElementById(`${side}CreationImage`);
@@ -346,12 +417,15 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     const gameEl = document.getElementById(`${side}OverlayGame`);
 
     if (!creation) {
+      setSideImageLoading(side, false);
       if (textEl) {
         textEl.textContent = '';
         textEl.classList.remove('fallback-active');
         textEl.style.display = 'none';
       }
       if (imageEl) {
+        imageEl.onload = null;
+        imageEl.onerror = null;
         delete imageEl.dataset.creationId;
         imageEl.removeAttribute('src');
         imageEl.style.display = 'none';
@@ -392,52 +466,84 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     if (!imageEl) return;
 
     const hasVisual = !!(creation.image || creation.imageAssetId || creation.imageRef?.id);
-    imageEl.dataset.creationId = creation.id || '';
+    const expectedCreationId = creation.id || '';
+    imageEl.dataset.creationId = expectedCreationId;
     if (!hasVisual) {
-      imageEl.removeAttribute('src');
-      imageEl.style.display = 'none';
-      if (textEl) {
-        textEl.innerHTML = buildCreationFallbackMarkup(creation, gameName, hostGame);
-        textEl.classList.add('fallback-active');
-        textEl.style.display = 'block';
-      }
+      setSideImageLoading(side, false);
+      showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame);
       return;
     }
 
-    imageEl.src = creation.image || '';
-    imageEl.style.display = creation.image ? 'block' : 'none';
+    imageEl.onload = null;
+    imageEl.onerror = null;
+    imageEl.removeAttribute('src');
+    imageEl.style.display = 'none';
+    setSideImageLoading(side, true);
     if (textEl) {
       textEl.classList.remove('fallback-active');
       textEl.style.display = 'none';
     }
-    if (window.ESHU_IMAGE_VIEWER) window.ESHU_IMAGE_VIEWER.attach(imageEl);
 
-    if (window.ESHU_MEDIA?.resolveCreationImageSrc) {
-      const expectedCreationId = creation.id || '';
-      window.ESHU_MEDIA.resolveCreationImageSrc(creation)
-        .then(src => {
-          if (imageEl.dataset.creationId !== expectedCreationId) return;
-          if (!src) return;
-          imageEl.src = src;
-          imageEl.style.display = 'block';
-          if (textEl) {
-            textEl.classList.remove('fallback-active');
-            textEl.style.display = 'none';
+    const onImageReady = (src) => {
+      if (imageEl.dataset.creationId !== expectedCreationId || !src) return;
+      bindCreationImageLoad(
+        side,
+        imageEl,
+        expectedCreationId,
+        () => showCreationImage(side, imageEl, textEl, src),
+        () => {
+          if (creation.image) {
+            showCreationImage(side, imageEl, textEl, creation.image);
+          } else {
+            showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame);
           }
-          if (window.ESHU_IMAGE_VIEWER) window.ESHU_IMAGE_VIEWER.attach(imageEl);
+        },
+      );
+      imageEl.src = src;
+      if (imageEl.complete && imageEl.naturalWidth > 0) {
+        imageEl.onload = null;
+        imageEl.onerror = null;
+        setSideImageLoading(side, false);
+        showCreationImage(side, imageEl, textEl, src);
+      }
+    };
+
+    const resolveAndShow = () => {
+      if (!window.ESHU_MEDIA?.resolveCreationImageSrc) {
+        if (creation.image) {
+          onImageReady(creation.image);
+        } else {
+          setSideImageLoading(side, false);
+          showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame);
+        }
+        return;
+      }
+      window.ESHU_MEDIA.resolveCreationImageSrc(creation)
+        .then((src) => {
+          if (imageEl.dataset.creationId !== expectedCreationId) return;
+          if (src) {
+            onImageReady(src);
+            return;
+          }
+          if (creation.image) {
+            onImageReady(creation.image);
+          } else {
+            setSideImageLoading(side, false);
+            showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame);
+          }
         })
         .catch(() => {
           if (imageEl.dataset.creationId !== expectedCreationId) return;
-          if (!creation.image) {
-            imageEl.style.display = 'none';
-            if (textEl) {
-              textEl.innerHTML = buildCreationFallbackMarkup(creation, gameName, hostGame);
-              textEl.classList.add('fallback-active');
-              textEl.style.display = 'block';
-            }
+          if (creation.image) {
+            onImageReady(creation.image);
+          } else {
+            setSideImageLoading(side, false);
+            showCreationFallback(side, imageEl, textEl, creation, gameName, hostGame);
           }
         });
-    }
+    };
+
+    resolveAndShow();
   }
 
   function openCreationDetailsFromSide(side) {
@@ -919,6 +1025,10 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     rightCreationId = right.id;
     leftCreationRef = left;
     rightCreationRef = right;
+    const leftHasVisual = !!(left.image || left.imageAssetId || left.imageRef?.id);
+    const rightHasVisual = !!(right.image || right.imageAssetId || right.imageRef?.id);
+    if (leftHasVisual) setSideImageLoading('left', true);
+    if (rightHasVisual) setSideImageLoading('right', true);
     updateCreationVisual('left', left);
     updateCreationVisual('right', right);
     document.getElementById('leftDrawIframe').src = `color-tone.html?creationId=${left.id}`;
