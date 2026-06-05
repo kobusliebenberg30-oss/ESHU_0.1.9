@@ -129,6 +129,51 @@
     return merged;
   }
 
+  // Entity tables whose locally-created rows must NEVER be silently dropped by
+  // a server pull. The server never hard-deletes (soft-delete via status), so
+  // any row present locally but ABSENT from the server pull is one that simply
+  // hasn't synced yet (created offline, or its push hasn't landed). Adopting
+  // the server snapshot wholesale would erase it — the "it disappears when I'm
+  // signed in" divergence from offline. We union those rows back in and mark
+  // the result dirty so they get pushed on activation.
+  const UNION_TABLES = ['groups', 'games', 'creations'];
+
+  function unionLocalRows(serverSnapshot, localSnapshot) {
+    if (!serverSnapshot || typeof serverSnapshot !== 'object') return { snapshot: serverSnapshot, added: false };
+    if (!localSnapshot || typeof localSnapshot !== 'object') return { snapshot: serverSnapshot, added: false };
+    const sTables = serverSnapshot.tables && typeof serverSnapshot.tables === 'object' ? serverSnapshot.tables : {};
+    const lTables = localSnapshot.tables && typeof localSnapshot.tables === 'object' ? localSnapshot.tables : {};
+    let next = serverSnapshot;
+    let added = false;
+    for (const table of UNION_TABLES) {
+      const localRows = Array.isArray(lTables[table]) ? lTables[table] : [];
+      if (!localRows.length) continue;
+      const serverRows = Array.isArray(sTables[table]) ? sTables[table] : [];
+      const serverIds = new Set(serverRows.map((r) => r && r.id).filter(Boolean));
+      const missing = localRows.filter((r) => r && r.id && !serverIds.has(r.id));
+      if (!missing.length) continue;
+      if (next === serverSnapshot) {
+        try {
+          next = JSON.parse(JSON.stringify(serverSnapshot));
+        } catch {
+          return { snapshot: serverSnapshot, added: false };
+        }
+        if (!next.tables || typeof next.tables !== 'object') next.tables = {};
+      }
+      const baseRows = Array.isArray(next.tables[table]) ? next.tables[table] : [];
+      next.tables[table] = baseRows.concat(missing);
+      added = true;
+    }
+    return { snapshot: next, added };
+  }
+
+  function adoptServer(pulled, local) {
+    const flagged = mergeProfileScopedFlags(pulled, local);
+    const unioned = unionLocalRows(flagged, local);
+    const changed = flagged !== pulled || unioned.added;
+    return { snapshot: unioned.snapshot, source: changed ? 'merged' : 'server' };
+  }
+
   function resolveInitialSnapshot(cacheKey, dbKey, pulledSnapshot) {
     const pulled = pulledSnapshot && typeof pulledSnapshot === 'object' ? pulledSnapshot : {};
     let local = null;
@@ -152,14 +197,12 @@
     const pulledMs = toUpdatedAtMs(pulled);
     const localMs = toUpdatedAtMs(local);
     if (hasServerProgress(pulled)) {
-      const merged = mergeProfileScopedFlags(pulled, local);
-      return { snapshot: merged, source: merged !== pulled ? 'merged' : 'server' };
+      return adoptServer(pulled, local);
     }
     if (local && localMs > pulledMs) {
       return { snapshot: local, source: 'local' };
     }
-    const merged = mergeProfileScopedFlags(pulled, local);
-    return { snapshot: merged, source: merged !== pulled ? 'merged' : 'server' };
+    return adoptServer(pulled, local);
   }
 
   function hasServerProgress(snapshot) {
@@ -183,6 +226,10 @@
     let pushTimer = null;
     let inflight = null;
     let pendingAfterInflight = false;
+    // True whenever `cache` holds changes not yet confirmed-saved on the
+    // server. Drives the navigation flush below so a quick page change can't
+    // outrun the debounced push and lose the write.
+    let dirty = false;
 
     function writeLocalMirror() {
       try {
@@ -209,6 +256,9 @@
       }
       inflight = window.ESHU_API.sync.push(body)
         .then(() => {
+          // Only clear the dirty flag if nothing was written while this push
+          // was in flight; otherwise newer edits still need to go up.
+          if (cache === snapshot) dirty = false;
           emit('eshu:sync-success');
         })
         .catch((err) => {
@@ -225,12 +275,41 @@
     }
 
     function schedulePush() {
+      dirty = true;
       if (pushTimer) clearTimeout(pushTimer);
       pushTimer = setTimeout(() => {
         pushTimer = null;
         pushNow();
       }, PUSH_DEBOUNCE_MS);
     }
+
+    // Last-chance synchronous save when the page is being hidden/unloaded
+    // (link click, back/forward, tab close, mobile background). A normal
+    // fetch would be aborted as the document tears down; `keepalive` lets the
+    // browser finish the request after navigation. This is what makes the
+    // signed-in experience match offline: changes are durable across page
+    // transitions instead of depending on the 600ms debounce winning the
+    // race. Body cap for keepalive is ~64KB; if exceeded we still attempt it
+    // and the regular debounced push remains the fallback on the next load.
+    function flushOnExit() {
+      if (!dirty) return;
+      try {
+        const base = (window.ESHU_API && window.ESHU_API.base) || '/api';
+        fetch(base + '/sync', {
+          method: 'PUT',
+          credentials: 'include',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: cache,
+        }).then(() => { dirty = false; }).catch(() => {});
+      } catch {}
+    }
+    try {
+      window.addEventListener('pagehide', flushOnExit);
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushOnExit();
+      });
+    } catch {}
 
     return {
       name: DRIVER_NAME,
@@ -279,8 +358,11 @@
         return () => {};
       },
 
-      // Test/diagnostic hook
-      __forcePushNow: pushNow,
+      // Test/diagnostic hook. Marks dirty first so that if this push is still
+      // in flight when the page navigates away, flushOnExit re-delivers via
+      // keepalive (the in-flight fetch would otherwise be aborted).
+      __forcePushNow: () => { dirty = true; return pushNow(); },
+      __flushOnExit: flushOnExit,
       __getCache: () => cache
     };
   }
