@@ -453,7 +453,7 @@
 
     if (!creationImage) return;
 
-    const hasVisual = !!(selected.image || selected.imageRef?.id);
+    const hasVisual = !!(selected.image || selected.imageAssetId || selected.imageRef?.id);
     if (!hasVisual) {
       creationImage.removeAttribute('src');
       creationImage.style.display = 'none';
@@ -465,8 +465,13 @@
       return;
     }
 
-    creationImage.src = selected.image || '';
-    creationImage.style.display = selected.image ? 'block' : 'none';
+    const initialImageSrc = selected.image || (
+      selected.imageAssetId && window.ESHU_API?.assets?.rawUrl
+        ? window.ESHU_API.assets.rawUrl(selected.imageAssetId)
+        : ''
+    );
+    creationImage.src = initialImageSrc;
+    creationImage.style.display = initialImageSrc ? 'block' : 'none';
     if (creationDisplay) {
       creationDisplay.classList.remove('fallback-active');
       creationDisplay.style.display = 'none';
@@ -519,7 +524,32 @@
 
   function getCreationCommentsStorageKey(creationId) { return `comments_${creationId}`; }
 
-  function loadCreation() {
+  function upsertCreationToLocal(creation) {
+    if (!creation || !creation.id || typeof ESHU_DB === 'undefined') return;
+    const current = ESHU_DB.getTable('creations') || [];
+    const idx = current.findIndex(c => c && c.id === creation.id);
+    const next = current.slice();
+    if (idx >= 0) next[idx] = { ...next[idx], ...creation };
+    else next.unshift(creation);
+    ESHU_DB.setTable('creations', next);
+  }
+
+  async function fetchCreationIfMissing(id) {
+    if (!id || !window.ESHU_API?.creations?.get) return null;
+    try {
+      const resp = await window.ESHU_API.creations.get(id);
+      const creation = resp && resp.creation ? resp.creation : resp;
+      if (creation && creation.id) {
+        upsertCreationToLocal(creation);
+        return creation;
+      }
+    } catch (err) {
+      console.warn('[creation-focus] could not fetch creation:', err);
+    }
+    return null;
+  }
+
+  async function loadCreation() {
     const urlParams = new URLSearchParams(window.location.search);
     const id = urlParams.get('id');
     if (!id) {
@@ -527,10 +557,11 @@
       return;
     }
     activeCreationId = id;
-    const selected = ESHU_DB.getEntityById('creations', id);
+    let selected = ESHU_DB.getEntityById('creations', id);
     if (!selected) {
       console.warn('Creation not found in local DB:', id);
-      return;
+      selected = await fetchCreationIfMissing(id);
+      if (!selected) return;
     }
     renderCreationDisplay();
     if (activeCreationId && !commentsInitialized) {
@@ -563,6 +594,29 @@
 
   function loadCreationComments(creationId) {
     if (!creationId) return [];
+    const target = { kind: 'creation', id: creationId };
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.load === 'function') {
+      const cached = window.ESHU_COMMENTS.load(target);
+      if (Array.isArray(cached)) {
+        return cached
+          .map((c, index) => ({
+            id: c?.id || `creation_comment_${creationId}_${index}_${Date.now()}`,
+            text: c?.text || '',
+            authorProfileId: c?.authorProfileId || c?.ownerProfileId || c?.createdByProfileId || c?.authorId || null,
+            authorName: c?.authorName || c?.author || 'Player',
+            timestamp: c?.timestamp || c?.createdAt || Date.now(),
+            status: c?.status || 'active',
+            likedBy: Array.isArray(c?.likedBy) ? c.likedBy : [],
+            followedBy: Array.isArray(c?.followedBy) ? c.followedBy : [],
+            editedAt: c?.editedAt || null,
+            animation: extractCommentAnimation(c),
+            animationImageUrl: c?.animationImageUrl || c?.imageUrl || ''
+          }))
+          .filter(c => c && ((typeof c.text === 'string' && c.text.trim()) || hasCommentAnimation(c)))
+          .filter(c => c.status !== 'deleted' && c.status !== 'burned')
+          .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      }
+    }
     const key = getCreationCommentsStorageKey(creationId);
     try {
       const parsed = JSON.parse(localStorage.getItem(key) || '[]');
@@ -659,6 +713,7 @@
     const section = document.getElementById(sectionId);
     const count = countId ? document.getElementById(countId) : null;
     if (!form || !input || !section || !creationId) return;
+    const target = { kind: 'creation', id: creationId };
 
     function render() {
       const comments = loadCreationComments(creationId);
@@ -920,8 +975,15 @@
         pendingAnimationImageUrl = '';
       }
 
-      const existing = loadCreationComments(creationId);
-      saveCreationComments(creationId, [nextComment, ...existing]);
+      if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.post === 'function') {
+        await window.ESHU_COMMENTS.post(target, {
+          text: nextComment.text,
+          animation: nextComment.animation || undefined
+        });
+      } else {
+        const existing = loadCreationComments(creationId);
+        saveCreationComments(creationId, [nextComment, ...existing]);
+      }
       input.value = '';
       // Clear the drawing attached indicator
       input.placeholder = 'Add a comment...';
@@ -945,6 +1007,18 @@
 
     // Expose render so the animation-save callback can refresh the list
     commentsRerender = render;
+
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.hydrate === 'function') {
+      window.ESHU_COMMENTS.hydrate(target).then(render).catch((err) => {
+        console.warn('[creation-focus] comments hydrate failed:', err);
+      });
+    }
+
+    window.addEventListener('eshu:comments-updated', (event) => {
+      const detail = event && event.detail;
+      if (!detail || !detail.target) return;
+      if (detail.target.kind === 'creation' && detail.target.id === creationId) render();
+    });
 
     // Animation play badge handler (delegated)
     section.addEventListener('click', async (e) => {
@@ -1073,12 +1147,20 @@
     });
   }
 
-  window.onload = loadCreation;
+  window.onload = () => { loadCreation().catch(err => console.warn('[creation-focus] load failed:', err)); };
+  window.addEventListener('eshu:remote-activated', () => {
+    loadCreation().catch(err => console.warn('[creation-focus] reload after remote activation failed:', err));
+  });
+  window.addEventListener('eshu:sync-success', () => {
+    loadCreation().catch(err => console.warn('[creation-focus] reload after sync failed:', err));
+  });
 
   initNavProfile();
 
   ESHU_DB.subscribe(() => {
     initNavProfile();
-    renderCreationDisplay();
+    if (activeCreationId && ESHU_DB.getEntityById('creations', activeCreationId)) {
+      renderCreationDisplay();
+    }
   });
 })();

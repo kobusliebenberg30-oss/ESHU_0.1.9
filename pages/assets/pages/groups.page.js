@@ -585,6 +585,11 @@
     if (wasMember) {
       TOAST.info('Already a member of this group');
     } else {
+      if (groupId === DEFAULT_GROUP_ID) {
+        TOAST.success('Default Group joined. Default Game and Create Game are unlocked.');
+        window.location.href = `games.html?view=front&gameId=${encodeURIComponent(DEFAULT_GAME_ID)}&sourceGroupId=${encodeURIComponent(DEFAULT_GROUP_ID)}&onboarding=joined`;
+        return;
+      }
       TOAST.success('Joined group. Game creation is now unlocked.');
     }
     } finally {
@@ -794,6 +799,21 @@
   function checkUrlActions() {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
+    const onboarding = params.get('onboarding');
+
+    if (onboarding === 'join-default') {
+      selectGroup(DEFAULT_GROUP_ID);
+      setTimeout(() => {
+        const card = groupsList ? groupsList.querySelector(`.u-card[data-id="${DEFAULT_GROUP_ID}"]`) : null;
+        if (card) card.classList.add('expanded');
+      }, 0);
+      if (typeof TOAST !== 'undefined') {
+        TOAST.info('Start here: join the Default Group to unlock the Default Game and Create Game.');
+      }
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
     if (action === 'create') {
       openCreateMode();
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -1004,7 +1024,9 @@
       // Resolve creator name
       const ownerProfile = ownerId ? profiles.find(p => p.id === ownerId) : null;
       const creatorName = ownerProfile?.name || group.creatorName || 'Unknown';
-      const cardSubtitle = isOnboardingJoin ? 'Join this Group to unlock Create Game' : `Group · by ${creatorName}`;
+      const cardSubtitle = isOnboardingJoin
+        ? 'Step 1: join to unlock the Default Game and Create Game'
+        : `Group · by ${creatorName}`;
       const grpLiked = (group.likedBy || []).includes(activeProfileId);
       const grpFollowed = (group.followedBy || []).includes(activeProfileId);
 
@@ -1026,7 +1048,7 @@
       if (showInvite) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); inviteToGroup('${group.id}')">Invite</button>`;
       if (canLeaveCard) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); leaveGroup('${group.id}')">Leave</button>`;
       if (showBootBurn) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); bootGroup('${group.id}')">Restore</button><button class="u-card-btn danger" onclick="event.stopPropagation(); burnGroup('${group.id}')">Delete</button>`;
-      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">${isOnboardingJoin ? 'Join Group & Unlock Games' : 'Join'}</button>`;
+      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">${isOnboardingJoin ? 'Join Default Group' : 'Join'}</button>`;
 
       return `
         <div class="u-card ${isSelected ? 'selected' : ''} ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}" data-id="${group.id}">
@@ -1191,7 +1213,7 @@
       }
       if (previewJoinBtn) {
         previewJoinBtn.style.display = canJoin ? 'inline-flex' : 'none';
-        previewJoinBtn.textContent = shouldShowOnboardingJoinGroup(group, activeProfileId) ? 'Join Group & Unlock Games' : 'Join';
+        previewJoinBtn.textContent = shouldShowOnboardingJoinGroup(group, activeProfileId) ? 'Join Default Group' : 'Join';
       }
       if (previewInviteBtn) {
         previewInviteBtn.style.display = canInvite ? 'inline-flex' : 'none';

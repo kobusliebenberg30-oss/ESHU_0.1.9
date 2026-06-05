@@ -359,13 +359,15 @@
     return result && result.client ? result.client : null;
   }
 
-  function shouldUseSupabaseAuth() {
+  async function shouldUseSupabaseAuth() {
     if (window.ESHU_USE_SUPABASE_AUTH === true) return true;
     try {
-      return localStorage.getItem('eshu_use_supabase_auth') === 'true';
+      if (localStorage.getItem('eshu_use_supabase_auth') === 'true') return true;
     } catch {
-      return false;
     }
+    if (state.supabaseEnabled) return true;
+    const supabase = await getSupabaseClient();
+    return !!supabase;
   }
 
   function showStatus(msg) {
@@ -399,10 +401,18 @@
     await window.ESHU_API.auth.supabaseSession({ accessToken, rememberMe });
   }
 
+  function buildEmailConfirmationRedirect() {
+    const productionOrigin = 'https://eshu-0-1-9.vercel.app';
+    const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
+    const origin = localHosts.has(location.hostname) ? productionOrigin : location.origin;
+    const path = location.pathname && location.pathname !== '/' ? location.pathname : '/play.html';
+    return origin + path + '?auth=confirmed';
+  }
+
   async function signUpWithSupabase(email, password, username) {
     const supabase = await getSupabaseClient();
     if (!supabase) throw new Error('Supabase auth is not available.');
-    const redirectTo = location.origin + location.pathname + '?auth=confirmed';
+    const redirectTo = buildEmailConfirmationRedirect();
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -412,6 +422,10 @@
       }
     });
     if (error) throw error;
+    if (data && data.session && data.session.access_token) {
+      try { await supabase.auth.signOut(); } catch {}
+      throw new Error('Supabase email confirmations are currently disabled, so no confirmation email was sent. Enable email confirmation in Supabase Auth settings and try creating the account again.');
+    }
     return data;
   }
 
@@ -988,7 +1002,7 @@
     state.submitBtn.textContent = state.tab === 'signin' ? 'Signing in\u2026' : 'Creating\u2026';
 
     try {
-      const useSupabaseAuth = shouldUseSupabaseAuth();
+      const useSupabaseAuth = await shouldUseSupabaseAuth();
       if (state.tab === 'signin') {
         const emailOrUsername = state.inputs.signinUser.value.trim();
         const password = state.inputs.signinPass.value;

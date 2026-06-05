@@ -2,11 +2,10 @@
  * Account tools — UI surface for the F4/F5 endpoints:
  *   - POST /api/auth/change-password
  *   - DELETE /api/auth/account
- *   - POST  /api/assets/gc
  *
  * This component contributes a third section ("Account") to the existing
  * settings dropdown when the user is signed into the remote backend, and
- * provides three small confirmation modals styled to match the brutalist
+ * provides account confirmation modals styled to match the brutalist
  * palette of eshu-styles.css (no radius, no shadows, monochrome + red).
  *
  * Wiring:
@@ -272,15 +271,6 @@
       changeBtn,
     ]));
 
-    const gcBtn = el('button', {
-      class: 'eshu-account-btn', type: 'button', text: 'Reclaim',
-      onclick: (e) => { e.stopPropagation(); runAssetGc(gcBtn); }
-    });
-    section.appendChild(el('div', { class: 'eshu-account-row' }, [
-      el('span', { class: 'eshu-account-label', text: 'Unused uploads' }),
-      gcBtn,
-    ]));
-
     const deleteBtn = el('button', {
       class: 'eshu-account-btn danger', type: 'button', text: 'Delete\u2026',
       onclick: (e) => { e.stopPropagation(); openDeleteAccountModal(); }
@@ -305,33 +295,6 @@
         try { window.dispatchEvent(new CustomEvent('eshu:auth-logout')); } catch {}
         try { window.location.replace('play.html'); } catch { window.location.href = 'play.html'; }
       });
-  }
-
-  // ---------- Asset GC ----------
-
-  async function runAssetGc(btn) {
-    if (!window.ESHU_API) { toast('API not loaded.', 'error'); return; }
-    if (btn) { btn.disabled = true; btn.textContent = 'Working\u2026'; }
-    try {
-      const res = await window.ESHU_API.assets.gc();
-      const n = (res && res.rowsDeleted) || 0;
-      const bytes = (res && res.bytesReclaimed) || 0;
-      if (n === 0) {
-        toast('No unused uploads to reclaim.', 'info');
-      } else {
-        toast(`Reclaimed ${n} upload${n === 1 ? '' : 's'} (${formatBytes(bytes)}).`, 'success');
-      }
-    } catch (err) {
-      toast(humanizeError(err), 'error');
-    } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Reclaim'; }
-    }
-  }
-
-  function formatBytes(n) {
-    if (!n || n < 1024) return `${n} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-    return `${(n / 1024 / 1024).toFixed(1)} MB`;
   }
 
   // ---------- Modal infrastructure ----------
@@ -492,6 +455,5 @@
     refresh: refreshAuthed,
     openChangePasswordModal,
     openDeleteAccountModal,
-    runAssetGc,
   };
 })();

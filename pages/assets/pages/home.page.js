@@ -946,7 +946,12 @@
       if (searchTerm) {
         profiles = profiles.filter((p) => String(p?.name || 'Player').toLowerCase().includes(searchTerm));
       }
-      profiles = profiles.slice().sort((a, b) => String(a?.name || 'Player').localeCompare(String(b?.name || 'Player')));
+      profiles = profiles.slice().sort((a, b) => {
+        const aIsOwn = isOwnProfileId(a?.id);
+        const bIsOwn = isOwnProfileId(b?.id);
+        if (aIsOwn !== bIsOwn) return aIsOwn ? -1 : 1;
+        return String(a?.name || 'Player').localeCompare(String(b?.name || 'Player'));
+      });
       const playerCountEl = document.getElementById('playerCount');
       if (playerCountEl) playerCountEl.textContent = `${profiles.length} player${profiles.length === 1 ? '' : 's'}`;
     }

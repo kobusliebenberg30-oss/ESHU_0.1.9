@@ -2380,7 +2380,7 @@
       } else if (scope === 'all') {
         gamesList.innerHTML = '<div class="u-card-empty">No games exist yet. Be the first to create one!</div>';
       } else {
-        gamesList.innerHTML = '<div class="u-card-empty">No games yet. Join a group to discover games or create your own!</div>';
+        gamesList.innerHTML = '<div class="u-card-empty">No games yet. Join the Default Group to unlock the Default Game and Create Game.</div>';
       }
       completeListLoadingWhenReady();
       return;
@@ -4492,8 +4492,8 @@
       const activeProfileId = getActiveProfileId();
 
       if (!hasJoinedAnyGroup(activeProfileId)) {
-        TOAST.error('You need to join a Group to Create a Game');
-        window.history.replaceState({}, document.title, window.location.pathname);
+        TOAST.info('Start by joining the Default Group. That unlocks the Default Game and Create Game.');
+        window.location.href = 'groups.html?onboarding=join-default';
         return;
       }
 
@@ -4526,6 +4526,9 @@
       const game = getGameById(gameId);
       if (game) {
         openGameFrontModal(gameId);
+        if (urlParams.get('onboarding') === 'joined' && gameId === 'game_default' && typeof TOAST !== 'undefined') {
+          TOAST.success('Default Game unlocked. Upload here, or use Create Game to make your own. After one upload, Comments unlock.');
+        }
         window.history.replaceState({}, document.title, window.location.pathname);
         return true;
       }

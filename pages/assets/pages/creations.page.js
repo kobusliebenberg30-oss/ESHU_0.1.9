@@ -1721,6 +1721,7 @@
           STATE.set('creations', [newCreation, ...currentCreations]);
         }
 
+        const xpBeforeUpload = parseInt(xpPoints || 0, 10);
         if (typeof ESHU_DB !== 'undefined' || (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote())) {
           // Server-authoritative XP via the shared helper. Handles
           // remote-vs-local mode, idempotency, and offline fallback.
@@ -1751,7 +1752,10 @@
         updateUploadAccessUi();
 
         if (typeof TOAST !== 'undefined') {
-          TOAST.success('Creation uploaded successfully!');
+          const unlockedComments = xpBeforeUpload < 3 && xpPoints >= 3;
+          TOAST.success(unlockedComments
+            ? 'Creation uploaded. Comments are now unlocked!'
+            : 'Creation uploaded successfully!');
         }
         runHype('RIGHT ON!');
 

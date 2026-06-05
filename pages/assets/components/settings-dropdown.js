@@ -116,7 +116,6 @@
               <span class="settings-label">Data Management</span>
               <div class="settings-data-actions">
                 <button type="button" id="eshuDownloadDataBtn" class="settings-action-btn">Export Data</button>
-                <button type="button" id="eshuUploadDataBtn" class="settings-action-btn">Import Data</button>
               </div>
             </div>
           </div>
@@ -382,14 +381,9 @@
   // Data Management Helper Functions
   function bindDataManagementButtons() {
     const downloadBtn = document.getElementById('eshuDownloadDataBtn');
-    const uploadBtn = document.getElementById('eshuUploadDataBtn');
     if (downloadBtn && !downloadBtn.dataset.bound) {
       downloadBtn.dataset.bound = 'true';
       downloadBtn.addEventListener('click', handleExportData);
-    }
-    if (uploadBtn && !uploadBtn.dataset.bound) {
-      uploadBtn.dataset.bound = 'true';
-      uploadBtn.addEventListener('click', handleImportData);
     }
   }
 
@@ -488,50 +482,6 @@
       if (typeof TOAST !== 'undefined') TOAST.error(`Export failed: ${err.message}`);
       alert('Export failed: ' + err.message);
     }
-  }
-
-  function handleImportData() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json,application/json';
-    input.onchange = async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const data = JSON.parse(text);
-
-        if (!data._eshuExport) {
-          throw new Error('Invalid export file - not an ESHU database backup');
-        }
-
-        const { _eshuExport, _exportedAt, _exportVersion, _exportPasswordHash, _profileName, ...cleanData } = data;
-
-        const EXPORT_PASSWORD = localStorage.getItem('eshuExportPassword') || '';
-        if (_exportPasswordHash) {
-          const providedHash = EXPORT_PASSWORD ? await sha256(EXPORT_PASSWORD) : '';
-          if (providedHash !== _exportPasswordHash) {
-            throw new Error('Export file requires a password to import');
-          }
-        }
-
-        if (typeof ESHU_DB === 'undefined' || !ESHU_DB.importDatabase) {
-          throw new Error('Import not available');
-        }
-
-        await ESHU_DB.importDatabase(cleanData);
-        if (typeof TOAST !== 'undefined') {
-          TOAST.success(`Imported profile: ${_profileName || 'Unknown'}`);
-        }
-        setTimeout(() => window.location.reload(), 1500);
-      } catch (err) {
-        console.error('Import failed:', err);
-        if (typeof TOAST !== 'undefined') {
-          TOAST.error(`Import failed: ${err.message}`);
-        }
-      }
-    };
-    input.click();
   }
 
   function initFollowedButtonIcon() {

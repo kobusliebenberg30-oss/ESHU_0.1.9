@@ -57,19 +57,33 @@
 
   async function handleEmailConfirmation() {
     try {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('auth') !== 'confirmed') return false;
-
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
       const hash = window.location.hash.slice(1);
       const hashParams = new URLSearchParams(hash);
-      const accessToken = hashParams.get('access_token');
+      const hasConfirmationMarker = params.get('auth') === 'confirmed';
+      const code = params.get('code');
+      let accessToken = hashParams.get('access_token');
+      if (!hasConfirmationMarker && !code && !accessToken) return false;
+
+      if (!accessToken && code) {
+        const client = await getClient();
+        if (!client || !client.auth || typeof client.auth.exchangeCodeForSession !== 'function') return false;
+        const { data, error } = await client.auth.exchangeCodeForSession(code);
+        if (error) throw error;
+        accessToken = data && data.session && data.session.access_token;
+      }
+
       if (!accessToken) return false;
 
       if (!window.ESHU_API || typeof window.ESHU_API.auth.supabaseSession !== 'function') return false;
 
       await window.ESHU_API.auth.supabaseSession({ accessToken });
 
-      const clean = window.location.pathname + window.location.search.replace(/[?&]auth=confirmed/, '').replace(/^&/, '?');
+      params.delete('auth');
+      params.delete('code');
+      const cleanSearch = params.toString();
+      const clean = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '');
       window.history.replaceState(null, '', clean || window.location.pathname);
 
       try { window.dispatchEvent(new CustomEvent('eshu:auth-success')); } catch {}
