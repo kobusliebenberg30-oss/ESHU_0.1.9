@@ -185,6 +185,79 @@
     return parseInt(window.ESHU_DB.getProfileXp(profileId) || 0, 10);
   }
 
+  // ---- XP HUD persistence -------------------------------------------------
+  //
+  // This is a multi-page app: every navigation is a full document load, so the
+  // top-nav XP counter starts life as the hardcoded "0 XP" in the HTML and only
+  // gets its real value once the page's boot() reads ESHU_DB (which may be
+  // gated on remote activation / sync). That made XP visibly flash 0 → N on
+  // every page change. We persist the last shown XP in localStorage and paint
+  // it the instant this early script runs, so the number is CONSTANT across
+  // navigations. A MutationObserver re-caches whatever any page writes into
+  // #xpCounter, so this stays decoupled from each page's own formatting (some
+  // append " +"); we only ever cache/repaint the numeric value.
+  const HUD_XP_KEY = 'eshu.hud.xp';
+
+  function getXpCounterEl() {
+    return document.getElementById('xpCounter');
+  }
+
+  function readCachedXp() {
+    try {
+      const raw = localStorage.getItem(HUD_XP_KEY);
+      if (raw == null) return null;
+      const n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function cacheXp(n) {
+    try { localStorage.setItem(HUD_XP_KEY, String(n)); } catch {}
+  }
+
+  function primeXpFromCache() {
+    const el = getXpCounterEl();
+    if (!el) return;
+    const cached = readCachedXp();
+    if (cached == null) return;
+    // Only override the placeholder so we never stomp a value a fast page
+    // boot already painted with its own formatting.
+    const current = parseInt(el.textContent || '', 10);
+    if (!Number.isFinite(current) || current === 0) {
+      el.textContent = cached + ' XP';
+    }
+  }
+
+  function observeXpCounter() {
+    const el = getXpCounterEl();
+    if (!el || typeof MutationObserver === 'undefined') return;
+    const recache = () => {
+      const n = parseInt(el.textContent || '', 10);
+      if (Number.isFinite(n)) {
+        const prev = readCachedXp();
+        if (prev !== n) cacheXp(n);
+      }
+    };
+    try {
+      const obs = new MutationObserver(recache);
+      obs.observe(el, { childList: true, characterData: true, subtree: true });
+    } catch {}
+    recache();
+  }
+
+  function initXpHud() {
+    primeXpFromCache();
+    observeXpCounter();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initXpHud, { once: true });
+  } else {
+    initXpHud();
+  }
+
   window.ESHU_RUNTIME = {
     getProfiles,
     getAccountDisplayName,

@@ -405,7 +405,10 @@
   ];
   // Exact keys to drop. Theme is intentionally NOT here so the user's
   // light/dark preference survives logout, as in any normal app.
-  const ACCOUNT_SCOPED_EXACT_KEYS = ['comments'];
+  // The hud.* keys are the instant-paint caches for the top-nav XP counter
+  // and the auth chip's identity; clearing them on logout stops the previous
+  // account's XP/name from flashing for the next user on this browser.
+  const ACCOUNT_SCOPED_EXACT_KEYS = ['comments', 'eshu.hud.xp', 'eshu.hud.auth'];
 
   // Standalone key for UI-only preferences that must survive account cache clears.
   const UI_PREFS_KEY = 'eshu_ui_prefs';

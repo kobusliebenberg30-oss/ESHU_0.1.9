@@ -123,8 +123,49 @@
   let chipEl = null;
   let chipUser = null;
 
+  // Persist the last signed-in identity so the chip can paint "online + name"
+  // the instant it mounts on a new page, instead of flashing the neutral
+  // "unknown" state while the auth.me() network round-trip is in flight. This
+  // is what makes the sign-in status feel CONSTANT across navigations. We only
+  // store a display label (no tokens/secrets); the authoritative check still
+  // runs in the background via refresh() and corrects the rare stale case
+  // (e.g. the session expired since the last page).
+  const HUD_AUTH_KEY = 'eshu.hud.auth';
+
+  function cacheAuth(user) {
+    try {
+      if (user) {
+        const name = user.displayName || user.username || 'account';
+        localStorage.setItem(HUD_AUTH_KEY, JSON.stringify({ name }));
+      } else {
+        localStorage.removeItem(HUD_AUTH_KEY);
+      }
+    } catch {}
+  }
+
+  function readCachedAuth() {
+    try {
+      const raw = localStorage.getItem(HUD_AUTH_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      return parsed && parsed.name ? parsed : null;
+    } catch {
+      return null;
+    }
+  }
+
+  // Optimistically paint from the cached identity before the network confirms.
+  function primeChip() {
+    if (!chipEl) return;
+    const cached = readCachedAuth();
+    if (cached) {
+      render('online', { displayName: cached.name, username: cached.name });
+    }
+  }
+
   function render(state, user) {
     if (!chipEl) return;
+    cacheAuth(state === 'online' ? user : null);
     chipEl.dataset.state = state; // 'online' | 'offline' | 'unknown'
     while (chipEl.firstChild) chipEl.removeChild(chipEl.firstChild);
 
@@ -174,6 +215,7 @@
     } else if (!chipEl.isConnected) {
       document.body.appendChild(chipEl);
     }
+    primeChip();
     refresh();
     return chipEl;
   }
@@ -225,6 +267,7 @@
       }
       chipEl.dataset.mountedInline = 'true';
       mountInto(slot);
+      primeChip();
       refresh();
     } else {
       ensureChip(null);
