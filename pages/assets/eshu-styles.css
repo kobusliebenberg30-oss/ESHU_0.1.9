@@ -156,12 +156,13 @@
  }
 
 /* === Unified Loading Indicator === */
-/* Solid page backdrop hides half-hydrated lists while the diamond blinks.
-   Not semi-transparent — that was letting stale/wrong content bleed through. */
+/* Transparent full-screen layer: the page stays visible underneath, only the
+   blinking diamond tile sits on the top layer. pointer-events on .active
+   still blocks clicks while loading without blanking the whole screen. */
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: var(--bg-body, #ffffff) !important;
+  background: transparent !important;
   display: none;
   align-items: center;
   justify-content: center;
