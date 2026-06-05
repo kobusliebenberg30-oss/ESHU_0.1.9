@@ -3920,22 +3920,29 @@
       // guard in saveChanges() blocks double submits.
       ESHU_SYNC.applyEntityResponse('games', newGame);
 
-      // XP is the only server call left in the critical path: a single fast,
-      // idempotent transaction that does NOT require the game row to exist yet
-      // (it keys on (kind, refId) only), so it's safe before the game syncs.
-      // awardSafe falls back to a local award if the server is unreachable, and
-      // local XP reconciles upward (Math.max) on the next sync — total stays
-      // correct either way.
+      // XP runs in the BACKGROUND so nothing blocks the jump into the game —
+      // this is what makes it feel as instant as group creation. The award is
+      // idempotent on (game_created, gameId) and doesn't require the game row
+      // to exist server-side yet (it keys on the id only).
+      //   - Remote: a keepalive POST survives the page transition (a plain
+      //     fetch would be aborted the moment we navigate, dropping the XP).
+      //   - Local-only: awardSafe applies synchronously and reconciles up via
+      //     sync (Math.max) later.
       try {
-        const awardResult = await ESHU_API.xp.awardSafe('game_created', newGame.id);
-        if (awardResult && typeof awardResult.xpPoints === 'number') {
-          STATE.set('xpPoints', awardResult.xpPoints);
-        }
-        if (window.XP_ANIM && awardResult && awardResult.delta > 0) {
-          XP_ANIM.show(awardResult.delta);
+        if (ESHU_SYNC.isRemote()) {
+          const base = (window.ESHU_API && window.ESHU_API.base) || '/api';
+          fetch(base + '/xp/award', {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify({ kind: 'game_created', refId: newGame.id }),
+          }).catch(() => {});
+        } else {
+          ESHU_API.xp.awardSafe('game_created', newGame.id);
         }
       } catch (err) {
-        console.warn('[createGame] XP award failed (non-fatal):', err);
+        console.warn('[createGame] background XP award failed (non-fatal):', err);
       }
 
       TOAST.success('Game created!');
