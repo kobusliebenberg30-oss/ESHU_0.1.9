@@ -3791,7 +3791,25 @@
   }
 
   // ===== Save Changes (handles both Edit and Create) =====
+  // Re-entrancy guard. Create mints a fresh game id from Date.now() on every
+  // call, so a slow server round-trip + a second click (the button stayed
+  // live, and the first click can *feel* like nothing happened on a laggy
+  // connection) used to fire two creates → duplicate rows in the list. The
+  // guard drops the second invocation and the disabled button gives feedback
+  // that the first one is in flight.
+  let isSavingGame = false;
   async function saveChanges() {
+    if (isSavingGame) return;
+    isSavingGame = true;
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      await saveChangesImpl();
+    } finally {
+      isSavingGame = false;
+      if (saveBtn) saveBtn.disabled = false;
+    }
+  }
+  async function saveChangesImpl() {
     const title = editTitle ? editTitle.value.trim() : '';
     if (!title) {
       TOAST.error('Please enter a title');
