@@ -12,6 +12,7 @@ import { env } from './env.js';
 import { logger } from './lib/logger.js';
 import { getSupabasePublicConfig } from './lib/supabase.js';
 import { errorHandler, notFound } from './middleware/error.js';
+import { prisma } from './db/client.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
 import userRoutes from './modules/users/users.routes.js';
@@ -221,6 +222,25 @@ export const buildApp = (): Express => {
   app.get('/healthz', (_req, res) =>
     res.json({ ok: true, env: process.env.NODE_ENV ?? 'development' }),
   );
+
+  // Keep-warm endpoint for an external uptime pinger (e.g. UptimeRobot /
+  // cron-job.org hitting this every ~5 min). Unlike /healthz it touches the
+  // database with a trivial query, so it keeps BOTH the serverless lambda and
+  // a pooled DB connection hot — that's what makes the *first* signed-in pull
+  // after an idle period fast instead of paying a full cold start. Mounted
+  // before the rate limiter and before session, so pings never burn the
+  // /api budget or create session rows. Always returns 200 quickly; a DB
+  // hiccup degrades to { db: false } rather than erroring the pinger.
+  app.get('/api/warm', async (_req, res) => {
+    let db = false;
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      db = true;
+    } catch {
+      db = false;
+    }
+    res.json({ ok: true, db, ts: Date.now() });
+  });
 
   // Soft rate-limit, scoped to the API surface only. Previously this was a
   // global `app.use(rateLimit(...))`, which counted every static asset GET
