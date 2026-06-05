@@ -88,16 +88,25 @@
   }
 
   function getActiveProfileId() {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getActiveProfileId === 'function') {
+      return window.ESHU_FLOW.getActiveProfileId();
+    }
     return getActiveProfile()?.id || ESHU_DB.getValue('currentProfileId') || null;
   }
 
   function getGroupMembers(group) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getMembers === 'function') {
+      return window.ESHU_FLOW.getMembers(group);
+    }
     const members = Array.isArray(group?.memberProfileIds) ? group.memberProfileIds.filter(Boolean) : [];
     if (group?.ownerProfileId && !members.includes(group.ownerProfileId)) members.push(group.ownerProfileId);
     return members;
   }
 
   function canViewGroup(group, profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.canViewGroup === 'function') {
+      return window.ESHU_FLOW.canViewGroup(group, profileId);
+    }
     if (!group) return false;
     if (group.privacy !== 'private') return true;
     return getGroupMembers(group).includes(profileId);
@@ -123,6 +132,10 @@
 
   function loadGroupComments(targetGroupId) {
     if (!targetGroupId) return [];
+    const target = { kind: 'group', id: targetGroupId };
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.load === 'function') {
+      return window.ESHU_COMMENTS.load(target);
+    }
     const key = getGroupCommentsStorageKey(targetGroupId);
     try {
       const parsed = JSON.parse(localStorage.getItem(key) || '[]');
@@ -139,6 +152,11 @@
 
   function saveGroupComments(targetGroupId, comments) {
     if (!targetGroupId) return;
+    const target = { kind: 'group', id: targetGroupId };
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS._writeCache === 'function') {
+      window.ESHU_COMMENTS._writeCache(target, comments || []);
+      return;
+    }
     const key = getGroupCommentsStorageKey(targetGroupId);
     localStorage.setItem(key, JSON.stringify(comments || []));
   }
@@ -203,6 +221,9 @@
 
   // Builds the hex-framed image (img clipped to hex, cap+outline overlaid)
   function buildHexImageSvg(imageUrl) {
+    if (window.ESHU_UI_MARKUP && typeof window.ESHU_UI_MARKUP.hexImage === 'function') {
+      return window.ESHU_UI_MARKUP.hexImage(imageUrl);
+    }
     const safeUrl = String(imageUrl || '').replace(/"/g, '&quot;');
     return `
       <div class="hex-image-frame">
@@ -219,6 +240,9 @@
 
   // Builds the diamond-framed game image (img clipped to diamond, cap+outline overlaid)
   function buildDiamondImageSvg(imageUrl) {
+    if (window.ESHU_UI_MARKUP && typeof window.ESHU_UI_MARKUP.diamondImage === 'function') {
+      return window.ESHU_UI_MARKUP.diamondImage(imageUrl);
+    }
     const safeUrl = String(imageUrl || '').replace(/"/g, '&quot;');
     return `
       <div class="diamond-image-frame">

@@ -149,19 +149,20 @@
 
   function applySnapshot(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return;
-    const tables = snapshot.tables && typeof snapshot.tables === 'object' ? snapshot.tables : {};
-    for (const name of ENTITY_TABLES) {
-      if (Array.isArray(tables[name])) {
-        setTableSafe(name, tables[name]);
-      }
-    }
-    // Mirror selected values (currentProfileId at minimum) so gates resolve.
+    // Set identity first. Table updates notify page subscribers immediately,
+    // and list filters need the canonical active profile before they render.
     if (snapshot.values && typeof snapshot.values === 'object') {
       try {
         if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue && snapshot.values.currentProfileId !== undefined) {
           ESHU_DB.setValue('currentProfileId', snapshot.values.currentProfileId);
         }
       } catch {}
+    }
+    const tables = snapshot.tables && typeof snapshot.tables === 'object' ? snapshot.tables : {};
+    for (const name of ENTITY_TABLES) {
+      if (Array.isArray(tables[name])) {
+        setTableSafe(name, tables[name]);
+      }
     }
   }
 
@@ -196,7 +197,21 @@
     }
     if (typeof call !== 'function') throw new Error('ESHU_SYNC.mutate: opts.call must be a function');
 
-    const resp = await call();
+    let resp;
+    try {
+      resp = await call();
+    } catch (err) {
+      // A 401 here means the page is in remote mode but the server session is
+      // gone/never-established (e.g. Supabase signed in but app session missing,
+      // or an expired cookie). Without this signal, callers silently fall back
+      // to a LOCAL-only write that looks saved in-session but is wiped on the
+      // next reload — the "created group/game doesn't show up" report. Prompt a
+      // re-auth so the write can actually reach the server.
+      if (err && err.status === 401) {
+        try { window.dispatchEvent(new CustomEvent('eshu:sync-unauthenticated')); } catch {}
+      }
+      throw err;
+    }
     if (opts.removeIds) {
       const ids = opts.removeIds(resp);
       removeEntity(entity, ids);

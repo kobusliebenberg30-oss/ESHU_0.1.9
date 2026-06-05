@@ -360,7 +360,20 @@ export const bulkReplace = async (userId: string, profileId: string, payload: Sy
   // upload (1 XP). Idempotent on (game_created, game_default).
   let touchedDefaultMembership = false;
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  // The bulk apply runs as a single interactive transaction with many
+  // sequential per-row queries (profiles → groups → games → creations →
+  // settings, plus membership reconciliation and onboarding healing). On
+  // Vercel + the Supabase pooler each round-trip carries real network
+  // latency (a plain GET /api/sync already takes ~3–4s), so Prisma's DEFAULT
+  // 5s interactive-transaction timeout is easily exceeded once an account has
+  // accumulated a handful of groups/games/creations. When it expires
+  // mid-flight the next query fails with "Transaction already closed /
+  // Transaction not found", the PUT 500s, and the save is silently lost —
+  // the "new groups/games don't show up in YOUR GAMES/GROUPS" report. The
+  // function's maxDuration is 60s, so a 30s transaction budget leaves ample
+  // headroom while preventing runaway holds.
+  await prisma.$transaction(
+    async (tx: Prisma.TransactionClient) => {
     // ---------- profiles (only those owned by this user) ----------
     for (const raw of profiles) {
       const o = asObject(raw);
@@ -619,7 +632,9 @@ export const bulkReplace = async (userId: string, profileId: string, payload: Sy
         },
       });
     }
-  });
+    },
+    { maxWait: 15000, timeout: 30000 },
+  );
 
   // Onboarding XP parity (post-commit). Mirrors `groups.service.join` so a
   // user who lands in `group_default` via a bulk snapshot push reaches the

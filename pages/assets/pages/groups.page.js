@@ -96,10 +96,16 @@
   }
 
   function getActiveProfileId() {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getActiveProfileId === 'function') {
+      return window.ESHU_FLOW.getActiveProfileId();
+    }
     return getActiveProfile()?.id || ESHU_DB.getValue('currentProfileId') || null;
   }
 
   function getGroupMembers(group) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getMembers === 'function') {
+      return window.ESHU_FLOW.getMembers(group);
+    }
     const members = Array.isArray(group?.memberProfileIds) ? group.memberProfileIds.filter(Boolean) : [];
     const ownerId = getGroupOwnerProfileId(group);
     if (ownerId && !group?.ownerHasLeft && !members.includes(ownerId)) {
@@ -117,11 +123,17 @@
   }
 
   function isGroupMember(group, profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.isMember === 'function') {
+      return window.ESHU_FLOW.isMember(group, profileId);
+    }
     if (!group || !profileId) return false;
     return getGroupMembers(group).includes(profileId);
   }
 
   function canViewGroup(group, profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.canViewGroup === 'function') {
+      return window.ESHU_FLOW.canViewGroup(group, profileId);
+    }
     if (!group) return false;
     if (group.privacy !== 'private') return true;
     return isGroupMember(group, profileId);
@@ -354,6 +366,9 @@
   // with the hex outline + cap overlaid on top via an SVG. Uses native browser
   // image scaling for crisper rendering than SVG <image>.
   function buildHexImageSvg(imageUrl) {
+    if (window.ESHU_UI_MARKUP && typeof window.ESHU_UI_MARKUP.hexImage === 'function') {
+      return window.ESHU_UI_MARKUP.hexImage(imageUrl);
+    }
     const safeUrl = String(imageUrl || '').replace(/"/g, '&quot;');
     return `
       <div class="hex-image-svg hex-image-frame">

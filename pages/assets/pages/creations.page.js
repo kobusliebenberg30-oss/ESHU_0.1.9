@@ -155,6 +155,9 @@
   }
 
   function getActiveProfileId() {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getActiveProfileId === 'function') {
+      return window.ESHU_FLOW.getActiveProfileId();
+    }
     return getActiveProfile()?.id || ESHU_DB.getValue('currentProfileId') || null;
   }
 
@@ -164,6 +167,9 @@
   }
 
   function getGroupMembers(group) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getMembers === 'function') {
+      return window.ESHU_FLOW.getMembers(group);
+    }
     const members = Array.isArray(group?.memberProfileIds) ? group.memberProfileIds.filter(Boolean) : [];
     if (group?.ownerProfileId && !members.includes(group.ownerProfileId)) {
       members.push(group.ownerProfileId);
@@ -172,6 +178,9 @@
   }
 
   function getGameMembers(game) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getMembers === 'function') {
+      return window.ESHU_FLOW.getMembers(game);
+    }
     const members = Array.isArray(game?.memberProfileIds) ? game.memberProfileIds.filter(Boolean) : [];
     if (game?.ownerProfileId && !members.includes(game.ownerProfileId)) {
       members.push(game.ownerProfileId);
@@ -180,6 +189,9 @@
   }
 
   function canAccessGame(game, profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.canAccessGame === 'function') {
+      return window.ESHU_FLOW.canAccessGame(game, profileId, games || []);
+    }
     if (!game) return false;
     if (game.privacy !== 'private') return true;
     if (!profileId) return false;

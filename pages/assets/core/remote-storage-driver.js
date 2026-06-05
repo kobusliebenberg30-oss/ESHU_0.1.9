@@ -743,9 +743,33 @@
     diagnose: () => preflightDiagnose('manual')
   };
 
+  // Guarded, idempotent activation. `activate()` sets window.ESHU_AUTH on
+  // success; until then it's safe to retry (e.g. it bailed because there was
+  // no session yet). `activationInFlight` prevents overlapping pulls.
+  let activationInFlight = false;
+  function activateOnce() {
+    if (window.ESHU_AUTH) return;        // already activated for a signed-in user
+    if (activationInFlight) return;
+    activationInFlight = true;
+    Promise.resolve()
+      .then(activate)
+      .catch(() => {})
+      .finally(() => { activationInFlight = false; });
+  }
+
+  // A session can be established WITHOUT a full page reload — notably the
+  // Supabase email-confirmation link handler and any sign-in opened with
+  // reloadOnSuccess:false. In those cases the initial (unauthenticated)
+  // activation already bailed and left the legacy localStorage driver active,
+  // so the page keeps a stale local profile id and never pulls server data
+  // (created groups/games then don't show in "Your Games/Groups"). Activating
+  // here pulls /api/sync, reconciles legacy→canonical profile ids, and
+  // rehydrates the open page.
+  window.addEventListener('eshu:auth-success', activateOnce);
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', activate, { once: true });
+    document.addEventListener('DOMContentLoaded', activateOnce, { once: true });
   } else {
-    activate();
+    activateOnce();
   }
 })();

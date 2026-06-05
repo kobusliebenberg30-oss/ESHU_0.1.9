@@ -17,6 +17,9 @@
 
   // Builds diamond-framed game image markup (img clipped to diamond, cap+outline overlaid)
   function buildDiamondImageSvg(imageUrl) {
+    if (window.ESHU_UI_MARKUP && typeof window.ESHU_UI_MARKUP.diamondImage === 'function') {
+      return window.ESHU_UI_MARKUP.diamondImage(imageUrl);
+    }
     const safeUrl = String(imageUrl || '').replace(/"/g, '&quot;');
     return `
       <div class="diamond-image-frame">
@@ -149,10 +152,16 @@
   }
 
   function getActiveProfileId() {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getActiveProfileId === 'function') {
+      return window.ESHU_FLOW.getActiveProfileId();
+    }
     return getActiveProfile()?.id || ESHU_DB.getValue('currentProfileId') || null;
   }
 
   function getGroupMembers(group) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getMembers === 'function') {
+      return window.ESHU_FLOW.getMembers(group);
+    }
     const members = Array.isArray(group?.memberProfileIds) ? group.memberProfileIds.filter(Boolean) : [];
     if (group?.ownerProfileId && !members.includes(group.ownerProfileId)) {
       members.push(group.ownerProfileId);
@@ -161,11 +170,17 @@
   }
 
   function isGroupMember(group, profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.isMember === 'function') {
+      return window.ESHU_FLOW.isMember(group, profileId);
+    }
     if (!group || !profileId) return false;
     return getGroupMembers(group).includes(profileId);
   }
 
   function hasJoinedAnyGroup(profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.hasJoinedAnyGroup === 'function') {
+      return window.ESHU_FLOW.hasJoinedAnyGroup(profileId);
+    }
     if (!profileId) return false;
     const stateGroups = STATE.get('groups') || [];
     const storageGroups = ESHU_DB.getTable ? (ESHU_DB.getTable('groups') || []) : [];
@@ -179,6 +194,9 @@
   }
 
   function isDefaultGroup(groupOrId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.isDefaultGroup === 'function') {
+      return window.ESHU_FLOW.isDefaultGroup(groupOrId);
+    }
     const id = typeof groupOrId === 'string' ? groupOrId : groupOrId?.id;
     return id === 'group_default';
   }
@@ -210,6 +228,9 @@
   }
 
   function canUploadCreation(profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.hasUploadUnlock === 'function') {
+      return window.ESHU_FLOW.hasUploadUnlock(profileId);
+    }
     const xp = parseInt(ESHU_DB.getProfileXp(profileId) || 0, 10);
     if (xp >= CREATION_UPLOAD_UNLOCK_XP) return true;
     const scopedUnlockKey = `creationUploadUnlocked_${profileId || 'global'}`;
@@ -378,6 +399,10 @@
 
   function loadGameComments(gameId) {
     if (!gameId) return [];
+    const target = { kind: 'game', id: gameId };
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.load === 'function') {
+      return window.ESHU_COMMENTS.load(target);
+    }
     const key = getGameCommentsStorageKey(gameId);
     try {
       const parsed = JSON.parse(localStorage.getItem(key) || '[]');
@@ -398,6 +423,11 @@
 
   function saveGameComments(gameId, comments) {
     if (!gameId) return;
+    const target = { kind: 'game', id: gameId };
+    if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS._writeCache === 'function') {
+      window.ESHU_COMMENTS._writeCache(target, comments || []);
+      return;
+    }
     const key = getGameCommentsStorageKey(gameId);
     localStorage.setItem(key, JSON.stringify(comments || []));
   }

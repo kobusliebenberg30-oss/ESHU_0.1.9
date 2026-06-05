@@ -15,6 +15,9 @@
   ];
 
   function hasJoinedAnyGroup(profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.hasJoinedAnyGroup === 'function') {
+      return window.ESHU_FLOW.hasJoinedAnyGroup(profileId);
+    }
     if (!profileId) return false;
     const profileIds = new Set([profileId]);
     if (typeof ESHU_DB !== 'undefined') {
@@ -71,6 +74,9 @@
   }
 
   function getProfileXpSafe(profileId) {
+    if (window.ESHU_FLOW && typeof window.ESHU_FLOW.getProfileXp === 'function') {
+      return window.ESHU_FLOW.getProfileXp(profileId);
+    }
     if (typeof ESHU_DB === 'undefined' || !ESHU_DB.getProfileXp) return 0;
     return parseInt(ESHU_DB.getProfileXp(profileId) || 0, 10);
   }
@@ -409,6 +415,9 @@
     }
 
     function canUploadCreation() {
+      if (window.ESHU_FLOW && typeof window.ESHU_FLOW.hasUploadUnlock === 'function') {
+        return window.ESHU_FLOW.hasUploadUnlock();
+      }
       if (typeof ESHU_DB === 'undefined') return true;
       const activeProfileId = ESHU_DB.getValue ? ESHU_DB.getValue('currentProfileId') : null;
       const xp = getProfileXpSafe(activeProfileId);
@@ -418,6 +427,9 @@
     }
 
     function canComment() {
+      if (window.ESHU_FLOW && typeof window.ESHU_FLOW.canComment === 'function') {
+        return window.ESHU_FLOW.canComment();
+      }
       if (typeof ESHU_DB === 'undefined') return true;
       const activeProfileId = ESHU_DB.getValue ? ESHU_DB.getValue('currentProfileId') : null;
       return getProfileXpSafe(activeProfileId) >= COMMENTS_UNLOCK_XP;
