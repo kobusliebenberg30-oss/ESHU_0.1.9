@@ -1347,28 +1347,26 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
       // are decorated on the cached row so render code is unchanged.
       let created = null;
       if (window.ESHU_COMMENTS) {
-        const postFields = { text: nextComment.text };
+        const postFields = {
+          text: nextComment.text,
+          authorName: nextComment.authorName,
+        };
         if (nextComment.animation) postFields.animation = nextComment.animation;
+        if (nextComment.animationImageUrl) postFields.animationImageUrl = nextComment.animationImageUrl;
         created = await window.ESHU_COMMENTS.post(target, postFields);
-        if (created) {
-          created.authorName = nextComment.authorName;
-          if (nextComment.animationImageUrl) created.animationImageUrl = nextComment.animationImageUrl;
-          const cached = window.ESHU_COMMENTS.load(target);
-          const idx = cached.findIndex((c) => c && c.id === created.id);
-          if (idx >= 0) { cached[idx] = created; window.ESHU_COMMENTS._writeCache(target, cached); }
-        }
       }
       input.value = '';
       // Clear the drawing attached indicator
       input.placeholder = 'Add a comment...';
       input.classList.remove('has-pending-animation');
       render();
+
       const persistedId = created ? created.id : nextComment.id;
       const kind = nextComment.animation ? 'comment_animated' : 'comment_posted';
-      const awardResult = await ESHU_API.xp.awardSafe(kind, persistedId);
-      xpPoints = awardResult.xpPoints;
+      const { delta } = ESHU_API.xp.awardBackground(kind, persistedId);
+      xpPoints = parseInt(xpPoints || 0, 10) + delta;
       updateXPDisplay();
-      if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
+      if (window.XP_ANIM && delta > 0) XP_ANIM.show(delta);
     };
 
     input.onkeydown = (event) => {

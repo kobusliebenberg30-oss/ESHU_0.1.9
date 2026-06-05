@@ -379,7 +379,44 @@
         console.warn('[xp.awardSafe] server unavailable, falling back to local:', err);
         return localAward();
       }
-    }
+    },
+
+    /**
+     * Fire-and-forget XP award for flows that must not block the UI (comments,
+     * game create, creation upload). Remote: keepalive POST survives navigation
+     * and in-page transitions where a plain fetch would be aborted. Local-only:
+     * applies addProfileXp synchronously. Does NOT touch the synced profile
+     * xpPoints in remote mode — callers bump their own optimistic display and
+     * the next sync pull reconciles via Math.max.
+     *
+     * Returns { delta, kind } for immediate HUD animation.
+     */
+    awardBackground(kind, refId) {
+      const rule = LOCAL_XP_RULES[kind];
+      const delta = rule ? rule.amount : 0;
+      const remoteMode = !!(
+        window.ESHU_REMOTE &&
+        window.ESHU_REMOTE.isEnabled &&
+        window.ESHU_REMOTE.isEnabled()
+      );
+
+      if (remoteMode) {
+        try {
+          fetch(BASE + '/xp/award', {
+            method: 'POST',
+            credentials: 'include',
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+            body: JSON.stringify({ kind, refId }),
+          }).catch(() => {});
+        } catch {}
+      } else if (typeof window.ESHU_DB !== 'undefined' && rule) {
+        const pid = window.ESHU_DB.getActiveProfileId();
+        window.ESHU_DB.addProfileXp(rule.amount, pid, rule.reason);
+      }
+
+      return { delta, kind };
+    },
   };
 
   window.ESHU_API = {

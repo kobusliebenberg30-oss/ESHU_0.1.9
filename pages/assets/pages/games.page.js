@@ -970,31 +970,29 @@
     const target = { kind: 'game', id: game.id };
     let created = null;
     if (window.ESHU_COMMENTS) {
-      const postFields = { text: nextComment.text };
+      const postFields = {
+        text: nextComment.text,
+        authorName: nextComment.authorName,
+      };
       if (nextComment.animation) postFields.animation = nextComment.animation;
+      if (nextComment.animationImageUrl) postFields.animationImageUrl = nextComment.animationImageUrl;
       created = await window.ESHU_COMMENTS.post(target, postFields);
-      if (created) {
-        created.authorName = nextComment.authorName;
-        if (nextComment.animationImageUrl) created.animationImageUrl = nextComment.animationImageUrl;
-        const cached = window.ESHU_COMMENTS.load(target);
-        const idx = cached.findIndex((c) => c && c.id === created.id);
-        if (idx >= 0) { cached[idx] = created; window.ESHU_COMMENTS._writeCache(target, cached); }
-      } else {
-        const cached = loadGameComments(game.id);
-        saveGameComments(game.id, [nextComment, ...cached.filter((c) => c && c.id !== nextComment.id)]);
-        if (typeof TOAST !== 'undefined') {
-          TOAST.warning('Comment saved locally. Sync to server failed.');
-        }
-      }
+    } else {
+      const cached = loadGameComments(game.id);
+      saveGameComments(game.id, [nextComment, ...cached.filter((c) => c && c.id !== nextComment.id)]);
+      created = nextComment;
     }
-    const persistedId = created ? created.id : nextComment.id;
-    const kind = nextComment.animation ? 'comment_animated' : 'comment_posted';
-    const awardResult = await ESHU_API.xp.awardSafe(kind, persistedId);
-    STATE.set('xpPoints', awardResult.xpPoints);
-    refreshXpCounter();
-    if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
+
     inputEl.value = '';
     refreshGameCommentsViews(game);
+
+    const persistedId = created ? created.id : nextComment.id;
+    const kind = nextComment.animation ? 'comment_animated' : 'comment_posted';
+    const { delta } = ESHU_API.xp.awardBackground(kind, persistedId);
+    const xpBefore = parseInt(STATE.get('xpPoints') || 0, 10);
+    STATE.set('xpPoints', xpBefore + delta);
+    refreshXpCounter();
+    if (window.XP_ANIM && delta > 0) XP_ANIM.show(delta);
   }
 
   function initGameCommentComposer(submitButtonId, inputId) {

@@ -197,9 +197,61 @@
     return run;
   }
 
+  function dispatchUpdated(target, comments, reason) {
+    try {
+      window.dispatchEvent(new CustomEvent('eshu:comments-updated', {
+        detail: { target, comments, reason },
+      }));
+    } catch {}
+  }
+
+  function makeOptimisticRow(target, fields, activeProfileId) {
+    const text = typeof fields?.text === 'string' ? fields.text.trim() : '';
+    const animation = fields?.animation ?? null;
+    return {
+      id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 9),
+      targetKind: target.kind,
+      targetId: target.id,
+      text,
+      animation,
+      animationImageUrl: fields?.animationImageUrl || null,
+      authorName: fields?.authorName || null,
+      timestamp: Date.now(),
+      status: 'active',
+      likedBy: [],
+      followedBy: [],
+      authorId: activeProfileId,
+      authorProfileId: activeProfileId,
+    };
+  }
+
+  function reconcileServerRow(target, optimisticId, serverRow) {
+    const arr = readCache(target);
+    const idx = arr.findIndex((c) => c && c.id === optimisticId);
+    if (idx < 0) {
+      const next = [serverRow, ...arr.filter((c) => c && c.id !== serverRow.id)];
+      writeCache(target, next);
+      dispatchUpdated(target, next, 'reconcile');
+      return serverRow;
+    }
+    const prev = arr[idx];
+    const merged = {
+      ...serverRow,
+      authorName: prev.authorName || serverRow.authorName || null,
+      animationImageUrl: prev.animationImageUrl || serverRow.animationImageUrl || null,
+    };
+    const next = arr.slice();
+    next[idx] = merged;
+    writeCache(target, next);
+    dispatchUpdated(target, next, 'reconcile');
+    return merged;
+  }
+
   /**
-   * Post a new comment. Updates the cache optimistically and reconciles
-   * with the server response. Returns the canonical row (or null on failure).
+   * Post a new comment. Writes to the cache IMMEDIATELY (optimistic) so the
+   * thread re-renders without waiting on the server round-trip, then reconciles
+   * with the canonical server row in the background. Returns the optimistic row
+   * right away (or null on validation failure).
    */
   async function post(target, fields) {
     if (!target || !target.id || !target.kind) return null;
@@ -208,69 +260,34 @@
     if (!text && !animation) return null;
     const activeProfileId = getActiveProfileId();
 
+    const optimistic = toLegacy(makeOptimisticRow(target, fields, activeProfileId));
+    const next = [optimistic, ...readCache(target)];
+    writeCache(target, next);
+    dispatchUpdated(target, next, 'post');
+
     const client = api();
     if (!canUseRemoteComments() || !client || !client.comments) {
-      // Local-only fallback. Mirrors the pre-migration behavior so offline
-      // / unauth users still get something rendered.
-      const local = {
-        id: 'cmt_local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        targetKind: target.kind,
-        targetId: target.id,
-        text,
-        animation: animation || null,
-        timestamp: Date.now(),
-        status: 'active',
-        likedBy: [],
-        followedBy: [],
-        authorId: activeProfileId,
-        authorProfileId: activeProfileId,
-      };
-      const next = [local, ...readCache(target)];
-      writeCache(target, next);
-      return local;
+      return optimistic;
     }
 
-    try {
-      const resp = await client.comments.create({
-        targetKind: target.kind,
-        targetId: target.id,
-        text: text || '',
-        ...(animation !== undefined ? { animation } : {}),
-      });
-      const created = toLegacy(resp && resp.comment ? resp.comment : resp);
-      const next = [created, ...readCache(target).filter((c) => c && c.id !== created.id)];
-      writeCache(target, next);
+    // Background reconcile — never block the caller on this.
+    void (async () => {
       try {
-        window.dispatchEvent(new CustomEvent('eshu:comments-updated', {
-          detail: { target, comments: next },
-        }));
-      } catch {}
-      return created;
-    } catch (err) {
-      applyRemoteBackoff(err, 'post');
-      console.warn('[ESHU_COMMENTS] post failed:', err);
-      const local = {
-        id: 'cmt_local_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        targetKind: target.kind,
-        targetId: target.id,
-        text,
-        animation: animation || null,
-        timestamp: Date.now(),
-        status: 'active',
-        likedBy: [],
-        followedBy: [],
-        authorId: activeProfileId,
-        authorProfileId: activeProfileId,
-      };
-      const next = [local, ...readCache(target)];
-      writeCache(target, next);
-      try {
-        window.dispatchEvent(new CustomEvent('eshu:comments-updated', {
-          detail: { target, comments: next },
-        }));
-      } catch {}
-      return local;
-    }
+        const resp = await client.comments.create({
+          targetKind: target.kind,
+          targetId: target.id,
+          text: text || '',
+          ...(animation !== undefined ? { animation } : {}),
+        });
+        const created = toLegacy(resp && resp.comment ? resp.comment : resp);
+        if (created) reconcileServerRow(target, optimistic.id, created);
+      } catch (err) {
+        applyRemoteBackoff(err, 'post');
+        console.warn('[ESHU_COMMENTS] background post failed; keeping optimistic row:', err);
+      }
+    })();
+
+    return optimistic;
   }
 
   /**

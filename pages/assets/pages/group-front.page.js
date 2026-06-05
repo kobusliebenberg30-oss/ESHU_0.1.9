@@ -777,29 +777,25 @@
         // optimistic row when remote mode is off or the network is down,
         // matching the rest of the platform's resilience model.
         const target = { kind: 'group', id: group.id };
+        const activeProfile = getActiveProfile();
         let created = null;
         if (window.ESHU_COMMENTS) {
-          const activeProfile = getActiveProfile();
-          created = await window.ESHU_COMMENTS.post(target, { text });
-          // Decorate the cached row with the legacy `authorName` field so
-          // existing render code doesn't have to look up the profile.
-          if (created && !created.authorName) {
-            created.authorName = activeProfile?.name || 'Player';
-            const cached = window.ESHU_COMMENTS.load(target);
-            const idx = cached.findIndex((c) => c && c.id === created.id);
-            if (idx >= 0) {
-              cached[idx] = created;
-              window.ESHU_COMMENTS._writeCache(target, cached);
-            }
-          }
-        }
-        if (created) {
-          const awardResult = await ESHU_API.xp.awardSafe('comment_posted', created.id);
-          if (xpCounter) xpCounter.textContent = parseInt(awardResult.xpPoints || 0, 10) + ' XP';
-          if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
+          created = await window.ESHU_COMMENTS.post(target, {
+            text,
+            authorName: activeProfile?.name || 'Player',
+          });
         }
         grfCommentsInput.value = '';
         renderComments(group);
+
+        if (created) {
+          const { delta } = ESHU_API.xp.awardBackground('comment_posted', created.id);
+          if (xpCounter) {
+            const xpBefore = parseInt(xpCounter.textContent || '0', 10);
+            xpCounter.textContent = (Number.isFinite(xpBefore) ? xpBefore : 0) + delta + ' XP';
+          }
+          if (window.XP_ANIM && delta > 0) XP_ANIM.show(delta);
+        }
       };
 
       grfCommentsSubmit.addEventListener('click', submitGroupComment);

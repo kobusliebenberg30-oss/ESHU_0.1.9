@@ -975,24 +975,30 @@
         pendingAnimationImageUrl = '';
       }
 
+      let created = null;
       if (window.ESHU_COMMENTS && typeof window.ESHU_COMMENTS.post === 'function') {
-        await window.ESHU_COMMENTS.post(target, {
+        created = await window.ESHU_COMMENTS.post(target, {
           text: nextComment.text,
-          animation: nextComment.animation || undefined
+          authorName: nextComment.authorName,
+          animation: nextComment.animation || undefined,
+          animationImageUrl: nextComment.animationImageUrl || undefined,
         });
       } else {
         const existing = loadCreationComments(creationId);
         saveCreationComments(creationId, [nextComment, ...existing]);
+        created = nextComment;
       }
       input.value = '';
       // Clear the drawing attached indicator
       input.placeholder = 'Add a comment...';
       input.classList.remove('has-pending-animation');
       render();
+
+      const persistedId = created ? created.id : nextComment.id;
       const kind = nextComment.animation ? 'comment_animated' : 'comment_posted';
-      const awardResult = await ESHU_API.xp.awardSafe(kind, nextComment.id);
-      xpPoints = awardResult.xpPoints;
-      if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
+      const { delta } = ESHU_API.xp.awardBackground(kind, persistedId);
+      xpPoints = parseInt(xpPoints || 0, 10) + delta;
+      if (window.XP_ANIM && delta > 0) XP_ANIM.show(delta);
     };
 
     input.onkeydown = (event) => {
