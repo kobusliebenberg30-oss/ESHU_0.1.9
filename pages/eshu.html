@@ -103,7 +103,6 @@
       <button class="fullscreen-btn" data-target="leftDrawOverlay" title="Toggle fullscreen" aria-label="Toggle fullscreen">
         <svg viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>
       </button>
-      <div class="winner-cross" id="leftCross">+</div>
       <div class="chamfer-button left" title="Choose Left"></div>
     </div>
     <div class="draw-overlay" id="leftDrawOverlay"><iframe id="leftDrawIframe"></iframe></div>
@@ -153,6 +152,10 @@
       </span>
       <span class="current-game-thumb-title" id="currentGameThumbTitle">Select game</span>
     </button>
+    <div class="winner-cross-stage" aria-hidden="true">
+      <div class="winner-cross" id="leftCross">+</div>
+      <div class="winner-cross right" id="rightCross">+</div>
+    </div>
   </div>
 
   <!-- Right Side -->
@@ -192,7 +195,6 @@
       <button class="fullscreen-btn" data-target="rightDrawOverlay" title="Toggle fullscreen" aria-label="Toggle fullscreen">
         <svg viewBox="0 0 24 24"><path d="M3 3h6v2H5v4H3V3zm12 0h6v6h-2V5h-4V3zM3 15h2v4h4v2H3v-6zm16 4h-4v2h6v-6h-2v4z"/></svg>
       </button>
-      <div class="winner-cross right" id="rightCross">+</div>
       <div class="chamfer-button right" title="Choose Right"></div>
     </div>
     <div class="draw-overlay" id="rightDrawOverlay"><iframe id="rightDrawIframe"></iframe></div>

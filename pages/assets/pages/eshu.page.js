@@ -752,7 +752,17 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   }
 
   /* Cross animation */
-  function animateCross(cross) { cross.style.opacity = '1'; cross.classList.remove('animate-cross'); void cross.offsetWidth; cross.classList.add('animate-cross'); setTimeout(() => { cross.style.opacity = '0'; cross.classList.remove('animate-cross'); }, 1000); }
+  function animateCross(cross) {
+    if (!cross) return;
+    cross.style.opacity = '1';
+    cross.classList.remove('animate-cross');
+    void cross.offsetWidth;
+    cross.classList.add('animate-cross');
+    setTimeout(() => {
+      cross.style.opacity = '0';
+      cross.classList.remove('animate-cross');
+    }, 1200);
+  }
 
   function findCreationIndex(creations, creationId, fallbackCreation) {
     if (!Array.isArray(creations)) return -1;
