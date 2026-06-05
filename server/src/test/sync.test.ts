@@ -123,6 +123,40 @@ describe('sync', () => {
     expect(ids).toContain('unrelated');
   });
 
+  it('PUT /api/sync does not reset server-awarded XP from stale local profile data', async () => {
+    const { agent } = await registerAndAuth();
+    const sync0 = await agent.get('/api/sync').expect(200);
+    const profileId: string = sync0.body.values.currentProfileId;
+
+    await agent
+      .post('/api/xp/award')
+      .send({ kind: 'creation_uploaded', refId: 'creation_xp_guard' })
+      .expect(200);
+
+    await agent
+      .put('/api/sync')
+      .send({
+        tables: {
+          profiles: [
+            {
+              id: profileId,
+              name: 'Stale Local Player',
+              xpPoints: 0,
+            },
+          ],
+        },
+        values: {
+          currentProfileId: profileId,
+        },
+      })
+      .expect(200);
+
+    const gates = await agent.get('/api/xp/gates').expect(200);
+    expect(gates.body.xpPoints).toBe(1);
+    const sync1 = await agent.get('/api/sync').expect(200);
+    expect(sync1.body.tables.profiles[0].xpPoints).toBe(1);
+  });
+
   it('memberProfileIds in PUT writes to join tables; GET surfaces them at top level', async () => {
     const { agent } = await registerAndAuth();
     const sync0 = await agent.get('/api/sync').expect(200);

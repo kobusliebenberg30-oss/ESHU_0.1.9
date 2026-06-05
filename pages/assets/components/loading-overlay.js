@@ -31,21 +31,19 @@
           position: absolute;
           top: 50%;
           left: 50%;
-          width: 20px;
-          height: 20px;
-          margin-left: -10px;
-          margin-top: -10px;
-          background: var(--accent-black, #111);
-          clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+          width: var(--loader-square-small, 14px);
+          height: var(--loader-square-small, 14px);
+          background: var(--loader-square-color, #111);
+          transform: translate(-50%, -50%);
           z-index: 30;
           display: flex;
           align-items: center;
           justify-content: center;
           pointer-events: none;
-          animation: inlineDiamondSpin 0.82s linear infinite;
+          animation: inlineSquareStepSpin var(--loader-square-duration, 1.1s) steps(8, end) infinite;
         }
 
-        @keyframes inlineDiamondSpin {
+        @keyframes inlineSquareStepSpin {
           from { transform: translate(-50%, -50%) rotate(0deg); }
           to { transform: translate(-50%, -50%) rotate(360deg); }
         }

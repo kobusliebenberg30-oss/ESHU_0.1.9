@@ -203,6 +203,73 @@
     return getGroupMembers(defaultGroup).includes(profileId);
   }
 
+  function ensureDefaultOnboardingGame(profileId) {
+    if (!profileId) return null;
+    const groups = ESHU_DB.getTable('groups') || [];
+    const defaultGroup = groups.find(g => g && g.id === DEFAULT_GROUP_ID);
+    const groupMembers = getGroupMembers(defaultGroup);
+    if (!groupMembers.includes(profileId)) return null;
+
+    const currentGames = ESHU_DB.getTable('games') || [];
+    const now = Date.now();
+    const existingIndex = currentGames.findIndex(g => g && g.id === DEFAULT_GAME_ID);
+    const existing = existingIndex >= 0 ? currentGames[existingIndex] : {};
+    const memberProfileIds = getGameMembers(existing);
+    const hadMembership = memberProfileIds.includes(profileId);
+    if (!hadMembership) memberProfileIds.push(profileId);
+
+    const needsHealing = existingIndex < 0 ||
+      !hadMembership ||
+      existing.name !== 'Default Game' ||
+      existing.hostGroupId !== DEFAULT_GROUP_ID ||
+      existing.status !== 'active' ||
+      existing.isSystemDefault !== true ||
+      existing.isOnboardingDefault !== true;
+
+    if (!needsHealing) {
+      return existing;
+    }
+
+    const healed = {
+      ...existing,
+      id: DEFAULT_GAME_ID,
+      name: 'Default Game',
+      description: 'Upload your first onboarding creations here.',
+      rules: 'Upload image assets. Each upload awards XP toward the next unlock.',
+      hostGroupId: DEFAULT_GROUP_ID,
+      hostGroupName: 'GROUP',
+      privacy: 'public',
+      gameType: existing.gameType || 'book',
+      timingMode: 'infinite',
+      ownerProfileId: null,
+      createdByProfileId: null,
+      memberProfileIds,
+      startTime: existing.startTime ?? null,
+      submissionCloseTime: existing.submissionCloseTime ?? null,
+      endTime: existing.endTime ?? null,
+      timingOffsets: existing.timingOffsets || {
+        start: { weeks: 0, days: 0, hours: 0, mins: 0 },
+        submission: { weeks: 0, days: 0, hours: 0, mins: 0 },
+        end: { weeks: 0, days: 0, hours: 0, mins: 0 }
+      },
+      timingExtensions: Array.isArray(existing.timingExtensions) ? existing.timingExtensions : [],
+      isSystemDefault: true,
+      isOnboardingDefault: true,
+      fixedSettings: true,
+      awardsXp: true,
+      status: 'active',
+      createdAt: existing.createdAt || now,
+      updatedAt: now
+    };
+
+    const nextGames = existingIndex >= 0 ? [...currentGames] : [healed, ...currentGames];
+    if (existingIndex >= 0) nextGames[existingIndex] = healed;
+    ESHU_DB.setTable('games', nextGames);
+    if (typeof STATE !== 'undefined' && STATE.set) STATE.set('games', nextGames);
+    games = nextGames;
+    return healed;
+  }
+
   function syncLegacyProfileValues(profile) {
     const effective = profile || { name: 'Player', description: '', image: null };
     ESHU_DB.setValue('profileName', effective.name || 'Player');
@@ -256,6 +323,9 @@
   // label upgrades to the real game name once sync delivers it.
   function applyPreselectedGame() {
     if (!preselectedGameId) return;
+    if (preselectedGameId === DEFAULT_GAME_ID) {
+      ensureDefaultOnboardingGame(getActiveProfileId());
+    }
     if (selectedGameId === preselectedGameId && gameDropdownValue && !gameDropdownValue.classList.contains('placeholder')) {
       // Already locked in with a real label; no-op unless the game name changes.
       const refreshed = (games || []).find(g => g && g.id === preselectedGameId);
@@ -475,6 +545,9 @@
       games = ESHU_DB.getTable('games') || [];
       creations = ESHU_DB.getTable('creations') || [];
       xpPoints = parseInt(ESHU_DB.getProfileXp(ESHU_DB.getActiveProfileId()) || 0, 10);
+      if (preselectedGameId === DEFAULT_GAME_ID || selectedGameId === DEFAULT_GAME_ID) {
+        ensureDefaultOnboardingGame(ESHU_DB.getActiveProfileId());
+      }
     } else if (typeof STATE !== 'undefined') {
       games = STATE.get('games') || [];
       creations = STATE.get('creations') || [];
@@ -1434,7 +1507,8 @@
     const activeProfile = getActiveProfile();
     const activeProfileId = activeProfile?.id || ESHU_DB.getValue('currentProfileId') || null;
     const activeProfileName = activeProfile?.name || ESHU_DB.getValue('profileName') || 'Player';
-    const targetGame = (games || []).find(g => g.id === hostGameId);
+    const targetGame = (games || []).find(g => g.id === hostGameId) ||
+      (hostGameId === DEFAULT_GAME_ID ? ensureDefaultOnboardingGame(activeProfileId) : null);
 
     if (!targetGame) {
       setLoading(false);
@@ -1467,11 +1541,15 @@
     // preview is available.
     const originalFile = uploadedImage && uploadedImage.originalFile;
     const freshDataUrl = uploadedImage && uploadedImage.previewDataUrl;
+    let reusedExistingAsset = false;
     if (window.ESHU_ASSETS && originalFile instanceof Blob) {
       try {
         const filename = (originalFile && originalFile.name) || 'creation';
         const uploaded = await window.ESHU_ASSETS.uploadBlob(originalFile, filename);
-        if (uploaded && uploaded.assetId) imageAssetId = uploaded.assetId;
+        if (uploaded && uploaded.assetId) {
+          imageAssetId = uploaded.assetId;
+          reusedExistingAsset = !!uploaded.deduped;
+        }
       } catch (err) {
         console.warn('[creations.save] full-resolution upload failed; falling back to inline data URL:', err);
       }
@@ -1479,20 +1557,24 @@
     if (!imageAssetId && typeof freshDataUrl === 'string' && freshDataUrl.startsWith('data:') && window.ESHU_ASSETS) {
       try {
         const uploaded = await window.ESHU_ASSETS.uploadDataUrl(freshDataUrl, 'creation.png');
-        if (uploaded && uploaded.assetId) imageAssetId = uploaded.assetId;
+        if (uploaded && uploaded.assetId) {
+          imageAssetId = uploaded.assetId;
+          reusedExistingAsset = !!uploaded.deduped;
+        }
       } catch (err) {
         console.warn('[creations.save] inline preview upload failed:', err);
       }
+    }
+    if (reusedExistingAsset && typeof TOAST !== 'undefined') {
+      TOAST.info('Image was already uploaded, so ESHU reused the existing file.');
     }
 
     try {
       if (editingCreation) {
         // --- Edit mode: update existing creation ---
-        ESHU_DB.updateTable('creations', (currentCreations) => {
-          return currentCreations.map(c => {
-            if (c.id !== editingCreation.id) return c;
-            return {
-              ...c,
+        const existingCreation = editingCreation;
+        const updatedCreation = {
+              ...existingCreation,
               title: title,
               name: title,
               description: description,
@@ -1500,21 +1582,52 @@
               tags: tags,
               location: location,
               dateMade: dateMade,
-              hostGameId: c.hostGameId || c.gameId || hostGameId,
-              gameId: c.gameId || c.hostGameId || hostGameId,
-              image: uploadedImage?.previewDataUrl || c.image,
-              imageRef: uploadedImage?.imageRef || c.imageRef,
-              imageAssetId: imageAssetId || c.imageAssetId || null,
+              hostGameId: existingCreation.hostGameId || existingCreation.gameId || hostGameId,
+              gameId: existingCreation.gameId || existingCreation.hostGameId || hostGameId,
+              image: uploadedImage?.previewDataUrl || existingCreation.image,
+              imageRef: uploadedImage?.imageRef || existingCreation.imageRef,
+              imageAssetId: imageAssetId || existingCreation.imageAssetId || null,
               // Image metadata for drawing system
-              naturalWidth: studio.img ? studio.naturalW : (c.naturalWidth || null),
-              naturalHeight: studio.img ? studio.naturalH : (c.naturalHeight || null),
-              bgColor: studio.bgColor || c.bgColor || null,
-              border: c.border || null,
+              naturalWidth: studio.img ? studio.naturalW : (existingCreation.naturalWidth || null),
+              naturalHeight: studio.img ? studio.naturalH : (existingCreation.naturalHeight || null),
+              bgColor: studio.bgColor || existingCreation.bgColor || null,
+              border: existingCreation.border || null,
               privacy: privacy,
               updatedAt: Date.now()
             };
+        let savedCreation = updatedCreation;
+        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+          savedCreation = await ESHU_SYNC.mutate({
+            entity: 'creations',
+            call: () => ESHU_API.creations.update(editingCreation.id, {
+              name: title,
+              description,
+              devices,
+              tags,
+              dateMade,
+              hostGameId: updatedCreation.hostGameId,
+              ...(imageAssetId !== undefined ? { imageAssetId } : {}),
+              data: {
+                image: updatedCreation.image,
+                imageRef: updatedCreation.imageRef,
+                naturalWidth: updatedCreation.naturalWidth,
+                naturalHeight: updatedCreation.naturalHeight,
+                bgColor: updatedCreation.bgColor,
+                border: updatedCreation.border,
+                privacy,
+                gameId: updatedCreation.gameId,
+                title,
+                location,
+              },
+            }),
+            pick: (resp) => resp && resp.creation,
+            refresh: true,
+          }) || updatedCreation;
+        } else {
+          ESHU_DB.updateTable('creations', (currentCreations) => {
+            return currentCreations.map(c => c.id === editingCreation.id ? updatedCreation : c);
           });
-        });
+        }
 
         updateXPDisplay();
         updateUploadAccessUi();
@@ -1564,23 +1677,67 @@
           timestamp: Date.now()
         };
 
-        if (typeof ESHU_DB !== 'undefined') {
+        let savedCreation = newCreation;
+        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+          savedCreation = await ESHU_SYNC.mutate({
+            entity: 'creations',
+            call: () => ESHU_API.creations.create({
+              name: title,
+              description,
+              devices,
+              tags,
+              dateMade,
+              hostGameId,
+              imageAssetId: imageAssetId || null,
+              status: 'active',
+              timestamp: newCreation.timestamp,
+              data: {
+                image: newCreation.image,
+                imageRef: newCreation.imageRef,
+                naturalWidth: newCreation.naturalWidth,
+                naturalHeight: newCreation.naturalHeight,
+                bgColor: newCreation.bgColor,
+                border: newCreation.border,
+                privacy,
+                gameId: hostGameId,
+                title,
+                location,
+                votes: 0,
+                burns: 0,
+                author: activeProfileName,
+                authorName: activeProfileName,
+                authorId: activeProfileId || 'current-user',
+                authorProfileId: activeProfileId,
+                createdByProfileId: activeProfileId,
+              },
+            }),
+            pick: (resp) => resp && resp.creation,
+            refresh: true,
+          }) || newCreation;
+        } else if (typeof ESHU_DB !== 'undefined') {
           ESHU_DB.updateTable('creations', (currentCreations) => [newCreation, ...currentCreations]);
+        } else if (typeof STATE !== 'undefined') {
+          const currentCreations = STATE.get('creations') || [];
+          STATE.set('creations', [newCreation, ...currentCreations]);
+        }
+
+        if (typeof ESHU_DB !== 'undefined' || (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote())) {
           // Server-authoritative XP via the shared helper. Handles
           // remote-vs-local mode, idempotency, and offline fallback.
           // Default-game uploads also award XP so onboarding users can
           // reach the Comments unlock (3 XP) without being forced into a
           // non-default game first.
-          const awardResult = await ESHU_API.xp.awardSafe('creation_uploaded', newCreation.id);
+          const awardResult = await ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id || newCreation.id);
           xpPoints = awardResult.xpPoints;
           if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
           if (xpPoints >= CREATION_UPLOAD_UNLOCK_XP) {
             writeUploadUnlockFlag(true);
             uploadUnlocked = true;
           }
-        } else if (typeof STATE !== 'undefined') {
-          const currentCreations = STATE.get('creations') || [];
-          STATE.set('creations', [newCreation, ...currentCreations]);
+          if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+            await ESHU_SYNC.refresh();
+          }
+        } else {
           const xp = parseInt(STATE.get('xpPoints') || 0, 10) + 1;
           STATE.set('xpPoints', xp);
           xpPoints = xp;
@@ -1598,16 +1755,11 @@
         }
         runHype('RIGHT ON!');
 
-        resetForm();
-
-        // Navigate to Game Front for the host game after short delay
-        setTimeout(() => {
-          const resolvedSourceGroupId = sourceGroupId || targetGame.hostGroupId || '';
-          const sourceGroupPart = resolvedSourceGroupId
-            ? `&sourceGroupId=${encodeURIComponent(resolvedSourceGroupId)}`
-            : '';
-          window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
-        }, 1500);
+        const resolvedSourceGroupId = sourceGroupId || targetGame.hostGroupId || '';
+        const sourceGroupPart = resolvedSourceGroupId
+          ? `&sourceGroupId=${encodeURIComponent(resolvedSourceGroupId)}`
+          : '';
+        window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
       }
     } catch (err) {
       console.error('Create upload failed:', err);
@@ -1654,9 +1806,12 @@
     
     // Keep preselected game if any, otherwise reset dropdown
     if (preselectedGameId) {
-      const preGame = games.find(g => g.id === preselectedGameId);
+      const preGame = games.find(g => g.id === preselectedGameId) ||
+        (preselectedGameId === DEFAULT_GAME_ID ? ensureDefaultOnboardingGame(getActiveProfileId()) : null);
       if (preGame) {
         setGameDropdownValue(preselectedGameId, preGame.name);
+      } else if (preselectedGameId === DEFAULT_GAME_ID) {
+        setGameDropdownValue(preselectedGameId, 'Default Game');
       } else {
         setGameDropdownValue(null, null);
       }

@@ -1,6 +1,7 @@
 import express, { type Express } from 'express';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import helmet from 'helmet';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
@@ -35,8 +36,27 @@ const SUPABASE_UMD_CANDIDATES = [
 ];
 const SUPABASE_UMD: string =
   SUPABASE_UMD_CANDIDATES.find((c) => existsSync(c)) ?? SUPABASE_UMD_CANDIDATES[0]!;
+const require = createRequire(import.meta.url);
+const { Pool: PgPool } = require('pg') as {
+  Pool: new (options: {
+    connectionString: string;
+    max?: number;
+    ssl?: { rejectUnauthorized: boolean };
+  }) => unknown;
+};
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+function sessionConnectionString(): string {
+  if (env.NODE_ENV !== 'production') return env.DATABASE_URL;
+  try {
+    const url = new URL(env.DATABASE_URL);
+    url.searchParams.delete('sslmode');
+    return url.toString();
+  } catch {
+    return env.DATABASE_URL;
+  }
+}
 
 function vercelPreviewOrigins(): string[] {
   const out: string[] = [];
@@ -51,10 +71,48 @@ function vercelPreviewOrigins(): string[] {
   return out;
 }
 
+function isSameVercelProjectDeployment(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== 'https:' || !parsed.hostname.endsWith('.vercel.app')) {
+      return false;
+    }
+
+    const currentDeployment = process.env.VERCEL_URL;
+    if (!currentDeployment) return false;
+    const currentHost = currentDeployment.replace(/^https?:\/\//, '').split('/')[0] ?? '';
+    if (!currentHost.endsWith('.vercel.app')) return false;
+
+    for (const allowed of env.CORS_ORIGIN) {
+      const allowedHost = new URL(allowed).hostname;
+      if (!allowedHost.endsWith('.vercel.app')) continue;
+
+      const projectSlug = allowedHost.replace(/\.vercel\.app$/, '');
+      const deploymentSlug = currentHost.replace(/\.vercel\.app$/, '');
+      if (!deploymentSlug.startsWith(`${projectSlug}-`)) continue;
+
+      const suffix = deploymentSlug.slice(projectSlug.length + 1);
+      const firstDash = suffix.indexOf('-');
+      if (firstDash < 0) continue;
+
+      const teamSlug = suffix.slice(firstDash + 1);
+      const expectedPrefix = `${projectSlug}-`;
+      const expectedSuffix = `-${teamSlug}.vercel.app`;
+      if (parsed.hostname.startsWith(expectedPrefix) && parsed.hostname.endsWith(expectedSuffix)) {
+        return true;
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 function isAllowedCorsOrigin(origin?: string): boolean {
   if (!origin) return true;
   if (env.CORS_ORIGIN.includes(origin)) return true;
   if (vercelPreviewOrigins().includes(origin)) return true;
+  if (isSameVercelProjectDeployment(origin)) return true;
   if (env.NODE_ENV === 'production') return false;
   try {
     const parsed = new URL(origin);
@@ -67,6 +125,15 @@ function isAllowedCorsOrigin(origin?: string): boolean {
 export const buildApp = (): Express => {
   const app = express();
   const PgStore = connectPgSimple(session);
+  const sessionPoolOptions = {
+    // Strip sslmode=require for this direct pg consumer; pg-connection-string
+    // otherwise re-enables certificate verification and overrides the ssl
+    // object below.
+    connectionString: sessionConnectionString(),
+    max: 1,
+    ...(env.NODE_ENV === 'production' ? { ssl: { rejectUnauthorized: false } } : {}),
+  };
+  const sessionPool = new PgPool(sessionPoolOptions);
 
   app.disable('x-powered-by');
   app.set('trust proxy', 1);
@@ -141,7 +208,7 @@ export const buildApp = (): Express => {
         maxAge: env.SESSION_MAX_AGE_MS,
       },
       store: new PgStore({
-        conString: env.DATABASE_URL,
+        pool: sessionPool,
         tableName: 'Session',
         createTableIfMissing: false,
       }),

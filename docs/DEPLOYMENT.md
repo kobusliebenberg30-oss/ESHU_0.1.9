@@ -85,8 +85,9 @@ Set for **Production** and **Preview** (preview may share the same DB or use a b
 | `SESSION_MAX_AGE_MS` | No | Default 30 days |
 | `CORS_ORIGIN` | Yes | `https://your-production-domain.vercel.app` (comma-separated) |
 | `LOG_LEVEL` | No | `info` |
-| `STORAGE_DRIVER` | No | `local` |
-| `STORAGE_LOCAL_DIR` | On Vercel | `/tmp/eshu-assets` (ephemeral; see risks) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes for Supabase Storage | Supabase server-only service role key |
+| `STORAGE_DRIVER` | Yes | `supabase` for durable Vercel uploads |
+| `STORAGE_SUPABASE_BUCKET` | Yes for Supabase Storage | Private bucket name, e.g. `eshu-assets` |
 | `STORAGE_MAX_BYTES` | No | Default 25MB |
 
 `VERCEL_URL` / `VERCEL_BRANCH_URL` are injected by Vercel; the server auto-allows them for CORS.
@@ -129,7 +130,19 @@ $env:NODE_ENV="production"; node server/dist/index.js
 
 ## 4. Asset storage on Vercel
 
-`STORAGE_DRIVER=local` on Vercel writes to `/tmp`, which is **not durable** across invocations. Image uploads may appear to work once, then 404 later. For production media, implement `STORAGE_DRIVER=s3` or Supabase Storage (not yet in repo).
+Use Supabase Storage for production media:
+
+1. Supabase Dashboard → **Storage** → create a private bucket named `eshu-assets` (or match `STORAGE_SUPABASE_BUCKET`).
+2. Supabase Dashboard → **Project Settings → API Keys** → copy the server-only **service role** key.
+3. Set Vercel env:
+
+```env
+STORAGE_DRIVER=supabase
+STORAGE_SUPABASE_BUCKET=eshu-assets
+SUPABASE_SERVICE_ROLE_KEY=...
+```
+
+The bucket should stay private. ESHU authorizes asset reads through `/api/assets/:id/raw`, then the server streams the object from Supabase Storage.
 
 ## 5. Troubleshooting
 
@@ -139,6 +152,7 @@ $env:NODE_ENV="production"; node server/dist/index.js
 | `database invariant failed` at cold start | Migrations not applied to Supabase |
 | 403 CORS | Add your custom domain to `CORS_ORIGIN` |
 | Login works, then 401 | Transaction pooler + session store; switch to session pooler |
+| Uploaded images 500/404 | Missing `SUPABASE_SERVICE_ROLE_KEY`, wrong `STORAGE_SUPABASE_BUCKET`, or bucket not created |
 | Static HTML 404 | `pages/**` not bundled — check `vercel.json` `includeFiles` |
 
 ## 6. Credential checklist (you provide)
@@ -147,4 +161,6 @@ $env:NODE_ENV="production"; node server/dist/index.js
 - [ ] Supabase `DIRECT_URL` (migrations)
 - [ ] `SESSION_SECRET` (≥ 32 chars)
 - [ ] `CORS_ORIGIN` with final Vercel/production URL(s)
+- [ ] Supabase `SUPABASE_SERVICE_ROLE_KEY`
+- [ ] Supabase Storage private bucket (`STORAGE_SUPABASE_BUCKET`)
 - [ ] Vercel project linked to this GitHub repo

@@ -27,8 +27,8 @@ const runSoft = (cmd, args, opts = {}) => {
   }
 };
 
-run(npm, ['run', 'build'], { cwd: SERVER });
 run(npm, ['run', 'db:generate'], { cwd: SERVER });
+run(npm, ['run', 'build'], { cwd: SERVER });
 
 if (process.env.DATABASE_URL && process.env.DIRECT_URL) {
   runSoft(npm, ['run', 'db:deploy'], { cwd: SERVER });

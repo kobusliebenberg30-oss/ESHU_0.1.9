@@ -263,14 +263,30 @@ export const updateProfile = async (
     };
   }
 
+  const profileUpdate = {
+    ...(input.name !== undefined ? { name: input.name } : {}),
+    ...(input.description !== undefined ? { description: input.description } : {}),
+    ...(input.xpPoints !== undefined ? { xpPoints: input.xpPoints } : {}),
+    ...(input.avatarAssetId !== undefined ? { avatarAssetId: input.avatarAssetId } : {}),
+    ...(nextData !== undefined ? { data: nextData as object } : {}),
+  };
+
+  if (input.name !== undefined) {
+    const [, profile] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { displayName: input.name },
+      }),
+      prisma.profile.update({
+        where: { id: activeProfileId },
+        data: profileUpdate,
+      }),
+    ]);
+    return profile;
+  }
+
   return prisma.profile.update({
     where: { id: activeProfileId },
-    data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.description !== undefined ? { description: input.description } : {}),
-      ...(input.xpPoints !== undefined ? { xpPoints: input.xpPoints } : {}),
-      ...(input.avatarAssetId !== undefined ? { avatarAssetId: input.avatarAssetId } : {}),
-      ...(nextData !== undefined ? { data: nextData as object } : {}),
-    },
+    data: profileUpdate,
   });
 };

@@ -5,7 +5,10 @@
  * Usage (replace YOUR_DB_PASSWORD with Supabase → Settings → Database → password):
  *   node scripts/complete-production.mjs --password=YOUR_DB_PASSWORD
  *
- * Optional region (default eu-central-1): --region=us-east-1
+ * Optional:
+ *   --region=us-east-1
+ *   --service-role=YOUR_SUPABASE_SERVICE_ROLE_KEY
+ *   --bucket=eshu-assets
  */
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
@@ -25,10 +28,18 @@ const args = Object.fromEntries(
 
 const password = args.password;
 const region = args.region || 'eu-central-1';
+const serviceRole = args['service-role'] || args.serviceRole;
+const bucket = args.bucket || 'eshu-assets';
 
 if (!password || password === 'true') {
   console.error('\nMissing --password=YOUR_SUPABASE_DATABASE_PASSWORD\n');
   console.error('Supabase → Project → Settings → Database → Database password\n');
+  process.exit(1);
+}
+
+if (!serviceRole || serviceRole === 'true') {
+  console.error('\nMissing --service-role=YOUR_SUPABASE_SERVICE_ROLE_KEY\n');
+  console.error('Supabase → Project Settings → API Keys → service_role (server-only)\n');
   process.exit(1);
 }
 
@@ -52,9 +63,10 @@ SESSION_COOKIE_NAME=eshu.sid
 SESSION_MAX_AGE_MS=2592000000
 SUPABASE_URL=https://${PROJECT_REF}.supabase.co
 SUPABASE_ANON_KEY=sb_publishable_ef87uC-eCGwhqArQnb2USQ_3Q6RODkb
+SUPABASE_SERVICE_ROLE_KEY=${serviceRole}
 CORS_ORIGIN=https://eshu-0-1-4.vercel.app
-STORAGE_DRIVER=local
-STORAGE_LOCAL_DIR=/tmp/eshu-assets
+STORAGE_DRIVER=supabase
+STORAGE_SUPABASE_BUCKET=${bucket}
 STORAGE_MAX_BYTES=26214400
 `,
 );
@@ -83,9 +95,10 @@ const vars = {
   SESSION_MAX_AGE_MS: '2592000000',
   SUPABASE_URL: `https://${PROJECT_REF}.supabase.co`,
   SUPABASE_ANON_KEY: 'sb_publishable_ef87uC-eCGwhqArQnb2USQ_3Q6RODkb',
+  SUPABASE_SERVICE_ROLE_KEY: serviceRole,
   CORS_ORIGIN: 'https://eshu-0-1-4.vercel.app',
-  STORAGE_DRIVER: 'local',
-  STORAGE_LOCAL_DIR: '/tmp/eshu-assets',
+  STORAGE_DRIVER: 'supabase',
+  STORAGE_SUPABASE_BUCKET: bucket,
   STORAGE_MAX_BYTES: '26214400',
 };
 

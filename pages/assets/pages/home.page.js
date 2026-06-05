@@ -79,6 +79,8 @@
     const ownId = getOwnedActiveProfileId();
     if (!ownId) return;
     selectedProfileId = ownId;
+    currentTab = 'player';
+    tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
     updateSidebarActiveState();
     renderProfilePanel();
     renderCurrentTab();
@@ -456,6 +458,7 @@
   }
 
   const profileXP = document.getElementById('profileXP');
+  const profileStats = document.querySelector('.profile-stats');
   const creationCountEl = document.getElementById('creationCount');
   const commentCountEl = document.getElementById('commentCount');
   const profileBioText = document.getElementById('profileBioText');
@@ -853,6 +856,7 @@
   const avatarSidebar = document.getElementById('avatarSidebar');
   let selectedProfileId = ESHU_DB.getValue('currentProfileId') || null;
   let sidebarBuiltIds = [];
+  let playerSearchTerm = '';
 
   // profileId query switching is intentionally disabled in single-profile mode.
 
@@ -935,6 +939,17 @@
       if (ownPlayerbaseProfileId && p.id === ownPlayerbaseProfileId) return true;
       return hasActivity(p);
     });
+
+    if (currentTab === 'player' && !isReadOnlyProfileView()) {
+      const playerSearch = document.getElementById('playerSearch');
+      const searchTerm = (playerSearchTerm || playerSearch?.value || '').trim().toLowerCase();
+      if (searchTerm) {
+        profiles = profiles.filter((p) => String(p?.name || 'Player').toLowerCase().includes(searchTerm));
+      }
+      profiles = profiles.slice().sort((a, b) => String(a?.name || 'Player').localeCompare(String(b?.name || 'Player')));
+      const playerCountEl = document.getElementById('playerCount');
+      if (playerCountEl) playerCountEl.textContent = `${profiles.length} player${profiles.length === 1 ? '' : 's'}`;
+    }
 
     if (profiles.length === 0 && !remoteMode) {
       profiles = [{
@@ -1026,59 +1041,10 @@
     if (!profilePanel) return;
 
     let actionsContainer = document.getElementById('profileActionButtons');
+    if (actionsContainer) actionsContainer.remove();
 
-    if (!readOnlyView) {
-      // Remove buttons when viewing own profile
-      if (actionsContainer) actionsContainer.remove();
-      return;
-    }
-
-    // Create buttons container if it doesn't exist
-    if (!actionsContainer) {
-      actionsContainer = document.createElement('div');
-      actionsContainer.id = 'profileActionButtons';
-      actionsContainer.className = 'profile-action-buttons';
-
-      // Like button
-      const likeBtn = document.createElement('button');
-      likeBtn.className = 'profile-action-btn profile-like-btn';
-      likeBtn.title = 'Like Profile';
-      likeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-      likeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleProfileLike(currentProfile.id, likeBtn);
-      });
-
-      // Follow button
-      const followBtn = document.createElement('button');
-      followBtn.className = 'profile-action-btn profile-follow-btn';
-      followBtn.title = 'Follow Player';
-      followBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`;
-      followBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleProfileFollow(currentProfile.id, followBtn);
-      });
-
-      // Close button (return to own profile)
-      const closeBtn = document.createElement('button');
-      closeBtn.className = 'profile-action-btn profile-close-btn-corner';
-      closeBtn.title = 'Close - Back to My Profile';
-      closeBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>`;
-      closeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        resetToOwnProfile();
-      });
-
-      actionsContainer.appendChild(likeBtn);
-      actionsContainer.appendChild(followBtn);
-      actionsContainer.appendChild(closeBtn);
-
-      // Insert at the top of profile panel
-      profilePanel.insertBefore(actionsContainer, profilePanel.firstChild);
-    }
-
-    // Update button states based on current profile
-    updateProfileActionStates(currentProfile.id);
+    // Other-player profiles are intentionally read-only and quiet.
+    // The subtle back link below is the only profile-level action.
   }
 
   function toggleProfileLike(profileId, btnElement) {
@@ -1158,13 +1124,18 @@
       ? (Number(currentProfile?.stats?.games) || 0)
       : scopedGames.length;
     if (profileXP) profileXP.textContent = `${xpPoints} XP`;
+    if (profileStats) {
+      profileStats.innerHTML = readOnlyView
+        ? `<span id="creationCount">${creationCount}</span> Creations · <span id="commentCount">${profileGameCount}</span> Games`
+        : `<span id="creationCount">${creationCount}</span> Creations · <span id="commentCount">${activeComments.length}</span> Comments`;
+    }
     if (creationCountEl) creationCountEl.textContent = creationCount;
     if (commentCountEl) commentCountEl.textContent = readOnlyView ? profileGameCount : activeComments.length;
     if (profileBioText) profileBioText.textContent = description;
     if (xpCounter) xpCounter.textContent = `${xpPoints} XP${readOnlyView ? '' : ' +'}`;
     if (profileDisplayName) {
       profileDisplayName.textContent = readOnlyView
-        ? `${headingName.toLowerCase()} (view only)`
+        ? headingName.toLowerCase()
         : headingName.toLowerCase();
     }
     if (mainContainer) {
@@ -1172,7 +1143,7 @@
     }
     if (profileViewMode) {
       if (readOnlyView) {
-        profileViewMode.textContent = 'view only mode';
+        profileViewMode.textContent = 'viewing profile';
         profileViewMode.classList.remove('my-profile-badge');
       } else {
         profileViewMode.textContent = 'MY PROFILE';
@@ -1183,11 +1154,13 @@
     // Close/Back button when viewing another profile
     let closeProfileBtn = document.getElementById('closeProfileBtn');
     if (readOnlyView) {
+      currentTab = 'player';
+      tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
       if (!closeProfileBtn) {
         closeProfileBtn = document.createElement('button');
         closeProfileBtn.id = 'closeProfileBtn';
-        closeProfileBtn.className = 'profile-close-btn';
-        closeProfileBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Back to My Profile';
+        closeProfileBtn.className = 'profile-back-link';
+        closeProfileBtn.textContent = 'back to my profile';
         closeProfileBtn.addEventListener('click', resetToOwnProfile);
         // Insert after the view mode element
         if (profileViewMode && profileViewMode.parentNode) {
@@ -1453,6 +1426,12 @@
   // ===== Render Tabs =====
   function renderCurrentTab() {
     const { scopedGroups, scopedGames, scopedCreations, scopedComments, scopedLikedItems, scopedFollowedItems } = getScopedData(selectedProfileId);
+    if (mainContainer) {
+      mainContainer.classList.toggle('profile-non-player-tab', currentTab !== 'player');
+    }
+    if (currentTab === 'player') {
+      renderAvatarSidebar();
+    }
 
     // Hide all content areas
     playerGrid.style.display = 'none';
@@ -1825,48 +1804,13 @@
       if (!playerContent) return;
       playerContent.innerHTML = '';
 
-      const filterVal = playerFilter?.value || 'all';
-      const sortVal = playerSort?.value || 'recent';
-      const searchVal = (playerSearch?.value || '').toLowerCase().trim();
-
       let filtered = scopedCreations.filter(c => ESHU_DB.isEntityActive(c));
-
-      if (filterVal === 'liked') {
-        filtered = filtered.filter(c => (c.likedBy || []).includes(selectedProfileId));
-      } else if (filterVal === 'public') {
-        filtered = filtered.filter(c => (c.privacy || '').toLowerCase() !== 'private');
-      } else if (filterVal === 'private') {
-        filtered = filtered.filter(c => (c.privacy || '').toLowerCase() === 'private');
-      }
-
-      if (searchVal) {
-        filtered = filtered.filter(c => {
-          const tags = Array.isArray(c.tags) ? c.tags.join(' ') : (c.tags || '');
-          return (
-            (c.name || c.title || '').toLowerCase().includes(searchVal) ||
-            (c.description || '').toLowerCase().includes(searchVal) ||
-            (c.authorName || c.author || '').toLowerCase().includes(searchVal) ||
-            (tags || '').toLowerCase().includes(searchVal)
-          );
-        });
-      }
-
-      if (sortVal === 'votes') {
-        filtered.sort((a, b) => getCreationVoteCount(b) - getCreationVoteCount(a));
-      } else if (sortVal === 'name') {
-        filtered.sort((a, b) => String(a.name || a.title || '').localeCompare(String(b.name || b.title || '')));
-      } else {
-        filtered.sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
-      }
+      filtered.sort((a, b) => (b.createdAt || b.timestamp || 0) - (a.createdAt || a.timestamp || 0));
 
       if (filtered.length === 0) {
         playerContent.innerHTML = '<div class="u-card-empty">No creations yet. Upload your first creation!</div>';
-        if (playerCountEl) playerCountEl.textContent = `0 / ${scopedCreations.length}`;
         return;
       }
-
-      const shown = Math.min(filtered.length, 50);
-      if (playerCountEl) playerCountEl.textContent = `${shown} / ${scopedCreations.length}`;
 
       filtered.slice(0, 50).forEach((creation, index) => {
         const card = createCreationCard(creation, index);
@@ -1877,13 +1821,23 @@
     renderPlayerList();
 
     if (playerFilter) {
-      playerFilter.onchange = renderPlayerList;
+      playerFilter.onchange = () => {
+        sidebarBuiltIds = [];
+        renderAvatarSidebar();
+      };
     }
     if (playerSort) {
-      playerSort.onchange = renderPlayerList;
+      playerSort.onchange = () => {
+        sidebarBuiltIds = [];
+        renderAvatarSidebar();
+      };
     }
     if (playerSearch) {
-      playerSearch.oninput = renderPlayerList;
+      playerSearch.oninput = () => {
+        playerSearchTerm = playerSearch.value || '';
+        sidebarBuiltIds = [];
+        renderAvatarSidebar();
+      };
     }
   }
 

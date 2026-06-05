@@ -80,7 +80,7 @@ model Asset {
   avatarOf      User?      @relation("UserAvatar")
   profileAvatar Profile?   @relation("ProfileAvatar")
   groupCover    Group?     @relation("GroupCover")
-  creationImage Creation?  @relation("CreationImage")
+  creationImages Creation[] @relation("CreationImage")
 
   @@unique([ownerId, sha256], name: "ownerId_sha256")
   @@index([ownerId, createdAt])
@@ -202,7 +202,7 @@ model Creation {
   tags           String?
   dateMade       String?
   status         EntityStatus @default(ACTIVE)
-  imageAssetId   String?      @unique
+  imageAssetId   String?
   imageAsset     Asset?       @relation("CreationImage", fields: [imageAssetId], references: [id])
   data           Json         @default("{}") // imageRef fallback, liked, followed, custom fields
   timestamp      BigInt       @default(0) // ms epoch from frontend; preserved for ordering parity

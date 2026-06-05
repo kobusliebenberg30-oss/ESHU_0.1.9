@@ -1240,9 +1240,27 @@
       populateGroupFilter();
       renderGamesList();
       initNavProfile();
+      completeListLoadingWhenReady();
     } catch (err) {
       console.error('Rehydrate error:', err);
     }
+  }
+
+  function isRemoteHydrationPending() {
+    return !!(
+      window.ESHU_REMOTE &&
+      window.ESHU_REMOTE.isEnabled &&
+      window.ESHU_REMOTE.isEnabled() &&
+      !window.ESHU_AUTH
+    );
+  }
+
+  function completeListLoadingWhenReady() {
+    if (isRemoteHydrationPending()) return;
+    if (!window.ESHU_RUNTIME || typeof window.ESHU_RUNTIME.completeNavigationLoading !== 'function') return;
+    requestAnimationFrame(() => {
+      window.ESHU_RUNTIME.completeNavigationLoading();
+    });
   }
 
   function setupStateSubscriptions() {
@@ -2364,6 +2382,7 @@
       } else {
         gamesList.innerHTML = '<div class="u-card-empty">No games yet. Join a group to discover games or create your own!</div>';
       }
+      completeListLoadingWhenReady();
       return;
     }
 
@@ -2486,6 +2505,7 @@
         lastClickedId = gameId;
       });
     });
+    completeListLoadingWhenReady();
   }
 
   // ===== Select Game (Single Tap) =====
@@ -4506,17 +4526,38 @@
       const game = getGameById(gameId);
       if (game) {
         openGameFrontModal(gameId);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return true;
       }
-      window.history.replaceState({}, document.title, window.location.pathname);
+      return false;
     }
+    return true;
   }
 
   // ===== Start =====
+  function retryOpenGameFrontFromUrl(gameId, attemptsLeft = 12) {
+    if (!gameId) return;
+    try { rehydrateFromStorage(); } catch {}
+    const game = getGameById(gameId);
+    if (game) {
+      openGameFrontModal(gameId);
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+    if (attemptsLeft <= 0) return;
+    setTimeout(() => retryOpenGameFrontFromUrl(gameId, attemptsLeft - 1), 250);
+  }
+
   function runUrlActionsWhenReady() {
     const remoteEnabled = !!(window.ESHU_REMOTE && window.ESHU_REMOTE.isEnabled && window.ESHU_REMOTE.isEnabled());
     const remoteReady = !remoteEnabled || !!window.ESHU_AUTH;
     if (remoteReady) {
-      try { checkUrlActions(); } catch(e) { console.error('checkUrlActions error:', e); }
+      try {
+        const opened = checkUrlActions();
+        const params = new URLSearchParams(window.location.search);
+        const isFront = params.get('view') === 'front' || params.get('action') === 'view-front';
+        if (opened === false && isFront) retryOpenGameFrontFromUrl(params.get('gameId'));
+      } catch(e) { console.error('checkUrlActions error:', e); }
       return;
     }
     // Remote mode active but driver hasn't pulled /api/sync yet. Wait for
@@ -4525,7 +4566,12 @@
     const onActivated = () => {
       window.removeEventListener('eshu:remote-activated', onActivated);
       try { rehydrateFromStorage(); } catch {}
-      try { checkUrlActions(); } catch(e) { console.error('checkUrlActions error:', e); }
+      try {
+        const opened = checkUrlActions();
+        const params = new URLSearchParams(window.location.search);
+        const isFront = params.get('view') === 'front' || params.get('action') === 'view-front';
+        if (opened === false && isFront) retryOpenGameFrontFromUrl(params.get('gameId'));
+      } catch(e) { console.error('checkUrlActions error:', e); }
     };
     window.addEventListener('eshu:remote-activated', onActivated, { once: true });
     // Safety net: if activation never fires (offline / unauthenticated), still
@@ -4533,7 +4579,12 @@
     setTimeout(() => {
       if (!window.ESHU_AUTH) {
         window.removeEventListener('eshu:remote-activated', onActivated);
-        try { checkUrlActions(); } catch(e) { console.error('checkUrlActions error:', e); }
+        try {
+          const opened = checkUrlActions();
+          const params = new URLSearchParams(window.location.search);
+          const isFront = params.get('view') === 'front' || params.get('action') === 'view-front';
+          if (opened === false && isFront) retryOpenGameFrontFromUrl(params.get('gameId'));
+        } catch(e) { console.error('checkUrlActions error:', e); }
       }
     }, 5000);
   }

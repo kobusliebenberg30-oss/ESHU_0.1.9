@@ -21,15 +21,42 @@ const schema = z.object({
   SESSION_COOKIE_SAME_SITE: z.enum(['lax', 'none', 'strict']).default('lax'),
   SUPABASE_URL: z.string().trim().url().optional(),
   SUPABASE_ANON_KEY: z.string().trim().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1).optional(),
 
   CORS_ORIGIN: z
     .string()
     .default('http://localhost:5173')
     .transform((s) => s.split(',').map((o) => o.trim()).filter(Boolean)),
 
-  STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),
+  STORAGE_DRIVER: z.enum(['local', 's3', 'supabase']).default('local'),
   STORAGE_LOCAL_DIR: z.string().default('./storage/assets'),
+  STORAGE_SUPABASE_BUCKET: z.string().trim().min(1).default('eshu-assets'),
   STORAGE_MAX_BYTES: z.coerce.number().int().positive().default(25 * 1024 * 1024),
+}).superRefine((value, ctx) => {
+  if (value.SUPABASE_ANON_KEY && !value.SUPABASE_URL) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['SUPABASE_URL'],
+      message: 'SUPABASE_URL is required when SUPABASE_ANON_KEY is set',
+    });
+  }
+
+  if (value.STORAGE_DRIVER === 'supabase') {
+    if (!value.SUPABASE_URL) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUPABASE_URL'],
+        message: 'SUPABASE_URL is required when STORAGE_DRIVER=supabase',
+      });
+    }
+    if (!value.SUPABASE_SERVICE_ROLE_KEY) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['SUPABASE_SERVICE_ROLE_KEY'],
+        message: 'SUPABASE_SERVICE_ROLE_KEY is required when STORAGE_DRIVER=supabase',
+      });
+    }
+  }
 });
 
 const parsed = schema.safeParse(process.env);
@@ -38,10 +65,9 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-if (!!parsed.data.SUPABASE_URL !== !!parsed.data.SUPABASE_ANON_KEY) {
+if (parsed.data.SUPABASE_ANON_KEY && !parsed.data.SUPABASE_URL) {
   console.error('\nInvalid environment configuration:\n', {
-    SUPABASE_URL: ['SUPABASE_URL and SUPABASE_ANON_KEY must be provided together'],
-    SUPABASE_ANON_KEY: ['SUPABASE_URL and SUPABASE_ANON_KEY must be provided together'],
+    SUPABASE_URL: ['SUPABASE_URL is required when SUPABASE_ANON_KEY is set'],
   });
   process.exit(1);
 }

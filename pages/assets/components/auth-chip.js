@@ -131,11 +131,11 @@
     chipEl.appendChild(el('span', { class: 'eshu-auth-chip-dot' }));
 
     if (state === 'online' && user) {
-      const name = user.username || user.displayName || 'account';
+      const name = user.displayName || user.username || 'account';
       chipEl.appendChild(el('span', { class: 'eshu-auth-chip-name', text: name }));
       chipEl.appendChild(el('span', { class: 'eshu-auth-chip-sep' }));
       chipEl.appendChild(el('button', {
-        class: 'eshu-auth-chip-action', type: 'button', text: 'Logout',
+        class: 'eshu-auth-chip-action', type: 'button', text: 'Sign out',
         onclick: () => window.ESHU_AUTH_UI && window.ESHU_AUTH_UI.logout()
       }));
     } else {

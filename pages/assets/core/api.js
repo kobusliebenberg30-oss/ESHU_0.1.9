@@ -43,6 +43,55 @@
   }
 
   const BASE = resolveBase();
+  let pendingRequests = 0;
+  let busyTimer = null;
+  let busyVisibleSince = 0;
+  const BUSY_SHOW_DELAY_MS = 180;
+  const BUSY_MIN_VISIBLE_MS = 260;
+
+  function ensureBusyIndicator() {
+    if (!document || !document.body) return null;
+    let el = document.getElementById('eshuNetworkBusy');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'eshuNetworkBusy';
+    el.className = 'eshu-network-busy';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = '<span class="eshu-busy-spinner"></span>';
+    document.body.appendChild(el);
+    return el;
+  }
+
+  function setBusyVisible(visible) {
+    const el = ensureBusyIndicator();
+    if (!el) return;
+    el.classList.toggle('active', !!visible);
+    if (visible) busyVisibleSince = Date.now();
+  }
+
+  function beginRequestBusy() {
+    pendingRequests += 1;
+    if (pendingRequests !== 1) return;
+    if (busyTimer) clearTimeout(busyTimer);
+    busyTimer = setTimeout(() => {
+      busyTimer = null;
+      if (pendingRequests > 0) setBusyVisible(true);
+    }, BUSY_SHOW_DELAY_MS);
+  }
+
+  function endRequestBusy() {
+    pendingRequests = Math.max(0, pendingRequests - 1);
+    if (pendingRequests > 0) return;
+    if (busyTimer) {
+      clearTimeout(busyTimer);
+      busyTimer = null;
+    }
+    const elapsed = Date.now() - busyVisibleSince;
+    const waitMs = Math.max(0, BUSY_MIN_VISIBLE_MS - elapsed);
+    setTimeout(() => {
+      if (pendingRequests === 0) setBusyVisible(false);
+    }, waitMs);
+  }
 
   function isSameOriginApiBase() {
     return BASE === '/api' || /^https?:\/\/[^/]+\/api$/i.test(BASE) === false;
@@ -80,6 +129,7 @@
     else if (cfg.body !== undefined) body = JSON.stringify(cfg.body);
 
     let res;
+    beginRequestBusy();
     try {
       res = await fetch(url, {
         method,
@@ -90,6 +140,8 @@
       });
     } catch (err) {
       throw new ApiError(0, 'NetworkError', err && err.message ? err.message : 'Network failure');
+    } finally {
+      endRequestBusy();
     }
 
     if (res.status === 204) return null;

@@ -369,7 +369,7 @@ export const bulkReplace = async (userId: string, profileId: string, payload: Sy
       // Verify ownership before touch; never reassign profiles cross-user.
       const existing = await tx.profile.findFirst({
         where: { id, userId },
-        select: { id: true, data: true },
+        select: { id: true, xpPoints: true, data: true },
       });
       if (!existing) continue;
       await tx.profile.update({
@@ -377,7 +377,10 @@ export const bulkReplace = async (userId: string, profileId: string, payload: Sy
         data: {
           name: asString(o.name) ?? 'Player',
           description: asNullableString(o.description) ?? null,
-          xpPoints: Math.max(0, asInt(o.xpPoints, 0)),
+          // XP is server-authoritative. Bulk sync may replay a stale local
+          // profile with xpPoints=0 during login hydration; never let that
+          // clobber XP already awarded by /api/xp/award.
+          xpPoints: Math.max(existing.xpPoints, asInt(o.xpPoints, existing.xpPoints)),
           // Only touch avatarAssetId when the caller actually sent it (incl.
           // null for explicit clear). Omitting the field leaves the existing
           // attached avatar intact — mirrors the granular PATCH contract.

@@ -5,6 +5,11 @@ import { validate } from '../../middleware/validate.js';
 import { prisma } from '../../db/client.js';
 import { ensureActiveProfileId } from '../profiles/profiles.service.js';
 import {
+  DEFAULT_GAME_ID,
+  DEFAULT_GROUP_ID,
+  ensureDefaultOnboardingContent,
+} from '../groups/groups.service.js';
+import {
   bulkReplace,
   creationToLegacy,
   gameToLegacy,
@@ -60,6 +65,10 @@ router.get('/', async (req, res, next) => {
     ]);
     const memberGroupIds = memberGroupRows.map((r) => r.groupId);
     const memberGameIds = memberGameRows.map((r) => r.gameId);
+    if (memberGroupIds.includes(DEFAULT_GROUP_ID) && !memberGameIds.includes(DEFAULT_GAME_ID)) {
+      await ensureDefaultOnboardingContent(profileId);
+      memberGameIds.push(DEFAULT_GAME_ID);
+    }
 
     // Pre-resolve the full set of games visible to this profile so we can
     // also pull every PUBLIC creation hosted in those games — not only the

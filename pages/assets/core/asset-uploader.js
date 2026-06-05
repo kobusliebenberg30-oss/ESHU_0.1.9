@@ -85,6 +85,7 @@
         mimeType: asset.mimeType || blob.type || null,
         byteSize: typeof asset.byteSize === 'number' ? asset.byteSize : blob.size,
         url: client.assets.rawUrl(asset.id),
+        deduped: !!resp.deduped,
       };
     } catch (err) {
       console.warn('[ESHU_ASSETS] uploadBlob failed:', err && err.message || err);

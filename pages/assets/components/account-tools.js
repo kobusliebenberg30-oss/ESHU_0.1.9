@@ -254,6 +254,15 @@
     const section = el('div', { class: SECTION_CLASS, 'data-authed': String(authed) });
     section.appendChild(el('div', { class: 'eshu-account-heading', text: 'Account' }));
 
+    const signOutBtn = el('button', {
+      class: 'eshu-account-btn', type: 'button', text: 'Sign out',
+      onclick: (e) => { e.stopPropagation(); signOut(); }
+    });
+    section.appendChild(el('div', { class: 'eshu-account-row' }, [
+      el('span', { class: 'eshu-account-label', text: 'Session' }),
+      signOutBtn,
+    ]));
+
     const changeBtn = el('button', {
       class: 'eshu-account-btn', type: 'button', text: 'Change',
       onclick: (e) => { e.stopPropagation(); openChangePasswordModal(); }
@@ -282,6 +291,20 @@
     ]));
 
     return section;
+  }
+
+  function signOut() {
+    if (window.ESHU_AUTH_UI && typeof window.ESHU_AUTH_UI.logout === 'function') {
+      window.ESHU_AUTH_UI.logout();
+      return;
+    }
+    if (!window.ESHU_API || !window.ESHU_API.auth) return;
+    window.ESHU_API.auth.logout()
+      .catch(() => {})
+      .finally(() => {
+        try { window.dispatchEvent(new CustomEvent('eshu:auth-logout')); } catch {}
+        try { window.location.replace('play.html'); } catch { window.location.href = 'play.html'; }
+      });
   }
 
   // ---------- Asset GC ----------

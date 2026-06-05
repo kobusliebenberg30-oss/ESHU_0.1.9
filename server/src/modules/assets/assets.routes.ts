@@ -38,13 +38,13 @@ router.post('/gc', requireAuth, async (req, res, next) => {
 router.post('/', requireAuth, upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) throw new HttpError(400, 'file field required');
-    const asset = await uploadAsset({
+    const result = await uploadAsset({
       ownerId: req.session.userId!,
       buffer: req.file.buffer,
       mimeType: req.file.mimetype,
       originalName: req.file.originalname,
     });
-    res.status(201).json({ asset });
+    res.status(201).json(result);
   } catch (e) {
     next(e);
   }

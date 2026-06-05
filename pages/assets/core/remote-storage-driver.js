@@ -151,11 +151,31 @@
 
     const pulledMs = toUpdatedAtMs(pulled);
     const localMs = toUpdatedAtMs(local);
+    if (hasServerProgress(pulled)) {
+      const merged = mergeProfileScopedFlags(pulled, local);
+      return { snapshot: merged, source: merged !== pulled ? 'merged' : 'server' };
+    }
     if (local && localMs > pulledMs) {
       return { snapshot: local, source: 'local' };
     }
     const merged = mergeProfileScopedFlags(pulled, local);
     return { snapshot: merged, source: merged !== pulled ? 'merged' : 'server' };
+  }
+
+  function hasServerProgress(snapshot) {
+    const tables = snapshot && typeof snapshot === 'object' && snapshot.tables && typeof snapshot.tables === 'object'
+      ? snapshot.tables
+      : {};
+    const profiles = Array.isArray(tables.profiles) ? tables.profiles : [];
+    const creations = Array.isArray(tables.creations) ? tables.creations : [];
+    const games = Array.isArray(tables.games) ? tables.games : [];
+    const groups = Array.isArray(tables.groups) ? tables.groups : [];
+
+    if (profiles.some((p) => p && Number(p.xpPoints || 0) > 0)) return true;
+    if (creations.some((c) => c && c.status !== 'deleted' && c.status !== 'burned')) return true;
+    if (games.some((g) => g && g.id !== 'game_default' && g.status !== 'deleted' && g.status !== 'burned')) return true;
+    if (groups.some((g) => g && g.id !== 'group_default' && g.status !== 'deleted' && g.status !== 'burned')) return true;
+    return false;
   }
 
   function createRemoteDriver(initialDb, dbKey, cacheKey) {

@@ -203,8 +203,60 @@
     if (headerName) headerName.textContent = active?.name || 'Profile';
   }
 
+  function imageFromProfile(profile) {
+    const dataImage = profile?.data && typeof profile.data === 'object' && typeof profile.data.image === 'string'
+      ? profile.data.image
+      : null;
+    if (dataImage) return dataImage;
+    if (profile?.avatarAssetId && window.ESHU_ASSETS && typeof window.ESHU_ASSETS.urlFor === 'function') {
+      return window.ESHU_ASSETS.urlFor(profile.avatarAssetId);
+    }
+    return profile?.image || null;
+  }
+
+  function applyProfileToForm(profile) {
+    if (!profile) return;
+    const image = imageFromProfile(profile);
+    profileName.value = profile.name || 'Player';
+    profileDesc.value = profile.description || '';
+    selectedProfileImage = image;
+    renderProfileImagePreview(image);
+
+    const localProfile = {
+      ...profile,
+      image,
+      description: profile.description || '',
+      updatedAt: profile.updatedAt ? Date.parse(profile.updatedAt) || Date.now() : Date.now(),
+      isActive: true
+    };
+    ESHU_DB.setTable('profiles', [localProfile]);
+    ESHU_DB.setValue('currentProfileId', profile.id);
+    syncLegacyProfileValues(localProfile);
+    updateNavProfile();
+
+    const headerName = document.getElementById('profileHeaderName');
+    if (headerName) headerName.textContent = profile.name || 'Profile';
+  }
+
+  async function hydrateFormFromServerProfile() {
+    if (!window.ESHU_API || !window.ESHU_API.profiles) return null;
+    try {
+      const resp = await window.ESHU_API.profiles.list();
+      const list = (resp && (resp.profiles || resp)) || [];
+      const profile = Array.isArray(list)
+        ? (list.find((p) => p && p.id === resp.currentProfileId) || list[0])
+        : null;
+      if (profile) applyProfileToForm(profile);
+      return profile || null;
+    } catch (err) {
+      console.warn('[profile] could not hydrate server profile:', err);
+      return null;
+    }
+  }
+
   ensureDefaultProfile();
   loadFormFromActiveProfile();
+  hydrateFormFromServerProfile().catch(() => {});
   if (saveBtn) {
     saveBtn.textContent = 'Save Player';
   }
@@ -401,77 +453,79 @@
 
   // Save profile
   saveBtn.addEventListener('click', async () => {
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
     const name = profileName.value.trim() || 'Player';
     const desc = profileDesc.value.trim();
 
-    const profiles = getProfiles();
-    const currentProfile = profiles[0] || null;
-    const now = Date.now();
-    let activeProfile;
+    try {
+      const profiles = getProfiles();
+      const currentProfile = profiles[0] || null;
+      const now = Date.now();
+      let activeProfile;
 
-    // Resolve the canonical (server-side) profile id when remote mode is
-    // active. This prevents the save handler from minting a fresh local id
-    // that the server would silently drop on bulk-sync (id+userId mismatch),
-    // which manifested as the avatar showing in the playerbase sidebar
-    // (server source) but missing from the main profile display (local
-    // source) after the next page navigation.
-    let canonicalProfileId = null;
-    const remoteMode = !!(window.ESHU_API && window.ESHU_REMOTE && window.ESHU_REMOTE.isEnabled && window.ESHU_REMOTE.isEnabled());
-    if (remoteMode) {
-      try {
-        const resp = await window.ESHU_API.profiles.list();
-        const list = (resp && (resp.profiles || resp)) || [];
-        if (resp && resp.currentProfileId) canonicalProfileId = resp.currentProfileId;
-        else if (Array.isArray(list) && list[0] && list[0].id) canonicalProfileId = list[0].id;
-      } catch (err) {
-        console.warn('[profile.save] could not resolve canonical profile id, falling back to local:', err);
+      // Resolve the canonical (server-side) profile id whenever the API is
+      // available. Profile edits are account data, so the server row is the
+      // source of truth; local cache is just for instant UI.
+      let canonicalProfileId = null;
+      let serverProfileAvailable = false;
+      const apiAvailable = !!(window.ESHU_API && window.ESHU_API.profiles);
+      if (apiAvailable) {
+        try {
+          const resp = await window.ESHU_API.profiles.list();
+          const list = (resp && (resp.profiles || resp)) || [];
+          if (resp && resp.currentProfileId) canonicalProfileId = resp.currentProfileId;
+          else if (Array.isArray(list) && list[0] && list[0].id) canonicalProfileId = list[0].id;
+          serverProfileAvailable = !!canonicalProfileId;
+        } catch (err) {
+          if (err && err.status === 401) {
+            serverProfileAvailable = false;
+          } else {
+            throw err;
+          }
+        }
       }
-    }
 
-    if (!currentProfile) {
-      const newProfile = {
-        id: canonicalProfileId || ('profile_' + now + '_' + Math.random().toString(36).slice(2, 8)),
-        name,
-        description: desc,
-        image: selectedProfileImage,
-        xpPoints: 0,
-        createdAt: now,
-        updatedAt: now,
-        isActive: true
-      };
-      activeProfile = newProfile;
-      ESHU_DB.setValue('currentProfileId', newProfile.id);
-    } else {
-      // If we have a canonical id and it differs from the local id, prefer
-      // the canonical so the bulk-sync push lands on the right Profile row.
-      const targetId = canonicalProfileId || currentProfile.id;
-      activeProfile = {
-        ...currentProfile,
-        id: targetId,
-        name,
-        description: desc,
-        image: selectedProfileImage,
-        updatedAt: now
-      };
-      ESHU_DB.setValue('currentProfileId', activeProfile.id);
-    }
+      if (!currentProfile) {
+        const newProfile = {
+          id: canonicalProfileId || ('profile_' + now + '_' + Math.random().toString(36).slice(2, 8)),
+          name,
+          description: desc,
+          image: selectedProfileImage,
+          xpPoints: 0,
+          createdAt: now,
+          updatedAt: now,
+          isActive: true
+        };
+        activeProfile = newProfile;
+        ESHU_DB.setValue('currentProfileId', newProfile.id);
+      } else {
+        // If we have a canonical id and it differs from the local id, prefer
+        // the canonical so the bulk-sync push lands on the right Profile row.
+        const targetId = canonicalProfileId || currentProfile.id;
+        activeProfile = {
+          ...currentProfile,
+          id: targetId,
+          name,
+          description: desc,
+          image: selectedProfileImage,
+          updatedAt: now
+        };
+        ESHU_DB.setValue('currentProfileId', activeProfile.id);
+      }
 
-    ESHU_DB.setTable('profiles', [activeProfile]);
-    ensureDefaultGroupExists();
-    syncLegacyProfileValues(activeProfile);
-    updateNavProfile();
-    const headerName = document.getElementById('profileHeaderName');
-    if (headerName) headerName.textContent = name;
+      ESHU_DB.setTable('profiles', [activeProfile]);
+      ensureDefaultGroupExists();
+      syncLegacyProfileValues(activeProfile);
+      updateNavProfile();
+      const headerName = document.getElementById('profileHeaderName');
+      if (headerName) headerName.textContent = name;
 
-    // In remote mode, take the authoritative path: PATCH /profiles/:id so
-    // the server immediately reflects the edit (name, description, image).
-    // The bulk-sync pipeline would eventually converge, but the granular
-    // call makes the change visible on the next page load deterministically
-    // instead of depending on the 600ms debounce + round-trip. If PATCH
-    // fails we still have the local-first write above, so the user doesn't
-    // lose their edit; they just see a stale playerbase entry until the
-    // bulk push reconciles.
-    if (remoteMode && canonicalProfileId) {
+      if (serverProfileAvailable) {
+        if (!canonicalProfileId) throw new Error('Could not find your server profile. Please sign in again.');
+
       try {
         // Upload the avatar bytes through the canonical asset pipeline when
         // the user selected a fresh data URL. The resulting `avatarAssetId`
@@ -495,26 +549,46 @@
           avatarAssetId = null;
         }
 
-        await window.ESHU_API.profiles.update(canonicalProfileId, {
+        const updateResp = await window.ESHU_API.profiles.update(canonicalProfileId, {
           name,
           description: desc,
           ...(avatarAssetId !== undefined ? { avatarAssetId } : {}),
           data: { image: selectedProfileImage },
         });
+        if (updateResp && updateResp.profile) applyProfileToForm(updateResp.profile);
         // Ask the playerbase / home page to refresh itself on next render.
         try { window.dispatchEvent(new CustomEvent('eshu:profile-updated', { detail: { id: canonicalProfileId } })); } catch {}
       } catch (err) {
-        console.warn('[profile.save] granular PATCH failed, relying on bulk sync:', err);
+        console.warn('[profile.save] granular PATCH failed:', err);
+        throw err;
       }
-    }
+      }
 
-    // Replace the blocking alert with a subtle toast and auto-navigate back
-    // to the home surface. This is what the user expected: save, then the
-    // homepage profile section reflects the edit without extra clicks.
-    showSaveToast('Profile saved');
-    setTimeout(() => {
-      try { location.assign('home.html'); } catch { location.reload(); }
-    }, 650);
+      // Replace the blocking alert with a subtle toast and auto-navigate back
+      // to the home surface. This is what the user expected: save, then the
+      // homepage profile section reflects the edit without extra clicks.
+      showSaveToast(serverProfileAvailable ? 'Profile saved' : 'Profile saved locally');
+      if (!serverProfileAvailable && apiAvailable && window.ESHU_AUTH_UI && typeof window.ESHU_AUTH_UI.open === 'function') {
+        setTimeout(() => {
+          window.ESHU_AUTH_UI.open({ tab: 'signin', reloadOnSuccess: false });
+        }, 700);
+        return;
+      }
+      setTimeout(() => {
+        try { location.assign('home.html'); } catch { location.reload(); }
+      }, 650);
+    } catch (err) {
+      console.error('[profile.save] failed:', err);
+      const message = err?.message || 'Could not save profile. Please try again.';
+      if (window.MODAL && typeof MODAL.alert === 'function') {
+        MODAL.alert({ title: 'Profile not saved', message });
+      } else {
+        alert(message);
+      }
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalText || 'Save Player';
+    }
   });
 
   // Lightweight inline toast. Appended to <body> and auto-removes. Kept in

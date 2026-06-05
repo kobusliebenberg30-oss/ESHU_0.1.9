@@ -359,6 +359,15 @@
     return result && result.client ? result.client : null;
   }
 
+  function shouldUseSupabaseAuth() {
+    if (window.ESHU_USE_SUPABASE_AUTH === true) return true;
+    try {
+      return localStorage.getItem('eshu_use_supabase_auth') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
   function showStatus(msg) {
     if (!state.errorEl) return;
     state.errorEl.textContent = msg || '';
@@ -979,7 +988,7 @@
     state.submitBtn.textContent = state.tab === 'signin' ? 'Signing in\u2026' : 'Creating\u2026';
 
     try {
-      const supabase = await getSupabaseClient();
+      const useSupabaseAuth = shouldUseSupabaseAuth();
       if (state.tab === 'signin') {
         const emailOrUsername = state.inputs.signinUser.value.trim();
         const password = state.inputs.signinPass.value;
@@ -990,7 +999,7 @@
         if (state.inputs.rememberCheckbox && !state.inputs.rememberCheckbox.checked) {
           payload.rememberMe = false;
         }
-        if (supabase && isEmailLike(emailOrUsername)) {
+        if (useSupabaseAuth && isEmailLike(emailOrUsername)) {
           await signInWithSupabase(emailOrUsername, password, payload.rememberMe);
         } else {
           await window.ESHU_API.auth.login(payload);
@@ -1001,7 +1010,7 @@
         const password = state.inputs.regPass.value;
         if (!email || !username || !password) throw new Error('All fields are required.');
         if (password.length < 8) throw new Error('Password must be at least 8 characters.');
-        if (supabase) {
+        if (useSupabaseAuth) {
           await signUpWithSupabase(email, password, username);
           state.submitBtn.disabled = false;
           state.submitBtn.textContent = original;

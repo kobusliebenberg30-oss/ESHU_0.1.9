@@ -457,7 +457,7 @@
     }, renderGroupsList);
   };
 
-  window.joinGroup = async function(groupId) {
+  window.joinGroup = async function(groupId, btnEl) {
     const activeProfileId = getActiveProfileId();
     if (!activeProfileId) {
       TOAST.error('Select a player profile first');
@@ -480,6 +480,14 @@
       return;
     }
 
+    const loadingKey = `join-group:${groupId}`;
+    const loadingTarget = btnEl || (document.activeElement && document.activeElement.closest ? document.activeElement.closest('button') : null);
+    if (window.ESHU_LOADING) {
+      ESHU_LOADING.show({ key: loadingKey, maxMs: 12000 });
+      ESHU_LOADING.showButton(loadingTarget);
+    }
+
+    try {
     // Authoritative server-side join when remote mode is active. The server
     // is the source of truth; ESHU_SYNC.mutate replaces the local row by id
     // and (with refresh: true) pulls a fresh /api/sync snapshot so server
@@ -578,6 +586,12 @@
       TOAST.info('Already a member of this group');
     } else {
       TOAST.success('Joined group. Game creation is now unlocked.');
+    }
+    } finally {
+      if (window.ESHU_LOADING) {
+        ESHU_LOADING.hide({ key: loadingKey, force: true });
+        ESHU_LOADING.hideButton(loadingTarget, { force: true });
+      }
     }
   };
 
@@ -754,9 +768,27 @@
       });
       renderGroupsList();
       if (selectedGroupId) selectGroup(selectedGroupId);
+      completeListLoadingWhenReady();
     } catch (err) {
       console.error('Rehydrate error:', err);
     }
+  }
+
+  function isRemoteHydrationPending() {
+    return !!(
+      window.ESHU_REMOTE &&
+      window.ESHU_REMOTE.isEnabled &&
+      window.ESHU_REMOTE.isEnabled() &&
+      !window.ESHU_AUTH
+    );
+  }
+
+  function completeListLoadingWhenReady() {
+    if (isRemoteHydrationPending()) return;
+    if (!window.ESHU_RUNTIME || typeof window.ESHU_RUNTIME.completeNavigationLoading !== 'function') return;
+    requestAnimationFrame(() => {
+      window.ESHU_RUNTIME.completeNavigationLoading();
+    });
   }
 
   function checkUrlActions() {
@@ -939,6 +971,7 @@
       } else {
         groupsList.innerHTML = '<div class="u-card-empty">No groups yet. Create your first one!</div>';
       }
+      completeListLoadingWhenReady();
       return;
     }
 
@@ -993,7 +1026,7 @@
       if (showInvite) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); inviteToGroup('${group.id}')">Invite</button>`;
       if (canLeaveCard) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); leaveGroup('${group.id}')">Leave</button>`;
       if (showBootBurn) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); bootGroup('${group.id}')">Restore</button><button class="u-card-btn danger" onclick="event.stopPropagation(); burnGroup('${group.id}')">Delete</button>`;
-      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}')">${isOnboardingJoin ? 'Join Group & Unlock Games' : 'Join'}</button>`;
+      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">${isOnboardingJoin ? 'Join Group & Unlock Games' : 'Join'}</button>`;
 
       return `
         <div class="u-card ${isSelected ? 'selected' : ''} ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}" data-id="${group.id}">
@@ -1066,6 +1099,7 @@
         selectGroup(groupId);
       });
     });
+    completeListLoadingWhenReady();
   }
 
   // ===== Select Group (Preview) =====
@@ -1861,7 +1895,7 @@
   if (previewJoinBtn) {
     previewJoinBtn.addEventListener('click', () => {
       if (!selectedGroupId) return;
-      window.joinGroup(selectedGroupId);
+      window.joinGroup(selectedGroupId, previewJoinBtn);
     });
   }
   if (previewLeaveBtn) {

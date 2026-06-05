@@ -5,6 +5,7 @@ import { statusFromWire, statusToWire } from '../../lib/status.js';
 import type { CreateCreationInput, UpdateCreationInput } from './creations.schemas.js';
 
 export const toWire = (c: Creation) => ({
+  ...(c.data as Record<string, unknown>),
   id: c.id,
   name: c.name,
   description: c.description,

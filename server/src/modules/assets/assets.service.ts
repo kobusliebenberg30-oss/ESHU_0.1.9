@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { AssetKind } from '@prisma/client';
+import type { Asset, AssetKind } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { storage } from '../../storage/index.js';
 import { HttpError } from '../../middleware/error.js';
@@ -27,7 +27,12 @@ export interface UploadInput {
   originalName?: string;
 }
 
-export const uploadAsset = async (input: UploadInput) => {
+export interface UploadResult {
+  asset: Asset;
+  deduped: boolean;
+}
+
+export const uploadAsset = async (input: UploadInput): Promise<UploadResult> => {
   const kind: AssetKind = MIME_TO_KIND[input.mimeType] ?? 'OTHER';
   const sha256 = createHash('sha256').update(input.buffer).digest('hex');
 
@@ -45,7 +50,7 @@ export const uploadAsset = async (input: UploadInput) => {
       },
       'asset upload deduped',
     );
-    return existing;
+    return { asset: existing, deduped: true };
   }
 
   const driver = storage();
@@ -75,7 +80,7 @@ export const uploadAsset = async (input: UploadInput) => {
     },
     'asset upload completed',
   );
-  return asset;
+  return { asset, deduped: false };
 };
 
 /**
@@ -97,13 +102,13 @@ export const getAssetForUser = async (assetId: string, userId: string | undefine
       avatarOf: { select: { id: true } },
       profileAvatar: { select: { id: true } },
       groupCover: { select: { id: true } },
-      creationImage: { select: { id: true } },
+      creationImages: { select: { id: true } },
     },
   });
   if (!asset) throw new HttpError(404, 'Asset not found');
   if (asset.ownerId === userId) return asset;
   const isAttached = Boolean(
-    asset.avatarOf || asset.profileAvatar || asset.groupCover || asset.creationImage,
+    asset.avatarOf || asset.profileAvatar || asset.groupCover || asset.creationImages.length > 0,
   );
   if (!isAttached) throw new HttpError(403, 'Forbidden');
   return asset;
@@ -165,7 +170,7 @@ export const gcOrphanedAssets = async (opts: GcOptions = {}): Promise<GcResult> 
         { avatarOf: { is: null } },
         { profileAvatar: { is: null } },
         { groupCover: { is: null } },
-        { creationImage: { is: null } },
+        { creationImages: { none: {} } },
       ],
     },
     select: { id: true, storageKey: true, byteSize: true },

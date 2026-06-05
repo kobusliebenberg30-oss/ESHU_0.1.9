@@ -207,8 +207,7 @@
       }
     }
     if (opts.refresh) {
-      // Fire-and-forget; the caller may also `await ESHU_SYNC.refresh()`.
-      refresh();
+      await refresh();
     }
     return typeof opts.pick === 'function' ? opts.pick(resp) : resp;
   }

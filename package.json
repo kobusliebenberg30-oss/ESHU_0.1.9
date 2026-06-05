@@ -15,6 +15,7 @@
     "supabase:init": "node scripts/supabase-client.mjs",
     "supabase:test": "node scripts/test-supabase-query.mjs",
     "supabase:verify-env": "node scripts/verify-supabase-env.mjs",
+    "vercel:push-env": "node scripts/push-vercel-env.mjs",
     "vercel-build": "node scripts/vercel-build.mjs"
   },
   "dependencies": {

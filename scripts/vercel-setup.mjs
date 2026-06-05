@@ -35,6 +35,12 @@ if (!project) {
 }
 console.log('Project:', project.name, project.id);
 
+const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!SERVICE_ROLE) {
+  console.error('Set SUPABASE_SERVICE_ROLE_KEY in your shell before running this script.');
+  process.exit(1);
+}
+
 const envVars = [
   { key: 'DATABASE_URL',             value: 'postgresql://postgres.shkoazonbwjplrsjtkne:Openthedoor1!@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true' },
   { key: 'DIRECT_URL',               value: 'postgresql://postgres.shkoazonbwjplrsjtkne:Openthedoor1!@aws-1-eu-central-1.pooler.supabase.com:5432/postgres' },
@@ -44,10 +50,11 @@ const envVars = [
   { key: 'SESSION_COOKIE_SAME_SITE', value: 'lax' },
   { key: 'SUPABASE_URL',             value: 'https://shkoazonbwjplrsjtkne.supabase.co' },
   { key: 'SUPABASE_ANON_KEY',        value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoa29hem9uYndqcGxyc2p0a25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MTk1MDYsImV4cCI6MjA5NTM5NTUwNn0.4zXRj6gTPkXCVMuZZ6J6gnSCWZ6DW57sfTjLsoTz014' },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', value: SERVICE_ROLE },
   { key: 'CORS_ORIGIN',              value: 'https://eshu-0-1-6b.vercel.app' },
   { key: 'NODE_ENV',                 value: 'production' },
-  { key: 'STORAGE_DRIVER',           value: 'local' },
-  { key: 'STORAGE_LOCAL_DIR',        value: '/tmp/eshu-assets' },
+  { key: 'STORAGE_DRIVER',           value: 'supabase' },
+  { key: 'STORAGE_SUPABASE_BUCKET',  value: 'eshu-assets' },
   { key: 'STORAGE_MAX_BYTES',        value: '26214400' },
 ];
 
