@@ -106,6 +106,7 @@ Or push to `main` with Git integration.
 
 ```text
 GET https://<your-app>/healthz          → { "ok": true, "env": "production" }
+GET https://<your-app>/api/warm         → { "ok": true, "db": true, "ts": ... }
 POST https://<your-app>/api/auth/register
 POST https://<your-app>/api/auth/login
 GET  https://<your-app>/api/auth/me     → 200 with session cookie
@@ -155,7 +156,49 @@ The bucket should stay private. ESHU authorizes asset reads through `/api/assets
 | Uploaded images 500/404 | Missing `SUPABASE_SERVICE_ROLE_KEY`, wrong `STORAGE_SUPABASE_BUCKET`, or bucket not created |
 | Static HTML 404 | `pages/**` not bundled — check `vercel.json` `includeFiles` |
 
-## 6. Credential checklist (you provide)
+## 6. Performance: cold start & keep-warm
+
+On the free tiers, the slow part of a signed-in session is the **first** request
+after the app has been idle. Vercel scales the serverless function to zero after
+a few minutes of inactivity, so the next visitor pays a cold start: the lambda
+boots, Prisma initializes, and a fresh Supabase pooler connection is opened —
+all before `/api/sync` can return. Add SA↔EU round-trip latency and that first
+pull can feel like several seconds.
+
+Three things mitigate this (the first two are already in the codebase):
+
+1. **Non-blocking boot checks.** `createApp()` (`server/src/bootstrap.ts`) runs
+   `assertDatabaseInvariants()` in the **background** on serverless instead of
+   awaiting it. The check is two sequential DB round-trips and only ever *warns*
+   in serverless (it can't safely `process.exit`), so blocking the first request
+   on it was pure latency. Long-running / self-host runs still await it as a
+   pre-flight gate.
+
+2. **Optimistic client render.** The remote storage driver
+   (`pages/assets/core/remote-storage-driver.js`) renders returning signed-in
+   users instantly from their local cache, then reconciles with the
+   authoritative `/api/sync` pull in the background — so a cold start is usually
+   hidden behind already-painted content.
+
+3. **Keep-warm pinger (manual, free).** `GET /api/warm` is a lightweight
+   endpoint (a trivial `SELECT 1`, mounted *before* the rate limiter and session
+   middleware) that keeps **both** the lambda and a pooled DB connection hot.
+   Point a free external uptime monitor at it so the function rarely goes cold:
+
+   - **UptimeRobot** (or **cron-job.org**) → new **HTTP(s)** monitor
+   - URL: `https://<your-app>/api/warm`
+   - Interval: **5 minutes** (free-plan minimum; enough to hold one warm instance)
+
+   > Vercel **Hobby** cron only fires once per day, so it can't keep the app
+   > warm — use an external pinger instead. If the project's URL changes, update
+   > the monitor to the new `/api/warm`.
+
+This does **not** make remote feel as instant as fully offline — cross-region
+latency is physics on the free tier. The durable fix for sub-second feel is a
+paid tier in a region near your users. The steps above remove the avoidable
+cold-start tax without changing plans.
+
+## 7. Credential checklist (you provide)
 
 - [ ] Supabase `DATABASE_URL` (runtime)
 - [ ] Supabase `DIRECT_URL` (migrations)
