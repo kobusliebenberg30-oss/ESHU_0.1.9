@@ -571,12 +571,27 @@
       const xpFlagKey = `defaultGroupJoinXpAwarded_${activeProfileId}`;
       const alreadyAwarded = !!(ESHU_DB.getValue && ESHU_DB.getValue(xpFlagKey));
       if (!alreadyAwarded) {
+        let awardResult = null;
         if (typeof ESHU_API !== 'undefined' && ESHU_API.xp && ESHU_API.xp.awardSafe) {
-          ESHU_API.xp.awardSafe('game_created', DEFAULT_GAME_ID).then(function(res) {
-            if (res && res.delta > 0 && window.XP_ANIM) XP_ANIM.show(res.delta);
-          }).catch(function() {});
-        } else if (typeof ESHU_DB !== 'undefined' && ESHU_DB.addProfileXp) {
-          ESHU_DB.addProfileXp(2, activeProfileId, 'Joined default group');
+          try {
+            awardResult = await ESHU_API.xp.awardSafe('game_created', DEFAULT_GAME_ID);
+          } catch (err) {
+            console.warn('[joinGroup] onboarding XP helper failed, falling back to local:', err);
+          }
+        }
+        if (!awardResult && typeof ESHU_DB !== 'undefined' && ESHU_DB.addProfileXp) {
+          const xpPoints = ESHU_DB.addProfileXp(2, activeProfileId, 'Joined default group');
+          awardResult = { xpPoints, delta: 2, source: 'local' };
+        }
+        if (awardResult && awardResult.delta > 0 && window.XP_ANIM) {
+          XP_ANIM.show(awardResult.delta);
+        }
+        if (awardResult && typeof awardResult.xpPoints === 'number' && xpCounter) {
+          xpCounter.textContent = awardResult.xpPoints + ' XP';
+        } else if (xpCounter && typeof ESHU_DB !== 'undefined' && ESHU_DB.getProfileXp) {
+          xpCounter.textContent = ESHU_DB.getProfileXp(activeProfileId) + ' XP';
+        } else if (xpCounter) {
+          xpCounter.textContent = parseInt(STATE.get('xpPoints') || 0, 10) + ' XP';
         }
         if (ESHU_DB.setValue) ESHU_DB.setValue(xpFlagKey, true);
       }
