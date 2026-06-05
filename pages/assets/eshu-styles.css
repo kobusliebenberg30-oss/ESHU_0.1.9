@@ -177,8 +177,7 @@
 
 /* Diamond tile: rotated square with a full border, like the game image tile. */
 .loading-spinner,
-.inline-loading-spinner,
-.eshu-busy-spinner {
+.inline-loading-spinner {
   width: 22px;
   height: 22px;
   background: var(--loader-square-color);
@@ -193,31 +192,6 @@
 .loading-overlay .loading-spinner {
   width: 30px;
   height: 30px;
-}
-
-.eshu-busy-spinner {
-  width: var(--loader-square-small);
-  height: var(--loader-square-small);
-}
-
-.eshu-network-busy {
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
-  z-index: 10000;
-  width: 18px;
-  height: 18px;
-  display: none;
-  pointer-events: none;
-}
-
-.eshu-network-busy.active {
-  display: block;
-}
-
-.eshu-network-busy .eshu-busy-spinner {
-  width: 18px;
-  height: 18px;
 }
 
 .eshu-action-loading {
