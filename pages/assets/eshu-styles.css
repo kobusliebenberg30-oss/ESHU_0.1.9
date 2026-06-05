@@ -156,17 +156,19 @@
  }
 
 /* === Unified Loading Indicator === */
-/* Transparent full-screen layer: the page stays visible underneath, only the
-   blinking diamond tile sits on the top layer. pointer-events on .active
-   still blocks clicks while loading without blanking the whole screen. */
+/* Content-area layer only (below the 56px nav) so the top bar stays visible
+   during navigation/loading. Transparent — only the diamond shows. */
 .loading-overlay {
   position: fixed;
-  inset: 0;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: transparent !important;
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 900;
   pointer-events: none;
 }
 
@@ -281,6 +283,8 @@ h3 { font-size: 14px; }
 }
 
 /* === Top Navigation Bar === */
+/* Fixed + high z-index so nav stays visible above page loaders/transitions.
+   Detailed layout lives in nav.css; this block only reinforces persistence. */
 .top-nav {
   display: flex;
   align-items: center;
@@ -289,9 +293,11 @@ h3 { font-size: 14px; }
   background: var(--bg-panel);
   height: 56px;
   gap: var(--spacing-md);
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  z-index: 1000;
   box-shadow: none;
   border-bottom: 1px solid var(--border-color);
 }

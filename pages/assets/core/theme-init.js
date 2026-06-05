@@ -119,7 +119,7 @@
   (function initPageTransition() {
     // Inject critical CSS inline so overlay works before stylesheets load
     var style = document.createElement('style');
-    style.textContent = '.page-transition-overlay{position:fixed;inset:0;z-index:99999;pointer-events:none;opacity:0;transition:opacity .18s ease}.page-transition-overlay.active{opacity:1;pointer-events:all}';
+    style.textContent = '.page-transition-overlay{position:fixed;top:56px;left:0;right:0;bottom:0;z-index:900;pointer-events:none;opacity:0;transition:opacity .18s ease}.page-transition-overlay.active{opacity:1;pointer-events:all}';
     document.head.appendChild(style);
 
     var overlay = document.createElement('div');

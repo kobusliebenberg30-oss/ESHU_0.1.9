@@ -51,12 +51,15 @@
   background: var(--bg-hover, #f0f0f0);
 }
 
-/* Page transition overlay */
+/* Page transition overlay — content area only; nav stays visible on top. */
 .page-transition-overlay {
   position: fixed;
-  inset: 0;
+  top: 56px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--bg-panel, #ffffff);
-  z-index: 99999;
+  z-index: 900;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
