@@ -2683,6 +2683,34 @@
     }
   }
 
+  // Open the front page in-place after create — avoids a full reload that
+  // briefly flashes the YOUR GAMES list (view=front entry on a fresh load).
+  function openCreatedGameFrontInPlace(gameId) {
+    if (!gameId) return;
+    if (pageContainer) pageContainer.classList.add('gf-transition-guard');
+    isCreateMode = false;
+    isEditMode = false;
+    hostGroupLockedForEdit = false;
+    selectedGameId = gameId;
+    if (pageContainer) pageContainer.classList.remove('edit-mode');
+    applyHostGroupLockUi();
+    hideLoading();
+    try { renderGamesList(); } catch {}
+    openGameFrontModal(gameId);
+    const frontUrl = buildGameFrontReturnUrl(gameId);
+    if (frontUrl) {
+      try {
+        const url = new URL(frontUrl, window.location.href);
+        window.history.replaceState(window.history.state, document.title, url.pathname + url.search);
+      } catch {
+        window.history.replaceState({}, document.title, frontUrl);
+      }
+    }
+    requestAnimationFrame(() => {
+      if (pageContainer) pageContainer.classList.remove('gf-transition-guard');
+    });
+  }
+
   // ===== Open Game Front Modal (Double Tap) =====
   function openGameFrontModal(gameId) {
     const game = getGameById(gameId);
@@ -3944,17 +3972,9 @@
       }
 
       TOAST.success('Game created!');
+      openCreatedGameFrontInPlace(newGame.id);
       runHype('GAME ON!');
-
-      isCreateMode = false;
-      const createdGameFrontUrl = buildGameFrontReturnUrl(newGame.id);
-      if (createdGameFrontUrl) {
-        window.location.href = createdGameFrontUrl;
-        return;
-      }
-
-      hideLoading();
-      exitEditMode();
+      return;
     } else {
       // UPDATE EXISTING GAME
       if (!selectedGameId) {
@@ -4600,7 +4620,23 @@
     } catch {}
   }
 
+  function clearGamesFrontEntry() {
+    try {
+      if (window.ESHU_PAGE_ENTRY && typeof window.ESHU_PAGE_ENTRY.clearGamesFrontEntry === 'function') {
+        window.ESHU_PAGE_ENTRY.clearGamesFrontEntry();
+      } else {
+        document.documentElement.removeAttribute('data-games-front-entry');
+        const overlay = document.querySelector('.page-transition-overlay');
+        if (overlay) overlay.classList.remove('active');
+      }
+      if (window.ESHU_RUNTIME && typeof window.ESHU_RUNTIME.completeNavigationLoading === 'function') {
+        window.ESHU_RUNTIME.completeNavigationLoading();
+      }
+    } catch {}
+  }
+
   function endFrontTransitionLoader() {
+    clearGamesFrontEntry();
     if (!frontTransitionActive) return;
     frontTransitionActive = false;
     try {
@@ -4731,9 +4767,10 @@
     }, 5000);
   }
 
+  // Prime before DOMContentLoaded so the list never paints under a transparent loader.
+  try { beginFrontTransitionLoader(); } catch {}
+
   function boot() {
-    // Cover the page before the list paints when we're heading straight to a
-    // game's Front page / Create flow, so the list never flashes underneath.
     try { beginFrontTransitionLoader(); } catch {}
     try { init(); } catch(e) { console.error('games init error:', e); }
     try { initCreateModal(); } catch(e) { console.error('initCreateModal error:', e); }

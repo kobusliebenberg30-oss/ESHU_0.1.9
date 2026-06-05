@@ -303,11 +303,13 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     const game = getCurrentGame();
     const gameId = game?.id || currentGameId;
     if (!gameId) return;
+    closeCurrentGameInfoModal();
     const params = new URLSearchParams();
     params.set('view', 'front');
     params.set('gameId', gameId);
     const sourceGroupId = getSourceGroupIdFromUrl() || game?.hostGroupId || '';
     if (sourceGroupId) params.set('sourceGroupId', sourceGroupId);
+    try { sessionStorage.setItem('eshu:navigation-loading-started-at', String(Date.now())); } catch {}
     window.location.href = `games.html?${params.toString()}`;
   }
 

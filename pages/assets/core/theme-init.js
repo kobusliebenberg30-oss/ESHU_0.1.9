@@ -112,6 +112,26 @@
   });
 
   // ---------------------------------------------------------------------------
+  // GAMES FRONT ENTRY — games.html?view=front&gameId=…
+  // Hide the YOUR GAMES list until the front modal opens so View Game / deep
+  // links never flash the list underneath a transparent loader.
+  // ---------------------------------------------------------------------------
+  (function markGamesFrontEntry() {
+    try {
+      var path = location.pathname || '';
+      if (path.indexOf('games.html') === -1) return;
+      var p = new URLSearchParams(location.search);
+      if ((p.get('view') === 'front' || p.get('action') === 'view-front') && p.get('gameId')) {
+        document.documentElement.setAttribute('data-games-front-entry', '1');
+        var entryStyle = document.createElement('style');
+        entryStyle.id = 'eshu-games-front-entry-css';
+        entryStyle.textContent = 'html[data-games-front-entry] #pageContainer{visibility:hidden!important;pointer-events:none!important}';
+        document.head.appendChild(entryStyle);
+      }
+    } catch (e) {}
+  })();
+
+  // ---------------------------------------------------------------------------
   // PAGE TRANSITION — smooth fade between pages
   // Injects an overlay that starts opaque (hides the white flash) and fades out
   // once the page is ready. On nav clicks it fades in before navigating away.
@@ -138,12 +158,22 @@
       overlay.classList.remove('active');
     }
 
-    // Fade out once DOM is interactive
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', function () { setTimeout(fadeOut, 30); });
-    } else {
+    // Fade out once DOM is interactive — hold cover when opening a game front page.
+    function scheduleFadeOut() {
+      if (document.documentElement.getAttribute('data-games-front-entry') === '1') return;
       setTimeout(fadeOut, 30);
     }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', scheduleFadeOut);
+    } else {
+      scheduleFadeOut();
+    }
+
+    window.ESHU_PAGE_ENTRY = window.ESHU_PAGE_ENTRY || {};
+    window.ESHU_PAGE_ENTRY.clearGamesFrontEntry = function () {
+      document.documentElement.removeAttribute('data-games-front-entry');
+      fadeOut();
+    };
 
     // Intercept internal link clicks for smooth exit
     document.addEventListener('click', function (e) {
