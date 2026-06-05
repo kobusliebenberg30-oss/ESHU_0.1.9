@@ -1700,43 +1700,18 @@
           timestamp: Date.now()
         };
 
-        let savedCreation = newCreation;
+        // Optimistic + instant: write the creation locally and leave for the
+        // game's front page right away. The only awaited server work was the
+        // image upload above (the actual bytes other players hydrate). The
+        // creation ROW persists via the normal sync path — the client id is
+        // canonical (the bulk /api/sync upsert keys on it), applyEntityResponse
+        // schedules a push, the pagehide keepalive flush is a head start, and
+        // the destination page union-pushes any not-yet-synced row. The old
+        // path additionally awaited a create POST, a refresh pull, AND a second
+        // ESHU_SYNC.refresh() pull — three extra round-trips that made this
+        // feel long. The isSubmitting guard already blocks double-submits.
         if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
-          savedCreation = await ESHU_SYNC.mutate({
-            entity: 'creations',
-            call: () => ESHU_API.creations.create({
-              name: title,
-              description,
-              devices,
-              tags,
-              dateMade,
-              hostGameId,
-              imageAssetId: imageAssetId || null,
-              status: 'active',
-              timestamp: newCreation.timestamp,
-              data: {
-                image: newCreation.image,
-                imageRef: newCreation.imageRef,
-                naturalWidth: newCreation.naturalWidth,
-                naturalHeight: newCreation.naturalHeight,
-                bgColor: newCreation.bgColor,
-                border: newCreation.border,
-                privacy,
-                gameId: hostGameId,
-                title,
-                location,
-                votes: 0,
-                burns: 0,
-                author: activeProfileName,
-                authorName: activeProfileName,
-                authorId: activeProfileId || 'current-user',
-                authorProfileId: activeProfileId,
-                createdByProfileId: activeProfileId,
-              },
-            }),
-            pick: (resp) => resp && resp.creation,
-            refresh: true,
-          }) || newCreation;
+          ESHU_SYNC.applyEntityResponse('creations', newCreation);
         } else if (typeof ESHU_DB !== 'undefined') {
           ESHU_DB.updateTable('creations', (currentCreations) => [newCreation, ...currentCreations]);
         } else if (typeof STATE !== 'undefined') {
@@ -1744,31 +1719,43 @@
           STATE.set('creations', [newCreation, ...currentCreations]);
         }
 
+        // XP runs in the BACKGROUND so nothing blocks the jump into the game.
+        // We deliberately do NOT bump the synced profile xpPoints here: the
+        // server award increments authoritatively and the next sync pull
+        // reflects it. Because our snapshot push still carries the pre-award
+        // xpPoints, the server's Math.max reconciliation can never double-count
+        // (award-then-sync and sync-then-award both converge to +1). We compute
+        // an OPTIMISTIC total only for the local display + unlock flags so the
+        // Comments unlock lights up immediately.
         const xpBeforeUpload = parseInt(xpPoints || 0, 10);
-        if (typeof ESHU_DB !== 'undefined' || (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote())) {
-          // Server-authoritative XP via the shared helper. Handles
-          // remote-vs-local mode, idempotency, and offline fallback.
-          // Default-game uploads also award XP so onboarding users can
-          // reach the Comments unlock (3 XP) without being forced into a
-          // non-default game first.
-          const awardResult = await ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id || newCreation.id);
-          xpPoints = awardResult.xpPoints;
-          if (window.XP_ANIM && awardResult.delta > 0) XP_ANIM.show(awardResult.delta);
-          if (xpPoints >= CREATION_UPLOAD_UNLOCK_XP) {
-            writeUploadUnlockFlag(true);
-            uploadUnlocked = true;
-          }
-          if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
-            await ESHU_SYNC.refresh();
+        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+          // Remote: keepalive POST survives the navigation (a plain fetch would
+          // be aborted on unload, dropping the award). Idempotent on
+          // (creation_uploaded, creationId).
+          try {
+            const base = (window.ESHU_API && window.ESHU_API.base) || '/api';
+            fetch(base + '/xp/award', {
+              method: 'POST',
+              credentials: 'include',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+              body: JSON.stringify({ kind: 'creation_uploaded', refId: newCreation.id }),
+            }).catch(() => {});
+          } catch (err) {
+            console.warn('[creations.save] background XP award failed (non-fatal):', err);
           }
         } else {
-          const xp = parseInt(STATE.get('xpPoints') || 0, 10) + 1;
-          STATE.set('xpPoints', xp);
-          xpPoints = xp;
-          if (xpPoints >= CREATION_UPLOAD_UNLOCK_XP) {
-            writeUploadUnlockFlag(true);
-            uploadUnlocked = true;
-          }
+          // Local-only mode: synchronous award keeps the offline path intact
+          // (it bumps ESHU_DB profile XP directly; no server to reconcile with).
+          try { ESHU_API.xp.awardSafe('creation_uploaded', newCreation.id); } catch {}
+        }
+
+        const optimisticXp = xpBeforeUpload + 1; // creation_uploaded = 1 XP
+        xpPoints = optimisticXp;
+        if (window.XP_ANIM) XP_ANIM.show(1);
+        if (optimisticXp >= CREATION_UPLOAD_UNLOCK_XP) {
+          writeUploadUnlockFlag(true);
+          uploadUnlocked = true;
         }
 
         updateXPDisplay();
