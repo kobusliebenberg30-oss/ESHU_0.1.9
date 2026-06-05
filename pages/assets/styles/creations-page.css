@@ -395,23 +395,8 @@
 }
 
 /* ── Loading Overlay ─────────────────────────────────────────── */
-.loading-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(255,255,255,0.85);
-  z-index: 9999;
-  align-items: center;
-  justify-content: center;
-}
-.loading-overlay.active { display: flex; }
+/* Square + transparent backdrop live in eshu-styles.css. */
 .loading-content { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.loading-spinner {
-  width: var(--loader-square-size, 32px);
-  height: var(--loader-square-size, 32px);
-  background: var(--loader-square-color, #111);
-  animation: eshuSquareStepSpin var(--loader-square-duration, 1.1s) steps(8, end) infinite;
-}
 .loading-text { font-size: 12px; font-weight: 600; color: #111; }
 
 /* ── Dark theme ──────────────────────────────────────────────── */
@@ -420,8 +405,6 @@ html[data-theme="dark"] .cu-btn-apply:hover { background: #fff; }
 html[data-theme="dark"] .cu-upload-trigger { background: #eee; color: #111; }
 html[data-theme="dark"] .cu-upload-trigger:hover { background: #fff; }
 html[data-theme="dark"] .cu-tool-header-arrow { color: #666; }
-html[data-theme="dark"] .loading-overlay { background: rgba(0,0,0,0.85); }
-html[data-theme="dark"] .loading-spinner { background: #eee; }
 html[data-theme="dark"] .loading-text { color: #eee; }
 
 /* ── Responsive ──────────────────────────────────────────────── */

@@ -469,7 +469,7 @@ html[data-theme="dark"] .loading-text {
   color: var(--text-primary) !important;
 }
 html[data-theme="dark"] .loading-spinner {
-  background: var(--loader-square-color, var(--text-primary)) !important;
+  background: var(--loader-square-color, #000000) !important;
 }
 
 /* --- Form placeholder contrast --- */
