@@ -72,5 +72,24 @@ if (parsed.data.SUPABASE_ANON_KEY && !parsed.data.SUPABASE_URL) {
   process.exit(1);
 }
 
+// Fail fast on Vercel with local disk storage. Vercel functions run on an
+// EPHEMERAL filesystem that is wiped between cold starts and is NOT shared
+// across instances/regions, so uploaded asset bytes written by the `local`
+// driver silently disappear — images upload "successfully" but 404 on any
+// other device. This refuses to boot so the misconfiguration is caught at
+// deploy time instead of as missing avatars/creations in production.
+// (Self-hosted production with a persistent disk is unaffected: this only
+// triggers when the VERCEL env var is present.)
+if (process.env.VERCEL && parsed.data.STORAGE_DRIVER === 'local') {
+  console.error(
+    '\nInvalid storage configuration for Vercel:\n' +
+      '  STORAGE_DRIVER=local is unsafe on Vercel — the serverless filesystem is\n' +
+      '  ephemeral, so uploaded images are lost across cold starts and instances.\n' +
+      '  Set STORAGE_DRIVER=supabase (plus SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,\n' +
+      '  STORAGE_SUPABASE_BUCKET) in your Vercel Environment Variables.\n',
+  );
+  process.exit(1);
+}
+
 export const env = parsed.data;
 export type Env = typeof env;
