@@ -137,11 +137,15 @@
   margin: 14px 0 0;
   padding: 9px 11px;
   font-size: 12px; line-height: 1.45;
-  background: rgba(229, 57, 53, 0.07);
-  color: var(--accent-coral-dark, #c62828);
-  border: 1.5px solid rgba(229, 57, 53, 0.35);
+  background: transparent;
+  color: var(--text-primary, #111111);
+  border: 1.5px solid var(--text-primary, #111111);
 }
 #${ROOT_ID} .eshu-auth-error[data-visible="true"] { display: block; }
+#${ROOT_ID} .eshu-auth-error[data-kind="status"] {
+  color: var(--text-secondary, #555555);
+  border-color: var(--border-color, #d0d0d0);
+}
 #${ROOT_ID} .eshu-auth-actions {
   margin-top: 18px;
 }
@@ -190,14 +194,18 @@
 }
 #${ROOT_ID} .eshu-auth-forgot-link:hover { color: var(--text-primary, #111111); }
 #${ROOT_ID} .eshu-auth-back-link {
-  appearance: none; background: transparent; border: 0; padding: 0; margin: 0 0 16px;
-  display: inline-flex; align-items: center; gap: 5px;
+  appearance: none; background: transparent; border: 0; padding: 0 0 0 9px; margin: 0 0 18px;
+  display: inline-flex; align-items: center;
+  border-left: 2px solid var(--border-color, #d0d0d0);
   cursor: pointer;
-  font: inherit; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  font: inherit; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
   color: var(--text-muted, #999999);
 }
-#${ROOT_ID} .eshu-auth-back-link:hover { color: var(--text-primary, #111111); }
+#${ROOT_ID} .eshu-auth-back-link:hover {
+  color: var(--text-primary, #111111);
+  border-left-color: var(--text-primary, #111111);
+}
 #${ROOT_ID} .eshu-auth-reset-hint {
   margin: 0 0 16px;
   font-size: 12.5px; line-height: 1.5;
@@ -292,53 +300,51 @@
 }
 #${ROOT_ID}[data-confirm="true"] .eshu-auth-confirm { display: flex; }
 #${ROOT_ID} .eshu-auth-confirm-card {
+  position: relative;
   width: min(320px, calc(100vw - 40px));
   background: var(--bg-panel, #ffffff);
   color: var(--text-primary, #111111);
   border: 1.5px solid var(--border-color, #d0d0d0);
   border-radius: 0;
-  padding: 20px 20px 16px;
+  padding: 36px 20px 20px;
 }
-#${ROOT_ID} .eshu-auth-confirm-tagline {
-  margin: 0 0 14px;
-  font-size: 11px; font-weight: 800;
-  letter-spacing: 0.10em; text-transform: uppercase;
-  color: var(--text-primary, #111111);
+#${ROOT_ID} .eshu-auth-confirm-close {
+  position: absolute; top: 14px; right: 14px;
+  appearance: none; background: transparent; border: 0;
+  width: 24px; height: 24px; padding: 0; cursor: pointer;
+  color: var(--text-muted, #999999);
+  font-size: 16px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
 }
+#${ROOT_ID} .eshu-auth-confirm-close:hover { color: var(--text-primary, #111111); }
 #${ROOT_ID} .eshu-auth-confirm-terms {
   margin: 0 0 14px;
   font-size: 12px; line-height: 1.5;
   color: var(--text-muted, #999999);
+  text-align: center;
 }
 #${ROOT_ID} .eshu-auth-confirm-terms button.eshu-auth-footer-link {
+  font-size: 12px;
   color: var(--text-secondary, #555555);
 }
 #${ROOT_ID} .eshu-auth-confirm-rule {
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   border: 0; border-top: 1.5px solid var(--border-color, #d0d0d0);
 }
 #${ROOT_ID} .eshu-auth-confirm-actions {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px;
+  display: flex; justify-content: center;
 }
-#${ROOT_ID} .eshu-auth-confirm-cancel {
-  appearance: none; background: transparent; border: 0; padding: 0; margin: 0;
-  cursor: pointer;
-  color: var(--text-muted, #999999);
-  font: inherit; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-#${ROOT_ID} .eshu-auth-confirm-cancel:hover { color: var(--text-primary, #111111); }
 #${ROOT_ID} .eshu-auth-confirm-ok {
   appearance: none; cursor: pointer;
-  height: 36px; padding: 0 18px;
+  width: 100%; height: 40px; padding: 0;
   background: var(--text-primary, #111111);
   color: #ffffff;
-  border: 0; border-radius: 0;
+  border: 0; border-radius: 0 !important; outline: none;
   font: inherit; font-size: 11px; font-weight: 800;
-  letter-spacing: 0.10em; text-transform: uppercase;
-  display: inline-flex; align-items: center; justify-content: center;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  display: flex; align-items: center; justify-content: center;
   transition: opacity 0.1s;
+  -webkit-appearance: none;
 }
 #${ROOT_ID} .eshu-auth-confirm-ok:hover { opacity: 0.80; }
 `;
@@ -819,19 +825,13 @@
 
     const termsLine = document.createElement('p');
     termsLine.className = 'eshu-auth-confirm-terms';
-    termsLine.appendChild(document.createTextNode('By continuing you agree to our '));
     const termsLink = document.createElement('button');
     termsLink.type = 'button';
     termsLink.className = 'eshu-auth-footer-link';
-    termsLink.textContent = 'terms & privacy policy';
+    termsLink.textContent = 'Terms & Privacy Policy';
     termsLink.addEventListener('click', () => openDetails({ tab: 'terms' }));
     termsLine.appendChild(termsLink);
-    termsLine.appendChild(document.createTextNode('.'));
 
-    const cancelBtn = el('button', {
-      class: 'eshu-auth-confirm-cancel', type: 'button', text: 'Cancel',
-      onclick: closeConfirm
-    });
     const okBtn = el('button', {
       class: 'eshu-auth-confirm-ok', type: 'button', text: 'OK, cool',
       onclick: () => {
@@ -844,10 +844,13 @@
     const card = el('div', {
       class: 'eshu-auth-confirm-card', role: 'dialog', 'aria-modal': 'true'
     }, [
-      el('p', { class: 'eshu-auth-confirm-tagline', text: 'Create account' }),
+      el('button', {
+        class: 'eshu-auth-confirm-close', type: 'button', 'aria-label': 'Close',
+        text: '\u2715', onclick: closeConfirm
+      }),
       termsLine,
       el('hr', { class: 'eshu-auth-confirm-rule' }),
-      el('div', { class: 'eshu-auth-confirm-actions' }, [cancelBtn, okBtn])
+      el('div', { class: 'eshu-auth-confirm-actions' }, [okBtn])
     ]);
 
     confirmEl = el('div', {
@@ -961,7 +964,7 @@
       submitBtn.textContent = 'Send reset link';
       fields.appendChild(el('button', {
         class: 'eshu-auth-back-link', type: 'button',
-        text: '\u2190 Back to sign in',
+        text: 'Back to sign in',
         onclick: () => { state.view = 'main'; tabsEl.style.display = ''; setTab('signin'); }
       }));
       fields.appendChild(el('p', { class: 'eshu-auth-reset-hint',
