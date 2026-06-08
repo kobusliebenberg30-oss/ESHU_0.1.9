@@ -137,6 +137,8 @@
      */
     login:    (input) => json.post('/auth/login', input),
     logout:   ()      => json.post('/auth/logout'),
+    /** Send a password-reset email. Always resolves (204) — no enumeration leak. */
+    forgotPassword: (input) => json.post('/auth/forgot-password', input),
     /** Rotate the password. Backend regenerates the session id. */
     changePassword: (input) => json.post('/auth/change-password', input),
     /** Permanently delete the account. Requires the current password. */

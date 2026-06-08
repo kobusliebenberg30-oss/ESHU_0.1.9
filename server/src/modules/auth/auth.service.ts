@@ -1,13 +1,22 @@
+import { Agent, request as httpsRequest } from 'node:https';
+import { getCACertificates } from 'node:tls';
 import { prisma } from '../../db/client.js';
 import { hashPassword, verifyPassword } from '../../lib/hash.js';
 import { HttpError } from '../../middleware/error.js';
+import { env } from '../../env.js';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import type {
   ChangePasswordInput,
   DeleteAccountInput,
+  ForgotPasswordInput,
   LoginInput,
   RegisterInput,
 } from './auth.schemas.js';
+
+const _systemCAs = (() => {
+  try { const c = getCACertificates('system'); return Array.isArray(c) && c.length ? c : undefined; } catch { return undefined; }
+})();
+const _supabaseAgent = _systemCAs ? new Agent({ ca: _systemCAs }) : undefined;
 
 export const registerUser = async (input: RegisterInput) => {
   const existing = await prisma.user.findFirst({
@@ -203,4 +212,35 @@ export const deleteUser = async (
   if (!ok) throw new HttpError(401, 'Invalid credentials');
 
   await prisma.user.delete({ where: { id: userId } });
+};
+
+/**
+ * Trigger a Supabase password-reset email. Always resolves (no error thrown)
+ * to avoid leaking whether the email is registered (enumeration protection).
+ * If Supabase is not configured the call is a no-op — callers still receive 204.
+ */
+export const requestPasswordReset = async (input: ForgotPasswordInput, redirectTo: string): Promise<void> => {
+  if (!env.SUPABASE_URL?.trim() || !env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return;
+
+  const resetUrl = new URL('/auth/v1/recover', env.SUPABASE_URL.trim());
+  const body = JSON.stringify({ email: input.email, gotrue_meta_security: {}, data: {}, create_user: false, redirect_to: redirectTo });
+
+  await new Promise<void>((resolve) => {
+    const req = httpsRequest(resetUrl, {
+      method: 'POST',
+      agent: _supabaseAgent,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+        apikey: env.SUPABASE_ANON_KEY?.trim() ?? '',
+        authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!.trim()}`,
+      },
+    }, (res) => {
+      res.resume();
+      res.on('end', resolve);
+    });
+    req.on('error', () => resolve());
+    req.write(body);
+    req.end();
+  });
 };

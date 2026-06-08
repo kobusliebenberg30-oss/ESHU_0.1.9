@@ -24,16 +24,6 @@
     enterApplication();
   });
 
-  // "Continue offline" in the auth overlay: drop into the local-only profile
-  // and proceed to the home page, instead of leaving the user stranded on
-  // play.html with the modal closed. We navigate regardless of whether the
-  // overlay was opened via the main Play button or the top-right Sign-in
-  // chip - either way the user has indicated they want to enter the app.
-  window.addEventListener('eshu:auth-offline-chosen', () => {
-    pendingPlayNavigation = false;
-    enterApplication();
-  });
-
   async function handlePlayClick(event) {
     if (!playButton) return;
     event.preventDefault();

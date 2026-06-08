@@ -8,6 +8,7 @@ import { getSupabasePublicConfig, getSupabaseUser, isSupabaseEnabled } from '../
 import {
   changePasswordSchema,
   deleteAccountSchema,
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
   supabaseSessionSchema,
@@ -17,6 +18,7 @@ import {
   changePassword,
   deleteUser,
   registerUser,
+  requestPasswordReset,
   syncSupabaseUser,
 } from './auth.service.js';
 
@@ -77,6 +79,18 @@ router.post('/supabase/session', authLimiter, validate(supabaseSessionSchema), a
     req.session.userId = user.id;
     applyRememberMe(req.session, req.body.rememberMe);
     res.json({ user });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req, res, next) => {
+  try {
+    const origin = (req.headers.origin as string | undefined) ||
+      (env.CORS_ORIGIN && env.CORS_ORIGIN[0] ? env.CORS_ORIGIN[0] : 'https://eshu-0-1-9.vercel.app');
+    const redirectTo = `${origin}/play.html?auth=reset`;
+    await requestPasswordReset(req.body, redirectTo);
+    res.status(204).end();
   } catch (e) {
     next(e);
   }

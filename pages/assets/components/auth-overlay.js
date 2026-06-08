@@ -32,74 +32,77 @@
 #${ROOT_ID} {
   position: fixed; inset: 0; z-index: 9999;
   display: none; align-items: center; justify-content: center;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.60);
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
 }
 #${ROOT_ID}[data-open="true"] { display: flex; }
 #${ROOT_ID} .eshu-auth-card {
-  width: min(420px, calc(100vw - 32px));
+  width: min(400px, calc(100vw - 24px));
   background: var(--bg-panel, #ffffff);
   color: var(--text-primary, #111111);
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1.5px solid var(--border-color, #d0d0d0);
   border-radius: 0;
   box-shadow: none;
 }
 #${ROOT_ID} .eshu-auth-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  padding: 18px 20px 16px;
+  border-bottom: 1.5px solid var(--border-color, #d0d0d0);
 }
 #${ROOT_ID} .eshu-auth-title {
-  margin: 0; font-weight: 700; font-size: 12px;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  margin: 0; font-weight: 800; font-size: 13px;
+  letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--text-primary, #111111);
 }
 #${ROOT_ID} .eshu-auth-close {
   appearance: none; background: transparent; border: 0;
-  width: 26px; height: 26px; padding: 0; cursor: pointer;
-  color: var(--text-secondary, #555555);
-  font-size: 16px; line-height: 1;
+  width: 28px; height: 28px; padding: 0; cursor: pointer;
+  color: var(--text-muted, #999999);
+  font-size: 18px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
 }
 #${ROOT_ID} .eshu-auth-close:hover { color: var(--text-primary, #111111); }
 #${ROOT_ID} .eshu-auth-tabs {
   display: grid; grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  border-bottom: 1.5px solid var(--border-color, #d0d0d0);
 }
 #${ROOT_ID} .eshu-auth-tab {
   appearance: none; background: transparent; border: 0;
-  padding: 12px 0; cursor: pointer;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--text-secondary, #555555);
-  border-bottom: 2px solid transparent;
+  padding: 13px 0 11px; cursor: pointer;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-muted, #999999);
+  border-bottom: 3px solid transparent;
+  transition: color 0.1s, border-color 0.1s;
 }
 #${ROOT_ID} .eshu-auth-tab[data-active="true"] {
   color: var(--text-primary, #111111);
-  border-bottom-color: var(--accent-blue, #1565c0);
+  border-bottom-color: var(--text-primary, #111111);
 }
-#${ROOT_ID} .eshu-auth-body { padding: 16px; }
+#${ROOT_ID} .eshu-auth-body { padding: 20px; }
 #${ROOT_ID} .eshu-auth-body label {
   display: block;
-  margin: 10px 0 4px;
-  font-size: 11px; font-weight: 600;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--text-secondary, #555555);
+  margin: 14px 0 5px;
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  color: var(--text-muted, #999999);
 }
+#${ROOT_ID} .eshu-auth-body label:first-child { margin-top: 0; }
 #${ROOT_ID} .eshu-auth-body input {
   width: 100%; box-sizing: border-box;
-  height: 36px; padding: 0 10px;
-  background: var(--bg-input, #ffffff);
+  height: 38px; padding: 0 11px;
+  background: var(--bg-body, #ffffff);
   color: var(--text-primary, #111111);
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1.5px solid var(--border-color, #d0d0d0);
   border-radius: 0;
   font-size: 13px; line-height: 1.4;
   font-family: inherit;
+  transition: border-color 0.1s;
 }
 #${ROOT_ID} .eshu-auth-body input:focus {
   outline: none;
-  border-color: var(--accent-black, #111111);
-  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.06);
+  border-color: var(--text-primary, #111111);
 }
 #${ROOT_ID} .eshu-auth-password-wrap {
   position: relative;
@@ -109,7 +112,7 @@
 }
 #${ROOT_ID} .eshu-auth-reveal {
   position: absolute;
-  right: 8px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
   appearance: none;
@@ -118,7 +121,7 @@
   padding: 0;
   margin: 0;
   cursor: pointer;
-  color: var(--text-secondary, #555555);
+  color: var(--text-muted, #999999);
   font: inherit;
   font-size: 10px;
   font-weight: 700;
@@ -128,73 +131,77 @@
 #${ROOT_ID} .eshu-auth-reveal:hover {
   color: var(--text-primary, #111111);
 }
-#${ROOT_ID} .eshu-auth-remember {
-  display: flex; align-items: center; gap: 8px;
-  margin: 14px 0 0;
-  font-size: 12px;
-  color: var(--text-secondary, #555555);
-  user-select: none;
-  cursor: pointer;
-}
-#${ROOT_ID} .eshu-auth-remember input[type="checkbox"] {
-  width: auto; height: auto; margin: 0;
-  accent-color: var(--accent-blue, #1565c0);
-  cursor: pointer;
-}
+
 #${ROOT_ID} .eshu-auth-error {
   display: none;
-  margin: 12px 0 0;
-  padding: 8px 10px;
-  font-size: 12px;
-  background: rgba(229, 57, 53, 0.08);
+  margin: 14px 0 0;
+  padding: 9px 11px;
+  font-size: 12px; line-height: 1.45;
+  background: rgba(229, 57, 53, 0.07);
   color: var(--accent-coral-dark, #c62828);
-  border: 1px solid rgba(229, 57, 53, 0.4);
+  border: 1.5px solid rgba(229, 57, 53, 0.35);
 }
 #${ROOT_ID} .eshu-auth-error[data-visible="true"] { display: block; }
 #${ROOT_ID} .eshu-auth-actions {
-  display: flex; gap: 8px; margin-top: 14px;
+  margin-top: 18px;
 }
 #${ROOT_ID} .eshu-auth-submit {
-  flex: 1; height: 36px;
+  width: 100%; height: 40px;
   appearance: none; cursor: pointer;
-  background: var(--accent-black, #111111);
-  color: var(--text-light, #ffffff);
-  border: 1px solid transparent; border-radius: 0;
-  font-size: 12px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--text-primary, #111111);
+  color: #ffffff;
+  border: 0; border-radius: 0;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  transition: opacity 0.1s;
 }
+#${ROOT_ID} .eshu-auth-submit:hover:not([disabled]) { opacity: 0.82; }
 #${ROOT_ID} .eshu-auth-submit[disabled] {
-  background: var(--bg-tertiary, #eeeeee);
-  color: var(--text-muted, #aaaaaa);
+  opacity: 0.35;
   cursor: not-allowed;
 }
 #${ROOT_ID} .eshu-auth-footer {
-  padding: 10px 16px 12px;
-  border-top: 1px solid var(--border-color, #e0e0e0);
-  font-size: 11px;
-  color: var(--text-muted, #999999);
-  letter-spacing: 0.02em;
-  line-height: 1.5;
+  padding: 12px 20px 14px;
+  border-top: 1.5px solid var(--border-color, #d0d0d0);
 }
 #${ROOT_ID} .eshu-auth-footer-note {
-  margin: 0 0 6px;
-  white-space: normal;
-  text-transform: none;
-  letter-spacing: 0;
+  margin: 0;
   font-size: 11px;
-  color: var(--text-secondary, #555555);
+  line-height: 1.5;
+  color: var(--text-muted, #999999);
 }
 #${ROOT_ID} .eshu-auth-footer-link {
   appearance: none; background: transparent; border: 0; padding: 0; margin: 0;
   cursor: pointer;
-  color: var(--text-primary, #111111);
+  color: var(--text-secondary, #555555);
   font: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-#${ROOT_ID} .eshu-auth-footer-link:hover { color: var(--accent-blue, #1565c0); }
-#${ROOT_ID} .eshu-auth-footer-actions {
-  display: flex; justify-content: flex-end;
+#${ROOT_ID} .eshu-auth-footer-link:hover { color: var(--text-primary, #111111); }
+#${ROOT_ID} .eshu-auth-forgot-link {
+  appearance: none; background: transparent; border: 0; padding: 0; margin: 8px 0 0;
+  display: block; text-align: right;
+  cursor: pointer;
+  font: inherit; font-size: 11px;
+  color: var(--text-muted, #999999);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+#${ROOT_ID} .eshu-auth-forgot-link:hover { color: var(--text-primary, #111111); }
+#${ROOT_ID} .eshu-auth-back-link {
+  appearance: none; background: transparent; border: 0; padding: 0; margin: 0 0 16px;
+  display: inline-flex; align-items: center; gap: 5px;
+  cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--text-muted, #999999);
+}
+#${ROOT_ID} .eshu-auth-back-link:hover { color: var(--text-primary, #111111); }
+#${ROOT_ID} .eshu-auth-reset-hint {
+  margin: 0 0 16px;
+  font-size: 12.5px; line-height: 1.5;
+  color: var(--text-secondary, #555555);
 }
 /* === Secondary popup: full terms / privacy / security === */
 #${ROOT_ID} .eshu-auth-details {
@@ -281,69 +288,59 @@
 #${ROOT_ID} .eshu-auth-confirm {
   position: absolute; inset: 0; z-index: 2;
   display: none; align-items: center; justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.50);
 }
 #${ROOT_ID}[data-confirm="true"] .eshu-auth-confirm { display: flex; }
 #${ROOT_ID} .eshu-auth-confirm-card {
-  width: min(360px, calc(100vw - 48px));
+  width: min(320px, calc(100vw - 40px));
   background: var(--bg-panel, #ffffff);
   color: var(--text-primary, #111111);
-  border: 1px solid var(--border-color, #e0e0e0);
+  border: 1.5px solid var(--border-color, #d0d0d0);
   border-radius: 0;
-  padding: 18px 18px 16px;
+  padding: 20px 20px 16px;
 }
-#${ROOT_ID} .eshu-auth-confirm-title {
-  margin: 0 0 8px;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-#${ROOT_ID} .eshu-auth-confirm-text {
+#${ROOT_ID} .eshu-auth-confirm-tagline {
   margin: 0 0 14px;
-  font-size: 12.5px; line-height: 1.55;
+  font-size: 11px; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--text-primary, #111111);
+}
+#${ROOT_ID} .eshu-auth-confirm-terms {
+  margin: 0 0 14px;
+  font-size: 12px; line-height: 1.5;
+  color: var(--text-muted, #999999);
+}
+#${ROOT_ID} .eshu-auth-confirm-terms button.eshu-auth-footer-link {
   color: var(--text-secondary, #555555);
 }
-#${ROOT_ID} .eshu-auth-confirm-text a,
-#${ROOT_ID} .eshu-auth-confirm-text button.eshu-auth-footer-link {
-  color: var(--text-primary, #111111);
-  text-decoration: underline; text-underline-offset: 2px;
+#${ROOT_ID} .eshu-auth-confirm-rule {
+  margin: 0 0 14px;
+  border: 0; border-top: 1.5px solid var(--border-color, #d0d0d0);
 }
 #${ROOT_ID} .eshu-auth-confirm-actions {
-  display: flex; align-items: center; justify-content: flex-end;
+  display: flex; align-items: center; justify-content: space-between;
   gap: 12px;
 }
 #${ROOT_ID} .eshu-auth-confirm-cancel {
   appearance: none; background: transparent; border: 0; padding: 0; margin: 0;
   cursor: pointer;
-  color: var(--text-secondary, #555555);
+  color: var(--text-muted, #999999);
   font: inherit; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
+  letter-spacing: 0.08em; text-transform: uppercase;
 }
 #${ROOT_ID} .eshu-auth-confirm-cancel:hover { color: var(--text-primary, #111111); }
 #${ROOT_ID} .eshu-auth-confirm-ok {
   appearance: none; cursor: pointer;
-  height: 34px; padding: 0 16px;
-  background: var(--accent-green, #2e7d32);
+  height: 36px; padding: 0 18px;
+  background: var(--text-primary, #111111);
   color: #ffffff;
-  border: 1px solid transparent; border-radius: 0;
-  font: inherit; font-size: 12px; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  border: 0; border-radius: 0;
+  font: inherit; font-size: 11px; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
   display: inline-flex; align-items: center; justify-content: center;
-  line-height: 1;
+  transition: opacity 0.1s;
 }
-#${ROOT_ID} .eshu-auth-confirm-ok:hover {
-  background: var(--accent-green-dark, #1b5e20);
-}
-#${ROOT_ID} .eshu-auth-offline-link {
-  appearance: none; background: transparent; border: 0; padding: 0;
-  cursor: pointer;
-  color: var(--text-secondary, #555555);
-  font: inherit; font-weight: 700;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  white-space: nowrap;
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-}
-#${ROOT_ID} .eshu-auth-offline-link:hover { color: var(--text-primary, #111111); }
+#${ROOT_ID} .eshu-auth-confirm-ok:hover { opacity: 0.80; }
 `;
     const el = document.createElement('style');
     el.id = STYLE_ID;
@@ -372,6 +369,7 @@
   let state = {
     root: null,
     tab: 'signin',
+    view: 'main',
     errorEl: null,
     submitBtn: null,
     inputs: {},
@@ -481,8 +479,12 @@
   function handleConfirmationHint() {
     try {
       const params = new URLSearchParams(window.location.search || '');
-      if (params.get('auth') === 'confirmed') {
+      const hint = params.get('auth');
+      if (hint === 'confirmed') {
         showStatus('Email confirmed. You can now sign in with your email and password.');
+        state.tab = 'signin';
+      } else if (hint === 'reset') {
+        showStatus('Your password has been reset. Sign in with your new password below.');
         state.tab = 'signin';
       }
     } catch {}
@@ -815,16 +817,16 @@
   function buildConfirmPopup() {
     if (confirmEl) return confirmEl;
 
-    const text = document.createElement('p');
-    text.className = 'eshu-auth-confirm-text';
-    text.appendChild(document.createTextNode('Quick check - by creating an account you accept our '));
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'eshu-auth-footer-link';
-    link.textContent = 'terms & privacy policy';
-    link.addEventListener('click', () => openDetails({ tab: 'terms' }));
-    text.appendChild(link);
-    text.appendChild(document.createTextNode('. All good?'));
+    const termsLine = document.createElement('p');
+    termsLine.className = 'eshu-auth-confirm-terms';
+    termsLine.appendChild(document.createTextNode('By continuing you agree to our '));
+    const termsLink = document.createElement('button');
+    termsLink.type = 'button';
+    termsLink.className = 'eshu-auth-footer-link';
+    termsLink.textContent = 'terms & privacy policy';
+    termsLink.addEventListener('click', () => openDetails({ tab: 'terms' }));
+    termsLine.appendChild(termsLink);
+    termsLine.appendChild(document.createTextNode('.'));
 
     const cancelBtn = el('button', {
       class: 'eshu-auth-confirm-cancel', type: 'button', text: 'Cancel',
@@ -835,7 +837,6 @@
       onclick: () => {
         termsConfirmed = true;
         closeConfirm();
-        // Re-enter submit now that the gate has been passed.
         submit();
       }
     });
@@ -843,8 +844,9 @@
     const card = el('div', {
       class: 'eshu-auth-confirm-card', role: 'dialog', 'aria-modal': 'true'
     }, [
-      el('h4', { class: 'eshu-auth-confirm-title', text: 'Before we create your account' }),
-      text,
+      el('p', { class: 'eshu-auth-confirm-tagline', text: 'Create account' }),
+      termsLine,
+      el('hr', { class: 'eshu-auth-confirm-rule' }),
       el('div', { class: 'eshu-auth-confirm-actions' }, [cancelBtn, okBtn])
     ]);
 
@@ -890,19 +892,12 @@
       type: 'password', name: 'password', autocomplete: 'current-password',
       placeholder: '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022'
     });
-    // "Stay signed in" - omit `rememberMe` (server defaults to persistent
-    // 30-day cookie). Unchecked - send `rememberMe: false` to get a
-    // browser-session cookie that vanishes when the browser closes.
-    const rememberCheckbox = el('input', {
-      type: 'checkbox', id: 'eshu-auth-su-remember', checked: 'checked'
-    });
-
     // Register fields
     const regEmail = el('input', { type: 'email', name: 'email', autocomplete: 'email', placeholder: 'you@example.com' });
     const regUser  = el('input', { type: 'text',  name: 'username', autocomplete: 'username', placeholder: 'alice', spellcheck: 'false' });
     const regPass  = el('input', { type: 'password', name: 'password', autocomplete: 'new-password', placeholder: 'min 8 characters' });
 
-    state.inputs = { signinUser, signinPass, regEmail, regUser, regPass, rememberCheckbox };
+    state.inputs = { signinUser, signinPass, regEmail, regUser, regPass };
 
     const submitBtn = el('button', { class: 'eshu-auth-submit', type: 'submit' });
     state.submitBtn = submitBtn;
@@ -935,10 +930,11 @@
         fields.appendChild(el('label', { for: 'eshu-auth-su-pass', text: 'Password' }));
         signinPass.id = 'eshu-auth-su-pass';
         fields.appendChild(wrapPasswordReveal(signinPass));
-        const rememberLabel = el('label', {
-          class: 'eshu-auth-remember', for: 'eshu-auth-su-remember'
-        }, [rememberCheckbox, document.createTextNode(' Stay signed in')]);
-        fields.appendChild(rememberLabel);
+        const forgotLink = el('button', {
+          class: 'eshu-auth-forgot-link', type: 'button', text: 'Forgot password?',
+          onclick: () => showForgotView()
+        });
+        fields.appendChild(forgotLink);
         setTimeout(() => signinUser.focus(), 30);
       } else {
         fields.appendChild(el('label', { for: 'eshu-auth-rg-email', text: 'Email' }));
@@ -954,6 +950,31 @@
       }
     }
 
+    const forgotEmail = el('input', { type: 'email', name: 'email', autocomplete: 'email', placeholder: 'you@example.com' });
+    state.inputs.forgotEmail = forgotEmail;
+
+    function showForgotView() {
+      state.view = 'forgot';
+      hideError();
+      tabsEl.style.display = 'none';
+      while (fields.firstChild) fields.removeChild(fields.firstChild);
+      submitBtn.textContent = 'Send reset link';
+      fields.appendChild(el('button', {
+        class: 'eshu-auth-back-link', type: 'button',
+        text: '\u2190 Back to sign in',
+        onclick: () => { state.view = 'main'; tabsEl.style.display = ''; setTab('signin'); }
+      }));
+      fields.appendChild(el('p', { class: 'eshu-auth-reset-hint',
+        text: 'Enter your email and we\'ll send you a link to reset your password.'
+      }));
+      fields.appendChild(el('label', { for: 'eshu-auth-fe-email', text: 'Email' }));
+      forgotEmail.id = 'eshu-auth-fe-email';
+      forgotEmail.value = isEmailLike(state.inputs.signinUser.value.trim())
+        ? state.inputs.signinUser.value.trim() : '';
+      fields.appendChild(forgotEmail);
+      setTimeout(() => forgotEmail.focus(), 30);
+    }
+
     const tabSignin = el('button', {
       class: 'eshu-auth-tab', type: 'button', 'data-active': 'true', text: 'Sign in',
       onclick: () => setTab('signin')
@@ -963,30 +984,17 @@
       onclick: () => setTab('register')
     });
 
+    const tabsEl = el('div', { class: 'eshu-auth-tabs' }, [tabSignin, tabRegister]);
+
     const card = el('div', { class: 'eshu-auth-card', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'eshu-auth-title' }, [
       el('div', { class: 'eshu-auth-header' }, [
         el('h2', { class: 'eshu-auth-title', id: 'eshu-auth-title', text: 'ESHU Account' }),
         el('button', { class: 'eshu-auth-close', type: 'button', 'aria-label': 'Close', text: '\u2715', onclick: close })
       ]),
-      el('div', { class: 'eshu-auth-tabs' }, [tabSignin, tabRegister]),
+      tabsEl,
       el('div', { class: 'eshu-auth-body' }, form),
       el('div', { class: 'eshu-auth-footer' }, [
-        // Reassuring, plain-English explanation of how credentials and the
-        // session are handled. Wraps freely across multiple lines.
-        buildFooterNote(),
-        // "Continue offline" clears the remote opt-in flag so future page
-        // loads don't try to talk to the backend. Mostly useful when a user
-        // who previously opted into remote on this device wants to drop
-        // back to local-only mode without having to sign in first.
-        el('div', { class: 'eshu-auth-footer-actions' }, [
-          el('button', {
-            class: 'eshu-auth-offline-link',
-            type: 'button',
-            text: 'Continue offline',
-            title: 'Use this device in local-only mode (your data stays in this browser).',
-            onclick: continueOffline
-          })
-        ])
+        buildFooterNote()
       ])
     ]);
 
@@ -1000,6 +1008,7 @@
     state.root = root;
 
     setTab('signin');
+    state.showForgotView = showForgotView;
     return root;
   }
 
@@ -1044,24 +1053,31 @@
 
     state.submitBtn.disabled = true;
     const original = state.submitBtn.textContent;
-    state.submitBtn.textContent = state.tab === 'signin' ? 'Signing in\u2026' : 'Creating\u2026';
+    if (state.view === 'forgot') {
+      state.submitBtn.textContent = 'Sending\u2026';
+    } else {
+      state.submitBtn.textContent = state.tab === 'signin' ? 'Signing in\u2026' : 'Creating\u2026';
+    }
 
     try {
+      if (state.view === 'forgot') {
+        const email = state.inputs.forgotEmail.value.trim();
+        if (!email) throw new Error('Please enter your email address.');
+        await window.ESHU_API.auth.forgotPassword({ email });
+        state.submitBtn.disabled = false;
+        state.submitBtn.textContent = original;
+        showStatus('If that email has an account, a reset link is on its way.');
+        return;
+      }
       const useSupabaseAuth = await shouldUseSupabaseAuth();
       if (state.tab === 'signin') {
         const emailOrUsername = state.inputs.signinUser.value.trim();
         const password = state.inputs.signinPass.value;
         if (!emailOrUsername || !password) throw new Error('Both fields are required.');
-        // Send `rememberMe: false` only when explicitly unchecked. Omitting
-        // the field preserves the server's persistent-session default.
-        const payload = { emailOrUsername, password };
-        if (state.inputs.rememberCheckbox && !state.inputs.rememberCheckbox.checked) {
-          payload.rememberMe = false;
-        }
         if (useSupabaseAuth && isEmailLike(emailOrUsername)) {
-          await signInWithSupabase(emailOrUsername, password, payload.rememberMe);
+          await signInWithSupabase(emailOrUsername, password);
         } else {
-          await window.ESHU_API.auth.login(payload);
+          await window.ESHU_API.auth.login({ emailOrUsername, password });
         }
       } else {
         const email = state.inputs.regEmail.value.trim();
@@ -1083,6 +1099,35 @@
 
       await finalizeSuccess();
     } catch (err) {
+      // On forgot-password view: show confirmation regardless (no enumeration).
+      if (state.view === 'forgot') {
+        state.submitBtn.disabled = false;
+        state.submitBtn.textContent = 'Send reset link';
+        showStatus('If that email has an account, a reset link is on its way.');
+        return;
+      }
+      // On register: if account already exists, switch to sign-in tab and nudge.
+      if (state.tab === 'register' && err && err.status === 409) {
+        state.submitBtn.disabled = false;
+        state.submitBtn.textContent = original;
+        const email = state.inputs.regEmail.value.trim();
+        state.inputs.signinUser.value = email;
+        const tabs = state.root && state.root.querySelectorAll('.eshu-auth-tab');
+        if (tabs) tabs.forEach((b) => { if (b.textContent === 'Sign in') b.click(); });
+        showStatus('Looks like you already have an account. Sign in below.');
+        return;
+      }
+      // On sign-in: if credentials not recognised, switch to register tab and nudge.
+      if (state.tab === 'signin' && err && (err.status === 401 || err.message === 'Invalid login credentials')) {
+        state.submitBtn.disabled = false;
+        state.submitBtn.textContent = original;
+        const typed = state.inputs.signinUser.value.trim();
+        if (isEmailLike(typed)) state.inputs.regEmail.value = typed;
+        const tabs = state.root && state.root.querySelectorAll('.eshu-auth-tab');
+        if (tabs) tabs.forEach((b) => { if (b.textContent === 'Create account') b.click(); });
+        showStatus("Don't have an account yet? Create one below.");
+        return;
+      }
       showError(humanizeError(err));
       state.submitBtn.disabled = false;
       state.submitBtn.textContent = original;
@@ -1126,6 +1171,12 @@
     state.reloadOnSuccess = !(opts && opts.reloadOnSuccess === false);
     // Each fresh open requires a fresh T&Cs acknowledgement.
     termsConfirmed = false;
+    // If overlay was left on the forgot-password view, snap back to sign-in.
+    if (state.view === 'forgot' && state.root) {
+      const tabsElRef = state.root.querySelector('.eshu-auth-tabs');
+      if (tabsElRef) tabsElRef.style.display = '';
+      state.view = 'main';
+    }
     if (opts && (opts.tab === 'signin' || opts.tab === 'register')) {
       // Find the tab button and click it
       const tabs = state.root.querySelectorAll('.eshu-auth-tab');
@@ -1150,6 +1201,9 @@
     state.root.dataset.details = 'false';
     state.root.setAttribute('aria-hidden', 'true');
     termsConfirmed = false;
+    if (state.view === 'forgot' && typeof state.showForgotView === 'function') {
+      state.view = 'main';
+    }
     document.removeEventListener('keydown', onKey);
     if (lastFocus && typeof lastFocus.focus === 'function') {
       try { lastFocus.focus(); } catch {}
@@ -1259,39 +1313,7 @@
     catch { location.reload(); }
   }
 
-  // Opt this device out of remote mode WITHOUT signing in. Used by the
-  // "Continue offline" link and by external callers (e.g. an in-app toggle).
-  // - Clears the persisted backend flag so future loads don't try to sync.
-  // - Suppresses the auto-open-on-unauth handler for the rest of this load.
-  // - Closes the overlay; no reload (the page is already on localStorage).
-  function continueOffline() {
-    try { localStorage.removeItem('eshu_backend'); } catch {}
-    suppressAutoOpen = true;
-    try { window.dispatchEvent(new CustomEvent('eshu:auth-offline-chosen')); } catch {}
-    close();
-  }
-
-  // Auto-open behaviour:
-  //   - On pages that declare `<html data-eshu-auth-required="true">` (e.g.
-  //     home.html and other authenticated surfaces), pop the sign-in modal
-  //     automatically when the remote driver reports no active session.
-  //   - On open landing surfaces like play.html, do NOT auto-open; the
-  //     auth chip in the top-nav remains the discoverable entry point.
-  //   - `continueOffline()` flips `suppressAutoOpen` so a user who chose to
-  //     keep using local-only mode isn't pestered for the rest of the load.
-  let suppressAutoOpen = false;
-
-  function pageRequiresAuth() {
-    try {
-      return !!(document.documentElement && document.documentElement.dataset.eshuAuthRequired === 'true');
-    } catch {
-      return false;
-    }
-  }
-
   function maybeAutoOpen() {
-    if (suppressAutoOpen) return;
-    if (!pageRequiresAuth()) return;
     // Defer one tick so concurrently-loading scripts (e.g. ESHU_API) finish
     // booting and the overlay can render its styles cleanly.
     setTimeout(() => {
@@ -1304,5 +1326,5 @@
   // `sync-unauthenticated` (the page is already navigating to play.html),
   // so no extra wiring is needed for that path.
 
-  window.ESHU_AUTH_UI = { open, close, logout, continueOffline };
+  window.ESHU_AUTH_UI = { open, close, logout };
 })();
