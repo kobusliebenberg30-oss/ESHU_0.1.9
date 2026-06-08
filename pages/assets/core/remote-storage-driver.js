@@ -35,7 +35,7 @@
   // Legacy keys to purge when moving between authenticated users in remote mode.
   const LEGACY_STORAGE_KEYS = ['eshu_db_v1', 'groups', 'games', 'creationsList', 'xpPoints', 'profileName', 'profileDesc', 'primaryGroupId', 'userProfile'];
   const DRIVER_NAME = 'remote';
-  const PUSH_DEBOUNCE_MS = 600;
+  const PUSH_DEBOUNCE_MS = 200;
 
   function isHostedDeployment() {
     try {
@@ -209,29 +209,44 @@
 
   function resolveInitialSnapshot(cacheKey, dbKey, pulledSnapshot) {
     const pulled = pulledSnapshot && typeof pulledSnapshot === 'object' ? pulledSnapshot : {};
-    let local = null;
-    const seenKeys = new Set();
-    const localKeys = [cacheKey, dbKey].filter((key) => {
-      if (!key || seenKeys.has(key)) return false;
-      seenKeys.add(key);
-      return true;
-    });
-    for (const key of localKeys) {
+
+    // Account-scoped cache (keyed by user id/username): safe to union with
+    // server because it was written by THIS user on THIS browser.
+    let accountLocal = null;
+    try {
+      if (cacheKey) accountLocal = safeParseJson(localStorage.getItem(cacheKey));
+    } catch {}
+
+    // Generic dbKey may contain data from a DIFFERENT account or a local-only
+    // session. Only use it as a fallback when there is no account-scoped cache
+    // AND the server has no profiles (truly empty account, first-ever login).
+    let genericLocal = null;
+    if (!accountLocal && cacheKey !== dbKey) {
       try {
-        const candidate = safeParseJson(localStorage.getItem(key));
-        if (!candidate) continue;
-        if (!local || toUpdatedAtMs(candidate) > toUpdatedAtMs(local)) {
-          local = candidate;
-        }
-      } catch {
-      }
+        if (dbKey) genericLocal = safeParseJson(localStorage.getItem(dbKey));
+      } catch {}
     }
 
+    const serverHasProfiles = (() => {
+      const profiles = Array.isArray(pulled.tables && pulled.tables.profiles)
+        ? pulled.tables.profiles : [];
+      return profiles.some((p) => p && p.id);
+    })();
+
+    // When the server has a profile for this user, it is authoritative.
+    // Union in account-scoped local rows (unsynced edits from THIS device)
+    // but NEVER let the generic dbKey data contaminate the merge — it may
+    // belong to a different account or a pre-login local-only session.
+    if (serverHasProfiles || hasServerProgress(pulled)) {
+      return adoptServer(pulled, accountLocal);
+    }
+
+    // Server has no profile yet (brand-new account, first activation).
+    // Prefer account-scoped local if it exists and is newer; fall back to
+    // generic local only as a last resort, and still union with the server.
+    const local = accountLocal || genericLocal;
     const pulledMs = toUpdatedAtMs(pulled);
     const localMs = toUpdatedAtMs(local);
-    if (hasServerProgress(pulled)) {
-      return adoptServer(pulled, local);
-    }
     if (local && localMs > pulledMs) {
       return { snapshot: local, source: 'local' };
     }
