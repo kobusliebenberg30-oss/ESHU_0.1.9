@@ -138,6 +138,20 @@
   // the result dirty so they get pushed on activation.
   const UNION_TABLES = ['groups', 'games', 'creations'];
 
+  // Parse a row's `updatedAt` to epoch-ms. Server rows carry a numeric ms
+  // value (Date.getTime()); local rows may carry ms or an ISO string. Missing
+  // / unparseable timestamps sort oldest so they never beat a real one.
+  function rowUpdatedMs(row) {
+    if (!row) return 0;
+    const v = row.updatedAt;
+    if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+    if (typeof v === 'string') {
+      const ms = Date.parse(v);
+      return Number.isFinite(ms) ? ms : 0;
+    }
+    return 0;
+  }
+
   function unionLocalRows(serverSnapshot, localSnapshot) {
     if (!serverSnapshot || typeof serverSnapshot !== 'object') return { snapshot: serverSnapshot, added: false };
     if (!localSnapshot || typeof localSnapshot !== 'object') return { snapshot: serverSnapshot, added: false };
@@ -149,9 +163,25 @@
       const localRows = Array.isArray(lTables[table]) ? lTables[table] : [];
       if (!localRows.length) continue;
       const serverRows = Array.isArray(sTables[table]) ? sTables[table] : [];
-      const serverIds = new Set(serverRows.map((r) => r && r.id).filter(Boolean));
-      const missing = localRows.filter((r) => r && r.id && !serverIds.has(r.id));
-      if (!missing.length) continue;
+      const serverById = new Map();
+      serverRows.forEach((r) => { if (r && r.id) serverById.set(r.id, r); });
+
+      // Keep a local row over the server copy when EITHER it isn't on the
+      // server yet (created offline / push not landed) OR the local copy was
+      // edited strictly more recently than the server's (an unsynced field
+      // edit). This stops a background pull from reverting the user's
+      // not-yet-pushed work — previously only brand-new rows survived, so an
+      // EDIT to an existing game/creation would silently revert to the server
+      // version. Concurrent cross-device edits resolve last-write-wins by
+      // updatedAt, matching the bulk-sync model's documented semantics.
+      const overrides = [];
+      for (const lr of localRows) {
+        if (!lr || !lr.id) continue;
+        const sr = serverById.get(lr.id);
+        if (!sr || rowUpdatedMs(lr) > rowUpdatedMs(sr)) overrides.push(lr);
+      }
+      if (!overrides.length) continue;
+
       if (next === serverSnapshot) {
         try {
           next = JSON.parse(JSON.stringify(serverSnapshot));
@@ -161,7 +191,10 @@
         if (!next.tables || typeof next.tables !== 'object') next.tables = {};
       }
       const baseRows = Array.isArray(next.tables[table]) ? next.tables[table] : [];
-      next.tables[table] = baseRows.concat(missing);
+      const mergedById = new Map();
+      baseRows.forEach((r) => { if (r && r.id) mergedById.set(r.id, r); });
+      overrides.forEach((r) => { mergedById.set(r.id, r); });
+      next.tables[table] = Array.from(mergedById.values());
       added = true;
     }
     return { snapshot: next, added };
@@ -253,11 +286,12 @@
 
     writeLocalMirror();
 
-    async function pushNow() {
+    function pushNow() {
       if (inflight) {
-        // Coalesce: we'll re-push when current call resolves.
+        // Coalesce: we'll re-push when current call resolves. Return the
+        // in-flight promise so awaiters (e.g. flush) can chain on it.
         pendingAfterInflight = true;
-        return;
+        return inflight;
       }
       const snapshot = cache;
       let body;
@@ -266,7 +300,7 @@
       } catch (err) {
         console.error('[ESHU remote] cache is not valid JSON; aborting push', err);
         emit('eshu:sync-error', { error: err });
-        return;
+        return Promise.resolve();
       }
       inflight = window.ESHU_API.sync.push(body)
         .then(() => {
@@ -286,6 +320,7 @@
             schedulePush();
           }
         });
+      return inflight;
     }
 
     function schedulePush() {
@@ -295,6 +330,32 @@
         pushTimer = null;
         pushNow();
       }, PUSH_DEBOUNCE_MS);
+    }
+
+    // Synchronously force every pending change to the server and RESOLVE only
+    // once it has actually landed (or all retries are exhausted). This is the
+    // durability guarantee logout needs: a debounced push that hasn't fired
+    // yet, or an in-flight push, would otherwise be discarded when the session
+    // is destroyed and the local cache is wiped — silently losing the user's
+    // last edits ("logged out and back in, my changes reverted"). Unlike the
+    // keepalive `flushOnExit`, this must be awaited BEFORE the session cookie
+    // is gone, so the write is authenticated. Returns true if the cache is
+    // clean (everything synced) when it resolves.
+    async function flush(opts) {
+      const retries = Math.max(0, (opts && opts.retries) || 0);
+      for (let attempt = 0; ; attempt++) {
+        // Cancel the debounce — we're pushing right now, not in 600ms.
+        if (pushTimer) { clearTimeout(pushTimer); pushTimer = null; }
+        // Drain any in-flight push so we observe its result.
+        if (inflight) { try { await inflight; } catch {} }
+        if (!dirty) return true;
+        try { await pushNow(); } catch {}
+        if (!dirty) return true;
+        if (attempt >= retries) return false;
+        // Bounded backoff: gives a cold-started serverless function /
+        // transaction a moment to recover before the next attempt.
+        await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+      }
     }
 
     // Last-chance synchronous save when the page is being hidden/unloaded
@@ -385,6 +446,7 @@
       // in flight when the page navigates away, flushOnExit re-delivers via
       // keepalive (the in-flight fetch would otherwise be aborted).
       __forcePushNow: () => { dirty = true; return pushNow(); },
+      __flush: flush,
       __flushOnExit: flushOnExit,
       __getCache: () => cache
     };
@@ -710,6 +772,11 @@
     return next;
   }
 
+  // The driver instance currently registered with ESHU_DB. Exposed via
+  // ESHU_REMOTE.flushPending so logout (and any caller) can force a durable
+  // sync before tearing down the session.
+  let activeDriver = null;
+
   function waitFor(predicate, timeoutMs) {
     return new Promise((resolve, reject) => {
       const start = Date.now();
@@ -751,6 +818,29 @@
       return;
     }
     if (!me) {
+      // The app session cookie is gone, but the Supabase client may still
+      // hold a valid persisted session in this browser. Rebuild the app
+      // session from it (no password prompt) so the device SYNCS instead of
+      // silently dropping to local-only — the "looks signed in but my data
+      // never reaches the other computer" failure mode. Best-effort: if there
+      // is no Supabase session (or Supabase auth isn't in use) this is a
+      // no-op and we fall through to the local-only path below.
+      let rebridged = false;
+      try {
+        if (window.ESHU_SUPABASE && typeof window.ESHU_SUPABASE.ensureAppSession === 'function') {
+          rebridged = await window.ESHU_SUPABASE.ensureAppSession();
+        }
+      } catch (err) {
+        console.warn('[ESHU remote] app-session re-bridge attempt failed', err);
+      }
+      if (rebridged) {
+        try { me = await window.ESHU_API.auth.me(); } catch { me = null; }
+        if (me) {
+          console.info('[ESHU remote] re-established app session from persisted Supabase session');
+        }
+      }
+    }
+    if (!me) {
       // Not signed in. Don't switch drivers; legacy localStorage stays active
       // so the page renders normally. The auth overlay listens for
       // eshu:sync-unauthenticated and prompts the user to sign in.
@@ -782,6 +872,7 @@
         || safeParseJson(localStorage.getItem(dbKey));
       if (hasUsableData(localSnap)) {
         driver = createRemoteDriver(localSnap, dbKey, cacheKey);
+        activeDriver = driver;
         window.ESHU_DB.registerStorageDriver('remote', () => driver);
         window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
         try { window.ESHU_AUTH = { user: me.user || null }; } catch {}
@@ -850,6 +941,7 @@
         // No usable cache (first login): register now with the resolved
         // snapshot — the original blocking behavior.
         driver = createRemoteDriver(resolved.snapshot, dbKey, cacheKey);
+        activeDriver = driver;
         window.ESHU_DB.registerStorageDriver('remote', () => driver);
         window.ESHU_DB.configureStorageDriver({ driver: 'remote' });
         try { window.ESHU_AUTH = { user: me.user || null }; } catch {}
@@ -878,6 +970,8 @@
       enable() { try { localStorage.setItem('eshu_backend', 'remote'); location.reload(); } catch {} },
       disable() { try { localStorage.setItem('eshu_backend', 'local'); location.reload(); } catch {} },
       isEnabled: () => false,
+      // Local-only mode has nothing to push; resolve immediately.
+      flushPending: () => Promise.resolve(true),
       clearLocalCache: () => clearLocalAccountCache(resolveDbKey()),
       diagnose: () => preflightDiagnose('manual')
     };
@@ -889,6 +983,13 @@
     disable() { try { localStorage.setItem('eshu_backend', 'local'); location.reload(); } catch {} },
     isEnabled: () => true,
     activate,
+    // Force any pending/in-flight changes to the server and resolve once they
+    // have landed. Callers that are about to invalidate the session (logout)
+    // MUST await this first so the final edits aren't lost.
+    flushPending: (opts) =>
+      activeDriver && typeof activeDriver.__flush === 'function'
+        ? activeDriver.__flush(opts)
+        : Promise.resolve(true),
     clearLocalCache: () => clearLocalAccountCache(resolveDbKey()),
     diagnose: () => preflightDiagnose('manual')
   };

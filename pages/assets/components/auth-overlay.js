@@ -1186,6 +1186,24 @@
 
   async function logout() {
     if (!window.ESHU_API) return;
+
+    // CRITICAL ORDERING: flush any unsynced changes to the server BEFORE we
+    // destroy the session below. Writes are debounced (~600ms) and may also be
+    // mid-flight; if we log out (which deletes the server session and then
+    // wipes the local cache) without flushing, those last edits are lost for
+    // good — the keepalive flush can't save them either because the session
+    // cookie is already gone. This was the "made changes, logged out and back
+    // in, everything reverted to the old version" bug. Cap the wait so a dead
+    // network never traps the user on a page they're trying to leave.
+    try {
+      if (window.ESHU_REMOTE && typeof window.ESHU_REMOTE.flushPending === 'function') {
+        await Promise.race([
+          window.ESHU_REMOTE.flushPending({ retries: 2 }),
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      }
+    } catch {}
+
     // Best-effort server logout (clears the session cookie). Never block
     // the local cleanup on a network failure: the user expects the app to
     // forget them either way.

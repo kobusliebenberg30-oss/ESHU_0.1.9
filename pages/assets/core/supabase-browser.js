@@ -95,11 +95,46 @@
     }
   }
 
+  /**
+   * Re-establish the ESHU app session (the `eshu.sid` cookie) from a still-
+   * valid persisted Supabase session, WITHOUT requiring the user to type
+   * their password again.
+   *
+   * Why this exists: the Supabase client persists its own session in this
+   * browser (`persistSession: true`), but the app's server session is a
+   * separate cookie that is only minted on explicit sign-in / email
+   * confirmation. If that cookie expires or is cleared while the Supabase
+   * session lives on, the device silently drops to LOCAL-ONLY mode on the
+   * next load — it looks signed in (cached name) but no longer syncs, so
+   * creations made there never reach the server and other devices' data
+   * never appears. Calling this on a 401 rebuilds the bridge so "signed in"
+   * actually means "syncing".
+   *
+   * Returns true only if a fresh app session was established.
+   */
+  async function ensureAppSession() {
+    try {
+      const client = await getClient();
+      if (!client || !client.auth || typeof client.auth.getSession !== 'function') return false;
+      const { data } = await client.auth.getSession();
+      const accessToken = data && data.session && data.session.access_token;
+      if (!accessToken) return false;
+      if (!window.ESHU_API || typeof window.ESHU_API.auth.supabaseSession !== 'function') return false;
+      await window.ESHU_API.auth.supabaseSession({ accessToken });
+      try { localStorage.setItem('eshu_backend', 'remote'); } catch {}
+      return true;
+    } catch (err) {
+      console.warn('[ESHU_SUPABASE] ensureAppSession failed:', err);
+      return false;
+    }
+  }
+
   window.ESHU_SUPABASE = {
     init,
     getClient,
     getConfig: fetchConfig,
     handleEmailConfirmation,
+    ensureAppSession,
   };
 
   document.addEventListener('DOMContentLoaded', () => {
