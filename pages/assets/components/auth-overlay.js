@@ -413,9 +413,21 @@
     try { window.dispatchEvent(new CustomEvent('eshu:auth-success')); } catch {}
   }
 
+  function isPlayPage() {
+    try { return /(?:^|\/)play\.html?$/i.test(location.pathname) || location.pathname === '/'; } catch { return false; }
+  }
+
   async function finalizeSuccess() {
     persistRemoteAuthSuccess();
     if (state.reloadOnSuccess !== false) {
+      // On play.html a plain reload loops back here and can re-trigger the
+      // login overlay before the session cookie is recognised. Navigate to
+      // home instead so the authenticated app boots cleanly.
+      if (isPlayPage()) {
+        const base = location.pathname.replace(/[^/]+$/, '');
+        location.href = base + 'home.html';
+        return;
+      }
       location.reload();
       return;
     }

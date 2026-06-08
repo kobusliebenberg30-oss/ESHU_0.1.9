@@ -1,28 +1,16 @@
 (function () {
   'use strict';
-  let pendingPlayNavigation = false;
 
   const playButton = document.getElementById('playButton');
 
-  function getPlayTargetHref() {
-    if (!playButton) return 'home.html';
-    const href = playButton.getAttribute('href') || 'home.html';
-    try {
-      return new URL(href, window.location.href).href;
-    } catch {
-      return href;
-    }
-  }
-
   function enterApplication() {
-    window.location.href = getPlayTargetHref();
+    window.location.href = 'home.html';
   }
 
-  window.addEventListener('eshu:auth-success', () => {
-    if (!pendingPlayNavigation) return;
-    pendingPlayNavigation = false;
-    enterApplication();
-  });
+  // After a successful sign-in on this page, go straight to home.
+  window.addEventListener('eshu:auth-success', enterApplication);
+  // After the remote driver activates (session already exists), go straight to home.
+  window.addEventListener('eshu:remote-activated', enterApplication);
 
   async function handlePlayClick(event) {
     if (!playButton) return;
@@ -32,16 +20,26 @@
     playButton.dataset.authChecking = 'true';
 
     try {
-      pendingPlayNavigation = true;
-      if (window.TOAST && typeof window.TOAST.info === 'function') {
-        window.TOAST.info('Please sign in to continue.');
+      // Already signed in — just enter.
+      if (window.ESHU_AUTH) {
+        enterApplication();
+        return;
       }
+
+      // Check the server session in case ESHU_AUTH hasn't been set yet.
+      if (window.ESHU_API && typeof window.ESHU_API.auth.me === 'function') {
+        try {
+          const me = await window.ESHU_API.auth.me();
+          if (me) { enterApplication(); return; }
+        } catch {}
+      }
+
+      // Not signed in — open the auth overlay.
       if (window.ESHU_AUTH_UI && typeof window.ESHU_AUTH_UI.open === 'function') {
         window.ESHU_AUTH_UI.open({ tab: 'signin', reloadOnSuccess: false });
         return;
       }
 
-      pendingPlayNavigation = false;
       enterApplication();
     } finally {
       playButton.dataset.authChecking = 'false';
