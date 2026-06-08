@@ -15,7 +15,7 @@ router.use(requireAuth);
 router.get('/', validate(listCreationsQuerySchema, 'query'), async (req, res, next) => {
   try {
     const profileId = await ensureActiveProfileId(req.session.userId!);
-    const creations = await svc.list(profileId, req.query as { status: string; hostGameId?: string });
+    const creations = await svc.list(profileId, req.query as unknown as { status: string; hostGameId?: string });
     res.json({ creations });
   } catch (e) {
     next(e);

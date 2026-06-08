@@ -67,29 +67,6 @@
     };
   }
 
-  function createNotConfiguredPostgresDriver() {
-    const message = 'PostgreSQL storage driver is not configured. Use localstorage now and export SQL via ESHU_DB.exportPostgresSnapshotSql().';
-    return {
-      name: 'postgresql',
-      getItem() {
-        throw new Error(message);
-      },
-      setItem() {
-        throw new Error(message);
-      },
-      removeItem() {
-        throw new Error(message);
-      },
-      listKeys() {
-        return [];
-      },
-      subscribe() {
-        return function noop() {
-        };
-      }
-    };
-  }
-
   function registerStorageDriver(name, factory) {
     const normalizedName = normalizeDriverName(name);
     if (!normalizedName || typeof factory !== 'function') return;
@@ -156,7 +133,6 @@
   function ensureStorageDriverReady() {
     if (activeStorageDriver) return;
     registerStorageDriver('localstorage', () => createLocalStorageDriver());
-    registerStorageDriver('postgresql', () => createNotConfiguredPostgresDriver());
     configureStorageDriver({ driver: 'localstorage' });
   }
 
@@ -1409,8 +1385,6 @@
     };
   }
 
-  registerStorageDriver('localstorage', () => createLocalStorageDriver());
-  registerStorageDriver('postgresql', () => createNotConfiguredPostgresDriver());
   ensureStorageDriverReady();
 
   async function exportDatabase() {

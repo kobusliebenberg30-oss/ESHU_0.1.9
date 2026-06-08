@@ -43,9 +43,9 @@ router.get('/', async (req, res, next) => {
   }
 });
 
-router.get('/playerbase', validate(playerbaseQuerySchema, 'query'), async (_req, res, next) => {
+router.get('/playerbase', validate(playerbaseQuerySchema, 'query'), async (req, res, next) => {
   try {
-    const { limit } = playerbaseQuerySchema.parse(_req.query);
+    const { limit } = req.query as unknown as { limit: number };
     const profiles = await svc.listPlayerbase(limit);
     res.json({ profiles });
   } catch (e) {

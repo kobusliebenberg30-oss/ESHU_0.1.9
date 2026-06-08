@@ -124,6 +124,7 @@ model Profile {
   groupMembers      GroupMember[]
   gameMembers       GameMember[]
   commentsAuthored  Comment[]     @relation("CommentAuthor")
+  xpAwards          XpAward[]     @relation("ProfileXpAwards")
 
   @@index([userId, createdAt])
 }
@@ -280,6 +281,29 @@ model GameMember {
 
   @@id([gameId, profileId])
   @@index([profileId])
+}
+
+// ---------- XP Awards ----------
+//
+// Replaces the client-side `Profile.data.xpAwards` JSON ledger.
+// The unique constraint on (profileId, kind, refId) provides DB-level
+// idempotency — no need for a read-modify-write transaction to prevent
+// double-awards. The `refId` column stores the entity id the award relates
+// to (creation id, game id, etc.); it is nullable for awards that have no
+// specific referent (e.g. comment_posted with no target id).
+
+model XpAward {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation("ProfileXpAwards", fields: [profileId], references: [id], onDelete: Cascade)
+  kind      String
+  refId     String?
+  amount    Int
+  reason    String
+  awardedAt DateTime @default(now())
+
+  @@unique([profileId, kind, refId], name: "profileId_kind_refId")
+  @@index([profileId, awardedAt])
 }
 
 // ---------- Comments ----------

@@ -4,7 +4,7 @@
    ============================================ */
 
  /* === CSS Variables === */
- :root {
+:root {
   /* LIGHT THEME — Clean white with warm gray accents */
   --bg-body: #ffffff;
   --bg-panel: #ffffff;
@@ -12,7 +12,7 @@
   --bg-input: #ffffff;
   --bg-nav: #111111;
   --bg-surface: #ffffff;
-  
+
   /* Accent palette — Monochrome + Red */
   --accent-green: #2e7d32;
   --accent-green-dark: #1b5e20;
@@ -28,46 +28,18 @@
   --accent-purple-dark: #6a1b9a;
   --accent-black: #111111;
   --accent-black-dark: #000000;
-  
+
   --neutral-btn: #555555;
   --neutral-btn-hover: #333333;
-  
+
   --text-primary: #111111;
   --text-secondary: #555555;
   --text-muted: #999999;
   --text-light: #ffffff;
-  
-  --border-color: #e0e0e0;
-  --border-light: #eeeeee;
-  
-  --radius-xs: 0;
-  --radius-sm: 0;
-  --radius-md: 0;
-  --radius-lg: 0;
-  --radius-xl: 0;
-  --radius-round: 0;
-  
-  --spacing-2xs: 2px;
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 12px;
-  --spacing-lg: 16px;
-  --spacing-xl: 20px;
-  --spacing-2xl: 24px;
 
-  --control-height-sm: 32px;
-  --control-height-md: 36px;
-  --control-padding-x: 12px;
-  --control-radius: 0;
-  --panel-radius: 0;
-  
   /* Shadows — flat brutalist, no shadows */
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
-  --shadow-xl: none;
   --shadow-card: none;
-  
+
   --transition-fast: 0.10s ease;
   --transition-normal: 0.18s ease;
 
@@ -88,7 +60,7 @@
   --loader-square-color: #000000;
   --loader-square-bg: transparent;
   --loader-square-duration: 0.8s;
- }
+}
 
  html {
   color-scheme: light;
@@ -121,14 +93,6 @@
   --text-muted: #aaaaaa;
   --text-light: #ffffff;
 
-  /* Borders bumped a notch so panels stay legible on pure black. */
-  --border-color: #333333;
-  --border-light: #1f1f1f;
-  --border-dark: #4a4a4a;
-
-  --shadow-sm: none;
-  --shadow-md: none;
-  --shadow-lg: none;
   --shadow-card: none;
 
   --hover-bg: #222222;

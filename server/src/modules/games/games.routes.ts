@@ -16,7 +16,7 @@ router.use(requireAuth);
 router.get('/', validate(listGamesQuerySchema, 'query'), async (req, res, next) => {
   try {
     const profileId = await ensureActiveProfileId(req.session.userId!);
-    const games = await svc.list(profileId, req.query as { status: string; hostGroupId?: string });
+    const games = await svc.list(profileId, req.query as unknown as { status: string; hostGroupId?: string });
     res.json({ games });
   } catch (e) {
     next(e);

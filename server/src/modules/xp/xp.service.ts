@@ -33,56 +33,45 @@ const unlocksAt = (xp: number): string[] =>
     .filter(([, t]) => xp >= t)
     .map(([k]) => k);
 
-type AwardLedger = Record<string, { amount: number; at: number; reason: string }>;
-
 /**
  * Internal: apply a single XP award to a specific profile, idempotent on
- * (kind, refId). Used by both the session-bound `award()` and by other
- * services (e.g. game finalization awarding placement XP to creation owners).
- *
- * Idempotency ledger lives in `Profile.data.xpAwards` for now (no schema
- * migration needed). For high-volume production this should move to a proper
- * `XpAward` table with a unique constraint on (profileId, kind, refId).
- *
- * Concurrency: read-modify-write inside a transaction. Postgres' default
- * READ COMMITTED isolation means two concurrent awards of the SAME (kind,
- * refId) for the SAME profile could both pass the existence check and
- * double-award. For the prototype's traffic this is acceptable; tighten with
- * `SELECT ... FOR UPDATE` (or the proper ledger table) when traffic warrants.
+ * (kind, refId). Uses the XpAward table's unique constraint for DB-level
+ * idempotency — no read-modify-write transaction needed.
  */
 const _awardCore = async (profileId: string, kind: XpKind, refId: string | undefined) => {
   const rule = RULES[kind];
   if (!rule) throw new HttpError(400, 'UNKNOWN_XP_KIND');
-  const ledgerKey = `${kind}:${refId ?? ''}`;
 
-  return prisma.$transaction(async (tx) => {
-    const profile = await tx.profile.findUnique({
-      where: { id: profileId },
-      select: { xpPoints: true, data: true },
-    });
-    if (!profile) throw new HttpError(404, 'Profile not found');
+  const profile = await prisma.profile.findUnique({
+    where: { id: profileId },
+    select: { xpPoints: true },
+  });
+  if (!profile) throw new HttpError(404, 'Profile not found');
 
-    const data: { xpAwards?: AwardLedger; [k: string]: unknown } =
-      (profile.data && typeof profile.data === 'object' ? { ...(profile.data as object) } : {}) as {
-        xpAwards?: AwardLedger;
-      };
-    const ledger: AwardLedger = { ...(data.xpAwards ?? {}) };
-
-    if (refId && ledger[ledgerKey]) {
+  try {
+    await prisma.$transaction([
+      prisma.xpAward.create({
+        data: { profileId, kind, refId: refId ?? null, amount: rule.amount, reason: rule.reason },
+      }),
+      prisma.profile.update({
+        where: { id: profileId },
+        data: { xpPoints: { increment: rule.amount } },
+      }),
+    ]);
+  } catch (err: unknown) {
+    // Unique constraint violation = already awarded — idempotent no-op.
+    const code = (err as { code?: string }).code;
+    if (code === 'P2002') {
       return { xpPoints: profile.xpPoints, delta: 0, alreadyAwarded: true };
     }
+    throw err;
+  }
 
-    ledger[ledgerKey] = { amount: rule.amount, at: Date.now(), reason: rule.reason };
-    data.xpAwards = ledger;
-
-    const updated = await tx.profile.update({
-      where: { id: profileId },
-      data: { xpPoints: { increment: rule.amount }, data: data as object },
-      select: { xpPoints: true },
-    });
-
-    return { xpPoints: updated.xpPoints, delta: rule.amount, alreadyAwarded: false };
+  const updated = await prisma.profile.findUniqueOrThrow({
+    where: { id: profileId },
+    select: { xpPoints: true },
   });
+  return { xpPoints: updated.xpPoints, delta: rule.amount, alreadyAwarded: false };
 };
 
 /**
@@ -120,6 +109,20 @@ export const awardToProfile = async (
     reason: rule.reason,
     profileId,
   };
+};
+
+/**
+ * Read the award history for the session's active profile, most-recent first.
+ */
+export const history = async (userId: string, limit = 50) => {
+  const profileId = await ensureActiveProfileId(userId);
+  const rows = await prisma.xpAward.findMany({
+    where: { profileId },
+    orderBy: { awardedAt: 'desc' },
+    take: limit,
+    select: { id: true, kind: true, refId: true, amount: true, reason: true, awardedAt: true },
+  });
+  return { profileId, awards: rows };
 };
 
 /**

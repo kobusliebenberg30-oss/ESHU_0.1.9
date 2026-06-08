@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { validate } from '../../middleware/validate.js';
 import { requireAuth } from '../../middleware/auth.js';
 import { env } from '../../env.js';
+import { prisma } from '../../db/client.js';
 import { getSupabasePublicConfig, getSupabaseUser, isSupabaseEnabled } from '../../lib/supabase.js';
 import {
   changePasswordSchema,
@@ -155,7 +156,6 @@ router.delete(
 
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const { prisma } = await import('../../db/client.js');
     const user = await prisma.user.findUnique({
       where: { id: req.session.userId! },
       select: { id: true, email: true, username: true, displayName: true, avatarAssetId: true },

@@ -26,12 +26,36 @@
     return normalizedScope ? `${STORAGE_BASENAME}__${normalizedScope}` : STORAGE_BASENAME;
   }
 
+  // Cached once per page load — avoids running the localStorage scan twice
+  // (once for theme, once for hideBurned).
+  var _dbCache = undefined;
+
   function readDb() {
+    if (_dbCache !== undefined) return _dbCache;
     try {
+      // Fast path 1: direct DB_KEY — covers all active local + remote sessions.
+      const raw = localStorage.getItem(DB_KEY);
+      if (raw) { _dbCache = JSON.parse(raw); return _dbCache; }
+
+      // Fast path 2: scoped and bare legacy keys.
+      const scopedLegacyRaw = localStorage.getItem(normalizeStorageScope(window.location && window.location.href).length
+        ? `${LEGACY_DB_KEY}__${normalizeStorageScope(window.location && window.location.href)}`
+        : LEGACY_DB_KEY);
+      if (scopedLegacyRaw) { _dbCache = JSON.parse(scopedLegacyRaw); return _dbCache; }
+      const legacyRaw = localStorage.getItem(LEGACY_DB_KEY);
+      if (legacyRaw) { _dbCache = JSON.parse(legacyRaw); return _dbCache; }
+
+      // Fast path 3: standalone UI prefs key written by remote-storage-driver
+      // before it wipes the user-scoped cache on unauthenticated page loads.
+      var uiPrefsRaw = localStorage.getItem('eshu_ui_prefs');
+      if (uiPrefsRaw) {
+        try { _dbCache = { values: JSON.parse(uiPrefsRaw) }; return _dbCache; } catch {}
+      }
+
+      // Last resort: full scan for a user-scoped remote cache key. Only reached
+      // on first-ever visit when eshu_theme and DB_KEY are both absent.
       // When the remote storage driver is active it writes to a user-scoped
       // cache key:  eshu_db_v2__user_<username>
-      // theme-init runs before ESHU_DB so we must scan for those keys and
-      // use the most recently-updated one that contains a valid uiTheme.
       var userKeyPrefix = DB_KEY + '__user_';
       var best = null;
       var bestMs = -1;
@@ -49,24 +73,10 @@
           }
         }
       } catch {}
-      if (best) return best;
-
-      const raw = localStorage.getItem(DB_KEY);
-      if (raw) return JSON.parse(raw);
-      const scopedLegacyRaw = localStorage.getItem(normalizeStorageScope(window.location && window.location.href).length
-        ? `${LEGACY_DB_KEY}__${normalizeStorageScope(window.location && window.location.href)}`
-        : LEGACY_DB_KEY);
-      if (scopedLegacyRaw) return JSON.parse(scopedLegacyRaw);
-      const legacyRaw = localStorage.getItem(LEGACY_DB_KEY);
-      if (legacyRaw) return JSON.parse(legacyRaw);
-      // Last resort: standalone UI prefs key written by remote-storage-driver
-      // before it wipes the user-scoped cache on unauthenticated page loads.
-      var uiPrefsRaw = localStorage.getItem('eshu_ui_prefs');
-      if (uiPrefsRaw) {
-        try { return { values: JSON.parse(uiPrefsRaw) }; } catch {}
-      }
-      return null;
+      _dbCache = best;
+      return _dbCache;
     } catch {
+      _dbCache = null;
       return null;
     }
   }
@@ -78,17 +88,12 @@
       var flat = localStorage.getItem('eshu_theme');
       if (flat === 'dark' || flat === 'light') return flat;
     } catch {}
-    // Fallbacks for first-ever visit or migrated storage.
+    // Fallback for first-ever visit or migrated storage.
     const db = readDb();
     if (db && db.values && typeof db.values.uiTheme === 'string' && db.values.uiTheme) {
       return db.values.uiTheme;
     }
     return 'dark';
-  }
-
-  function readHideBurnedFromDb() {
-    const db = readDb();
-    return !!(db && db.values && db.values.hideBurned === true);
   }
 
   function applyTheme(theme) {
@@ -101,13 +106,17 @@
     else document.documentElement.removeAttribute('data-hide-burned');
   }
 
+  // Read db once; share the cached result for both theme and hideBurned.
+  const _initDb = readDb();
   applyTheme(readThemeFromDb());
-  applyHideBurned(readHideBurnedFromDb());
+  applyHideBurned(!!(_initDb && _initDb.values && _initDb.values.hideBurned === true));
 
   window.addEventListener('storage', (e) => {
-    if (e.key === DB_KEY || e.key === LEGACY_DB_KEY) {
+    if (e.key === DB_KEY || e.key === LEGACY_DB_KEY || e.key === 'eshu_theme') {
+      _dbCache = undefined;
+      const db = readDb();
       applyTheme(readThemeFromDb());
-      applyHideBurned(readHideBurnedFromDb());
+      applyHideBurned(!!(db && db.values && db.values.hideBurned === true));
     }
   });
 

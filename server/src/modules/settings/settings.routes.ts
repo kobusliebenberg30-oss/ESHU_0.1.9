@@ -11,7 +11,6 @@ router.use(requireAuth);
 const updateSchema = z.object({
   uiTheme: z.enum(['light', 'dark']).optional(),
   primaryGroupId: z.string().nullable().optional(),
-  currentProfileId: z.string().nullable().optional(),
   data: z.record(z.unknown()).optional(),
 });
 
