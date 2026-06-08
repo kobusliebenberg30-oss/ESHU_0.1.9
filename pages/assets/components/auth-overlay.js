@@ -1209,6 +1209,20 @@
     // forget them either way.
     try { await window.ESHU_API.auth.logout(); } catch {}
 
+    // Also end the persisted Supabase session. Without this, the app-session
+    // re-bridge (which exists so an expired cookie auto-recovers from a live
+    // Supabase session) would immediately sign the user BACK IN on the very
+    // next page load — making "Sign out" do nothing. Explicit logout must
+    // clear both layers.
+    try {
+      if (window.ESHU_SUPABASE && typeof window.ESHU_SUPABASE.getClient === 'function') {
+        const sb = await window.ESHU_SUPABASE.getClient();
+        if (sb && sb.auth && typeof sb.auth.signOut === 'function') {
+          await sb.auth.signOut();
+        }
+      }
+    } catch {}
+
     // Defensive: any code path that reads window.ESHU_AUTH between this
     // function body and the location.replace below should see "signed out".
     // The remote driver re-populates ESHU_AUTH on its next activation.

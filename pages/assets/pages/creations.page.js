@@ -1774,8 +1774,26 @@
         const returnToGameFront = () => {
           window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
         };
+        // Durability: the creation row (and its image data) is persisted via
+        // the bulk /api/sync push. On a high-latency deployment the debounced
+        // push often doesn't land before we navigate, and the pagehide
+        // keepalive flush can't save it because keepalive bodies are capped at
+        // ~64KB while the snapshot carries image bytes — so the upload was
+        // silently lost and "didn't sync" on the next sign-in. Force an
+        // explicit flush now and wait for it to LAND before leaving the page.
+        // It runs in parallel with the hype animation, and is capped so a dead
+        // network can't trap the user here.
+        const uploadFlush = (window.ESHU_REMOTE && typeof window.ESHU_REMOTE.flushPending === 'function')
+          ? window.ESHU_REMOTE.flushPending({ retries: 3 }).catch(() => false)
+          : Promise.resolve(true);
         await new Promise((resolve) => {
-          runHype('RIGHT ON!', () => {
+          runHype('RIGHT ON!', async () => {
+            try {
+              await Promise.race([
+                uploadFlush,
+                new Promise((r) => setTimeout(r, 8000)),
+              ]);
+            } catch {}
             returnToGameFront();
             resolve();
           }, 1500);
