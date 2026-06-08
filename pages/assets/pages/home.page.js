@@ -2699,6 +2699,15 @@
     renderCurrentTab();
   });
 
+  window.addEventListener('eshu:sync-success', () => {
+    sidebarBuiltIds = [];
+    refreshState();
+    upsertPlayerbaseProfiles(playerbaseProfiles);
+    renderAvatarSidebar();
+    renderProfilePanel();
+    renderCurrentTab();
+  });
+
   window.addEventListener('eshu:auth-logout', () => {
     try { window.location.replace('play.html'); } catch { window.location.href = 'play.html'; }
   });
