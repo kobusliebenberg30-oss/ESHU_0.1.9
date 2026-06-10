@@ -340,10 +340,199 @@
     });
   }
 
+  function initIdleScreensaver() {
+    const IDLE_TIMEOUT_MS = 7.5 * 60 * 1000;
+    const COLOR_INTERVAL_MS = 20000;
+    const COLOR_TRANSITION_MS = 18000;
+    let lastActivityAt = Date.now();
+    let idleTimer = null;
+    let colorTimer = null;
+    let visible = false;
+    let overlay = null;
+    let playButton = null;
+
+    function randomRelaxedColor() {
+      const hue = Math.floor(Math.random() * 360);
+      const saturation = 48 + Math.floor(Math.random() * 18);
+      const lightness = 78 + Math.floor(Math.random() * 12);
+      return `hsl(${hue} ${saturation}% ${lightness}%)`;
+    }
+
+    function ensureStyles() {
+      if (document.getElementById('eshu-idle-screensaver-style')) return;
+      const style = document.createElement('style');
+      style.id = 'eshu-idle-screensaver-style';
+      style.textContent = `
+        .eshu-idle-screensaver {
+          position: fixed;
+          inset: 0;
+          z-index: 2147483000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: var(--eshu-idle-bg, #ffffff);
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 420ms ease, background-color ${COLOR_TRANSITION_MS}ms ease-in-out;
+        }
+        .eshu-idle-screensaver.is-visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        .eshu-idle-play-ring {
+          position: relative;
+          width: 180px;
+          height: 180px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .eshu-idle-play-ring svg {
+          position: absolute;
+          inset: 0;
+          width: 180px;
+          height: 180px;
+          transform: rotate(-90deg);
+        }
+        .eshu-idle-ring-bg {
+          fill: none;
+          stroke: rgba(255, 255, 255, 0.32);
+          stroke-width: 6;
+        }
+        .eshu-idle-ring-fill {
+          fill: none;
+          stroke: #111111;
+          stroke-width: 6;
+          stroke-linecap: round;
+        }
+        .eshu-idle-play-button {
+          position: relative;
+          z-index: 1;
+          width: 150px;
+          height: 150px;
+          border: 0;
+          border-radius: 50%;
+          background: #000;
+          color: #fff;
+          font: 700 22px/1 Arial, sans-serif;
+          letter-spacing: 0.02em;
+          cursor: pointer;
+          transition: background-color 220ms ease, color 220ms ease, transform 220ms ease;
+        }
+        .eshu-idle-play-button:hover,
+        .eshu-idle-play-button:focus {
+          background: #fff;
+          color: #000;
+          outline: none;
+          transform: scale(1.02);
+        }
+        .eshu-idle-play-button:focus-visible {
+          outline: 3px solid #66c0ff;
+          outline-offset: 4px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    function ensureOverlay() {
+      if (overlay) return overlay;
+      ensureStyles();
+      overlay = document.createElement('div');
+      overlay.className = 'eshu-idle-screensaver';
+      overlay.setAttribute('role', 'dialog');
+      overlay.setAttribute('aria-label', 'Idle screen');
+      overlay.setAttribute('aria-modal', 'true');
+      overlay.innerHTML = `
+        <div class="eshu-idle-play-ring">
+          <svg viewBox="0 0 180 180" aria-hidden="true">
+            <circle class="eshu-idle-ring-bg" cx="90" cy="90" r="85"></circle>
+            <circle class="eshu-idle-ring-fill" cx="90" cy="90" r="85"></circle>
+          </svg>
+          <button type="button" class="eshu-idle-play-button">PLAY</button>
+        </div>
+      `;
+      overlay.style.setProperty('--eshu-idle-bg', '#ffffff');
+      playButton = overlay.querySelector('.eshu-idle-play-button');
+      if (playButton) {
+        playButton.addEventListener('click', dismissScreensaver);
+      }
+      overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) event.stopPropagation();
+      });
+      document.body.appendChild(overlay);
+      return overlay;
+    }
+
+    function cycleColor() {
+      ensureOverlay().style.setProperty('--eshu-idle-bg', randomRelaxedColor());
+    }
+
+    function startColorCycle() {
+      stopColorCycle();
+      cycleColor();
+      colorTimer = window.setInterval(cycleColor, COLOR_INTERVAL_MS);
+    }
+
+    function stopColorCycle() {
+      if (colorTimer) window.clearInterval(colorTimer);
+      colorTimer = null;
+    }
+
+    function scheduleIdleTimer() {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      if (visible) return;
+      const remaining = Math.max(0, IDLE_TIMEOUT_MS - (Date.now() - lastActivityAt));
+      idleTimer = window.setTimeout(showScreensaver, remaining);
+    }
+
+    function showScreensaver() {
+      if (visible || document.hidden) {
+        scheduleIdleTimer();
+        return;
+      }
+      visible = true;
+      ensureOverlay();
+      startColorCycle();
+      window.requestAnimationFrame(() => {
+        overlay.classList.add('is-visible');
+        if (playButton) playButton.focus({ preventScroll: true });
+      });
+    }
+
+    function dismissScreensaver() {
+      if (!visible) return;
+      visible = false;
+      lastActivityAt = Date.now();
+      stopColorCycle();
+      if (overlay) overlay.classList.remove('is-visible');
+      scheduleIdleTimer();
+    }
+
+    function recordActivity() {
+      if (visible) return;
+      lastActivityAt = Date.now();
+      scheduleIdleTimer();
+    }
+
+    ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach((eventName) => {
+      window.addEventListener(eventName, recordActivity, { passive: true });
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      if (Date.now() - lastActivityAt >= IDLE_TIMEOUT_MS) showScreensaver();
+      else scheduleIdleTimer();
+    });
+    scheduleIdleTimer();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initXpHud, { once: true });
+    document.addEventListener('DOMContentLoaded', () => {
+      initXpHud();
+      initIdleScreensaver();
+    }, { once: true });
   } else {
     initXpHud();
+    initIdleScreensaver();
   }
 
   window.ESHU_RUNTIME = {

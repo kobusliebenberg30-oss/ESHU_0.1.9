@@ -2,9 +2,34 @@
   'use strict';
 
   const playButton = document.getElementById('playButton');
+  const COLOR_INTERVAL_MS = 20000;
+  let colorTimer = null;
 
   function enterApplication() {
     window.location.href = 'home.html';
+  }
+
+  function randomRelaxedColor() {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 48 + Math.floor(Math.random() * 18);
+    const lightness = 78 + Math.floor(Math.random() * 12);
+    return `hsl(${hue} ${saturation}% ${lightness}%)`;
+  }
+
+  function cycleLandingColor() {
+    document.body.style.backgroundColor = randomRelaxedColor();
+  }
+
+  function startLandingColorCycle() {
+    if (colorTimer) return;
+    cycleLandingColor();
+    colorTimer = window.setInterval(cycleLandingColor, COLOR_INTERVAL_MS);
+  }
+
+  function stopLandingColorCycle() {
+    if (colorTimer) window.clearInterval(colorTimer);
+    colorTimer = null;
+    document.body.style.backgroundColor = '#ffffff';
   }
 
   // After a successful sign-in on this page, go straight to home.
@@ -48,5 +73,9 @@
 
   if (playButton) {
     playButton.addEventListener('click', handlePlayClick);
+    playButton.addEventListener('mouseenter', startLandingColorCycle);
+    playButton.addEventListener('focus', startLandingColorCycle);
+    playButton.addEventListener('mouseleave', stopLandingColorCycle);
+    playButton.addEventListener('blur', stopLandingColorCycle);
   }
 })();
