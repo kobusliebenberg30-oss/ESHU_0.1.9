@@ -8,6 +8,7 @@
   const CLOSE_SVG = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
   const CHAT_SVG = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/></svg>';
   const PENCIL_SVG = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
+  const GROUP_FRONT_TRANSFER_KEY = 'eshu.groupFront.transfer';
   const runtime = window.ESHU_RUNTIME;
 
   function getGameTimingStatusGrf(game) {
@@ -120,6 +121,31 @@
     return `comments_group_${targetGroupId}`;
   }
 
+  function upsertLocalGroup(group) {
+    if (!group || !group.id) return;
+    const groups = ESHU_DB.getTable('groups') || [];
+    const idx = groups.findIndex((g) => g && g.id === group.id);
+    const next = idx >= 0 ? [...groups] : [group, ...groups];
+    if (idx >= 0) next[idx] = { ...groups[idx], ...group };
+    ESHU_DB.setTable('groups', next);
+  }
+
+  function readTransferredGroup() {
+    try {
+      const raw = sessionStorage.getItem(GROUP_FRONT_TRANSFER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const group = parsed && parsed.group;
+      if (!group || group.id !== groupId || !ESHU_DB.isEntityActive(group)) return null;
+      if (!canViewGroup(group, getActiveProfileId())) return null;
+      upsertLocalGroup(group);
+      return group;
+    } catch (err) {
+      console.warn('[group-front] unable to read group handoff:', err);
+      return null;
+    }
+  }
+
   function escapeCommentHtml(text) {
     if (typeof text !== 'string') return '';
     return text
@@ -199,7 +225,7 @@
   function getGroup() {
     const groups = ESHU_DB.getTable('groups') || [];
     const activeProfileId = getActiveProfileId();
-    const group = groups.find(g => g.id === groupId && ESHU_DB.isEntityActive(g));
+    const group = groups.find(g => g.id === groupId && ESHU_DB.isEntityActive(g)) || readTransferredGroup();
     if (!group || !canViewGroup(group, activeProfileId)) return null;
     return group;
   }

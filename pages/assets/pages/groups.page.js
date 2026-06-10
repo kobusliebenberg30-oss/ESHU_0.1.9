@@ -18,6 +18,7 @@
   const DEFAULT_GROUP_ID = 'group_default';
   const DEFAULT_GAME_ID = 'game_default';
   const DEFAULT_GROUP_DESCRIPTION = 'This is the group that users will join by default.';
+  const GROUP_FRONT_TRANSFER_KEY = 'eshu.groupFront.transfer';
 
   // Initialize XP Counter
   const xpCounter = document.getElementById('xpCounter');
@@ -1103,17 +1104,10 @@
       };
     });
 
-    // Add click handlers for selection
+    // Add click handlers with the same double-tap behavior as game cards.
     groupsList.querySelectorAll('.u-card').forEach(item => {
-      item.addEventListener('dblclick', (event) => {
-        event.preventDefault();
-        const groupId = item.dataset.id;
-        if (!groupId) return;
-        openGroupFrontPage(groupId);
-        lastClickedGroupId = null;
-        lastGroupClickTime = 0;
-      });
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (event) => {
+        if (event.target.closest('button')) return;
         const groupId = item.dataset.id;
         if (!groupId) return;
         const groups = STATE.get('groups') || [];
@@ -1260,6 +1254,15 @@
     if (!group) {
       TOAST.error('Group not found or access denied');
       return;
+    }
+    try {
+      saveToStorage();
+      sessionStorage.setItem(GROUP_FRONT_TRANSFER_KEY, JSON.stringify({
+        group,
+        openedAt: Date.now()
+      }));
+    } catch (err) {
+      console.warn('[groups] unable to prepare group front handoff:', err);
     }
     window.location.href = `group-front.html?groupId=${encodeURIComponent(groupId)}`;
   }

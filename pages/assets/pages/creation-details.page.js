@@ -4,6 +4,7 @@
   ESHU_DB.ensure();
   const HEART_SVG = '<svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
   const COG_SVG = '<svg viewBox="0 0 24 24"><path d="M19.14 12.94a7.07 7.07 0 000-1.88l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96a7.04 7.04 0 00-1.63-.94l-.36-2.54A.48.48 0 0013.92 2h-3.84a.48.48 0 00-.48.41l-.36 2.54a7.04 7.04 0 00-1.63.94l-2.39-.96a.49.49 0 00-.59.22L2.71 8.47a.49.49 0 00.12.61l2.03 1.58a7.07 7.07 0 000 1.88l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32a.49.49 0 00.59.22l2.39-.96c.5.38 1.05.7 1.63.94l.36 2.54a.48.48 0 00.48.41h3.84a.48.48 0 00.48-.41l.36-2.54a7.04 7.04 0 001.63-.94l2.39.96a.49.49 0 00.59-.22l1.92-3.32a.49.49 0 00-.12-.61l-2.03-1.58zM12 15.5A3.5 3.5 0 1115.5 12 3.5 3.5 0 0112 15.5z"/></svg>';
+  const CREATION_EDIT_TRANSFER_KEY = 'eshu.creationEdit.transfer';
 
   const pageParams = new URLSearchParams(window.location.search);
   const creationId = pageParams.get('id');
@@ -249,7 +250,15 @@
         editBtn.innerHTML = COG_SVG;
         editBtn.title = 'Edit Creation';
         editBtn.addEventListener('click', () => {
-          window.location.href = `creations.html?edit=${creationId}`;
+          try {
+            sessionStorage.setItem(CREATION_EDIT_TRANSFER_KEY, JSON.stringify({
+              creation,
+              openedAt: Date.now()
+            }));
+          } catch (err) {
+            console.warn('[creation-details] unable to prepare edit handoff:', err);
+          }
+          window.location.href = `creations.html?edit=${encodeURIComponent(creationId)}`;
         });
         leftHeaderActions.appendChild(editBtn);
       }

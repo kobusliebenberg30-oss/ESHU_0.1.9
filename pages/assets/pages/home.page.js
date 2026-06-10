@@ -6,6 +6,7 @@
 
   // ===== Data =====
   const DEFAULT_GROUP_ID = 'group_default';
+  const CREATION_EDIT_TRANSFER_KEY = 'eshu.creationEdit.transfer';
   let groups = [];
   let games = [];
   let creations = [];
@@ -365,6 +366,24 @@
     if (!yes) return;
     if (!updateEntityStatus('creations', creationId, 'burned')) return;
     rerenderHomePanels();
+  };
+
+  window.homeEditCreation = function (creationId) {
+    const creation = (creations || []).find(c => c && c.id === creationId)
+      || (ESHU_DB.getTable('creations') || []).find(c => c && c.id === creationId);
+    if (!creation) {
+      if (typeof TOAST !== 'undefined') TOAST.error('Creation not found for editing.');
+      return;
+    }
+    try {
+      sessionStorage.setItem(CREATION_EDIT_TRANSFER_KEY, JSON.stringify({
+        creation,
+        openedAt: Date.now()
+      }));
+    } catch (err) {
+      console.warn('[home] unable to prepare creation edit handoff:', err);
+    }
+    window.location.href = `creations.html?edit=${encodeURIComponent(creationId)}`;
   };
 
   window.homeClearGroup = function (groupId) {
@@ -2080,7 +2099,7 @@
           window.location.href = `creation-focus.html?id=${creation.id}&from=home.html`;
         });
         const editBtn = item.querySelector('[data-home-action="edit-creation"]');
-        if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); window.location.href = `creation-focus.html?id=${creation.id}&from=home.html`; });
+        if (editBtn) editBtn.addEventListener('click', (e) => { e.stopPropagation(); window.homeEditCreation(creation.id); });
         const clearBtn = item.querySelector('[data-home-action="clear-creation"]');
         if (clearBtn) clearBtn.addEventListener('click', (e) => { e.stopPropagation(); window.homeClearCreation(creation.id); });
         const bootBtn = item.querySelector('[data-home-action="boot-creation"]');

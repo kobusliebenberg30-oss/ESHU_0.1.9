@@ -52,6 +52,7 @@
   const CREATION_UPLOAD_UNLOCK_KEY = 'creationUploadUnlocked';
   const DEFAULT_GROUP_ID = 'group_default';
   const DEFAULT_GAME_ID = 'game_default';
+  const CREATION_EDIT_TRANSFER_KEY = 'eshu.creationEdit.transfer';
   const runtime = window.ESHU_RUNTIME;
   let uploadUnlocked = false;
 
@@ -126,8 +127,9 @@
   }
 
   function updateUploadAccessUi() {
+    const isEditing = !!editingCreation || !!editCreationId;
     const onboardingUploadAllowed = canUploadToSelectedOnboardingGame();
-    const isLocked = !uploadUnlocked && !onboardingUploadAllowed;
+    const isLocked = !isEditing && !uploadUnlocked && !onboardingUploadAllowed;
     const lockMessage = `Requires ${CREATION_UPLOAD_UNLOCK_XP} XP to unlock uploads`;
     const remainingXp = Math.max(0, CREATION_UPLOAD_UNLOCK_XP - xpPoints);
     if (createBtn) {
@@ -159,6 +161,44 @@
       return window.ESHU_FLOW.getActiveProfileId();
     }
     return getActiveProfile()?.id || ESHU_DB.getValue('currentProfileId') || null;
+  }
+
+  function upsertLocalCreation(creation) {
+    if (!creation || !creation.id || typeof ESHU_DB === 'undefined') return;
+    ESHU_DB.updateTable('creations', (currentCreations) => {
+      const list = Array.isArray(currentCreations) ? currentCreations : [];
+      const idx = list.findIndex((item) => item && item.id === creation.id);
+      if (idx < 0) return [creation, ...list];
+      const next = [...list];
+      next[idx] = { ...next[idx], ...creation };
+      return next;
+    });
+  }
+
+  function readTransferredCreation(id) {
+    try {
+      const raw = sessionStorage.getItem(CREATION_EDIT_TRANSFER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const creation = parsed && parsed.creation;
+      if (!creation || creation.id !== id) return null;
+      upsertLocalCreation(creation);
+      return creation;
+    } catch (err) {
+      console.warn('[creations] Failed to read edit handoff:', err);
+      return null;
+    }
+  }
+
+  function setEditModeUi(creation) {
+    document.title = 'ESHU - Edit Creation';
+    const titleEl = document.querySelector('.creation-edit-panel .edit-title');
+    if (titleEl) titleEl.textContent = creation ? 'Edit Creation' : 'Creation Not Found';
+    if (createBtn) {
+      createBtn.textContent = creation ? 'Save Changes' : 'Cannot Edit';
+      createBtn.dataset.originalText = creation ? 'Save Changes' : 'Cannot Edit';
+      createBtn.disabled = !creation;
+    }
   }
 
   function getUploadUnlockStorageKey() {
@@ -407,15 +447,20 @@
 
     // Edit mode: pre-fill form if ?edit= is present
     if (editCreationId) {
-      loadCreationForEdit(editCreationId);
+      const loaded = loadCreationForEdit(editCreationId);
+      if (!loaded) {
+        setEditModeUi(null);
+        if (typeof TOAST !== 'undefined') TOAST.error('Creation not found for editing. Please go back and try again.');
+      }
       setWizardStep('details');
     }
   }
 
   function loadCreationForEdit(id) {
-    const creation = ESHU_DB.getEntityById('creations', id);
-    if (!creation) return;
+    const creation = ESHU_DB.getEntityById('creations', id) || readTransferredCreation(id);
+    if (!creation) return false;
     editingCreation = creation;
+    setEditModeUi(creation);
     
     // Lock image editing for published creations unless Architect Mode is enabled
     const hasImage = !!(creation.image || creation.imageUrl);
@@ -451,7 +496,8 @@
     applyEditImageLockUi();
     applyHostGameLockUi();
 
-    if (createBtn) createBtn.textContent = 'Save Changes';
+    updateUploadAccessUi();
+    return true;
   }
 
   async function resolveCreationEditImageUrl(creation) {
@@ -1463,10 +1509,15 @@
   async function handleCreate() {
     if (isSubmitting) return;
 
-    if (!uploadUnlocked && !canUploadToSelectedOnboardingGame()) {
+    if (!editingCreation && !uploadUnlocked && !canUploadToSelectedOnboardingGame()) {
       if (typeof TOAST !== 'undefined') {
         TOAST.error('You need more XP to unlock this feature. You need at least 2 XP to Upload a Creation.');
       }
+      return;
+    }
+
+    if (editCreationId && !editingCreation) {
+      if (typeof TOAST !== 'undefined') TOAST.error('This creation could not be loaded for editing.');
       return;
     }
 
