@@ -1105,6 +1105,14 @@
 
     // Add click handlers for selection
     groupsList.querySelectorAll('.u-card').forEach(item => {
+      item.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        const groupId = item.dataset.id;
+        if (!groupId) return;
+        openGroupFrontPage(groupId);
+        lastClickedGroupId = null;
+        lastGroupClickTime = 0;
+      });
       item.addEventListener('click', () => {
         const groupId = item.dataset.id;
         if (!groupId) return;
@@ -1244,7 +1252,10 @@
   function openGroupFrontPage(groupId) {
     const groups = STATE.get('groups') || [];
     const activeProfileId = getActiveProfileId();
-    const visibleGroups = groups.filter(group => groupBelongsToProfile(group, activeProfileId));
+    const visibleGroups = groups.filter(group => {
+      if (!group || group.status === 'deleted' || group.status === 'burned') return false;
+      return canViewGroup(group, activeProfileId);
+    });
     const group = visibleGroups.find(g => g.id === groupId);
     if (!group) {
       TOAST.error('Group not found or access denied');
