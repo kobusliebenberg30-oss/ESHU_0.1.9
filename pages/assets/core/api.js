@@ -289,6 +289,7 @@
   const xp = {
     award: (input) => json.post('/xp/award', input),
     gates: ()      => json.get('/xp/gates'),
+    history: (limit) => json.get('/xp/history' + qs({ limit })),
 
     /**
      * High-level XP award. Use this from page code instead of calling `award`

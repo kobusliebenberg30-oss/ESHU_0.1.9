@@ -59,14 +59,43 @@
   }
 
   // ===== Render =====
-  function render() {
+  async function loadRemoteHistory() {
+    if (!window.ESHU_API || !ESHU_API.xp || typeof ESHU_API.xp.history !== 'function') return null;
+    const remoteMode = !!(
+      window.ESHU_REMOTE &&
+      typeof window.ESHU_REMOTE.isEnabled === 'function' &&
+      window.ESHU_REMOTE.isEnabled()
+    );
+    if (!remoteMode) return null;
+    try {
+      const result = await ESHU_API.xp.history(50);
+      const awards = Array.isArray(result && result.awards) ? result.awards : [];
+      return awards.map(function (award) {
+        return {
+          amount: Number(award.amount) || 0,
+          reason: award.reason || 'XP earned',
+          timestamp: award.awardedAt ? Date.parse(award.awardedAt) : Date.now(),
+          totalAfter: null
+        };
+      });
+    } catch (err) {
+      console.warn('[xp-history] remote history failed:', err);
+      return null;
+    }
+  }
+
+  async function render() {
     if (!content) return;
     var profileId = null;
     if (typeof ESHU_DB !== 'undefined') {
       profileId = ESHU_DB.getActiveProfileId();
     }
-    var history = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getXpHistory)
+    content.innerHTML = '<p style="color:#888;text-align:center;margin-top:32px;">Loading XP history...</p>';
+    var history = await loadRemoteHistory();
+    if (!history) {
+      history = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getXpHistory)
       ? ESHU_DB.getXpHistory(profileId) : [];
+    }
 
     if (history.length === 0) {
       content.innerHTML = '<p style="color:#888;text-align:center;margin-top:32px;">No XP history yet.</p>';
@@ -82,14 +111,14 @@
           '<div class="xp-history-reason" title="' + (e.reason || '') + '">' + (e.reason || 'XP earned') + '</div>' +
           '<div class="xp-history-meta">' + formatTs(e.timestamp) + '</div>' +
         '</div>' +
-        '<div class="xp-history-total">' + e.totalAfter + ' XP</div>' +
+        '<div class="xp-history-total">' + (e.totalAfter == null ? '' : e.totalAfter + ' XP') + '</div>' +
       '</div>';
     }).join('');
   }
 
   // ===== Toggle panel =====
   xpCounter.addEventListener('click', function () {
-    render();
+    render().catch(function (err) { console.warn('[xp-history] render failed:', err); });
     panel.classList.toggle('open');
   });
 

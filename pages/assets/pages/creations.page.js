@@ -1751,41 +1751,25 @@
           STATE.set('creations', [newCreation, ...currentCreations]);
         }
 
-        // XP runs in the BACKGROUND so nothing blocks the jump into the game.
-        // We deliberately do NOT bump the synced profile xpPoints here: the
-        // server award increments authoritatively and the next sync pull
-        // reflects it. Because our snapshot push still carries the pre-award
-        // xpPoints, the server's Math.max reconciliation can never double-count
-        // (award-then-sync and sync-then-award both converge to +1). We compute
-        // an OPTIMISTIC total only for the local display + unlock flags so the
-        // Comments unlock lights up immediately.
         const xpBeforeUpload = parseInt(xpPoints || 0, 10);
-        if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
-          // Remote: keepalive POST survives the navigation (a plain fetch would
-          // be aborted on unload, dropping the award). Idempotent on
-          // (creation_uploaded, creationId).
-          try {
-            const base = (window.ESHU_API && window.ESHU_API.base) || '/api';
-            fetch(base + '/xp/award', {
-              method: 'POST',
-              credentials: 'include',
-              keepalive: true,
-              headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ kind: 'creation_uploaded', refId: savedCreation.id }),
-            }).catch(() => {});
-          } catch (err) {
-            console.warn('[creations.save] background XP award failed (non-fatal):', err);
+        let awardResult = null;
+        try {
+          if (ESHU_API && ESHU_API.xp && typeof ESHU_API.xp.awardSafe === 'function') {
+            awardResult = await ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id);
           }
-        } else {
-          // Local-only mode: synchronous award keeps the offline path intact
-          // (it bumps ESHU_DB profile XP directly; no server to reconcile with).
-          try { ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id); } catch {}
+        } catch (err) {
+          console.warn('[creations.save] XP award failed:', err);
         }
 
-        const optimisticXp = xpBeforeUpload + 1; // creation_uploaded = 1 XP
-        xpPoints = optimisticXp;
-        if (window.XP_ANIM) XP_ANIM.show(1);
-        if (optimisticXp >= CREATION_UPLOAD_UNLOCK_XP) {
+        const awardedDelta = Number(awardResult && awardResult.delta) || 0;
+        xpPoints = Number.isFinite(Number(awardResult && awardResult.xpPoints))
+          ? Number(awardResult.xpPoints)
+          : xpBeforeUpload + awardedDelta;
+        if (window.XP_ANIM && awardedDelta > 0) XP_ANIM.show(awardedDelta);
+        if (window.ESHU_RUNTIME && typeof window.ESHU_RUNTIME.applyHudXp === 'function') {
+          window.ESHU_RUNTIME.applyHudXp(xpPoints, { force: true });
+        }
+        if (xpPoints >= CREATION_UPLOAD_UNLOCK_XP) {
           writeUploadUnlockFlag(true);
           uploadUnlocked = true;
         }

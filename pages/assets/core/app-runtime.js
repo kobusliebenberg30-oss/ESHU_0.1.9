@@ -198,13 +198,33 @@
   // append " +"); we only ever cache/repaint the numeric value.
   const HUD_XP_KEY = 'eshu.hud.xp';
 
+  function getHudProfileId() {
+    try {
+      if (window.ESHU_DB && typeof window.ESHU_DB.getActiveProfileId === 'function') {
+        const id = window.ESHU_DB.getActiveProfileId();
+        if (id) return id;
+      }
+      if (window.ESHU_DB && typeof window.ESHU_DB.getValue === 'function') {
+        const id = window.ESHU_DB.getValue('currentProfileId');
+        if (id) return id;
+      }
+    } catch {}
+    return null;
+  }
+
+  function getHudXpKey(profileId) {
+    return profileId ? `${HUD_XP_KEY}.${profileId}` : null;
+  }
+
   function getXpCounterEl() {
     return document.getElementById('xpCounter');
   }
 
   function readCachedXp() {
+    const key = getHudXpKey(getHudProfileId());
+    if (!key) return null;
     try {
-      const raw = localStorage.getItem(HUD_XP_KEY);
+      const raw = localStorage.getItem(key);
       if (raw == null) return null;
       const n = parseInt(raw, 10);
       return Number.isFinite(n) ? n : null;
@@ -214,7 +234,9 @@
   }
 
   function cacheXp(n) {
-    try { localStorage.setItem(HUD_XP_KEY, String(n)); } catch {}
+    const key = getHudXpKey(getHudProfileId());
+    if (!key) return;
+    try { localStorage.setItem(key, String(n)); } catch {}
   }
 
   function applyHudXp(n, options) {
@@ -242,6 +264,13 @@
     applyHudXp(cached, { force: true });
   }
 
+  function syncHudFromActiveProfile() {
+    const profileId = getHudProfileId();
+    if (!profileId) return;
+    const xp = getProfileXpValue(profileId);
+    applyHudXp(xp, { force: true });
+  }
+
   function observeXpCounter() {
     const el = getXpCounterEl();
     if (!el || typeof MutationObserver === 'undefined') return;
@@ -265,8 +294,17 @@
   }
 
   function initXpHud() {
+    try { localStorage.removeItem(HUD_XP_KEY); } catch {}
     primeXpFromCache();
     observeXpCounter();
+    window.addEventListener('eshu:remote-activated', syncHudFromActiveProfile);
+    window.addEventListener('eshu:sync-success', syncHudFromActiveProfile);
+    window.addEventListener('eshu:auth-success', () => {
+      try { localStorage.removeItem(HUD_XP_KEY); } catch {}
+    });
+    window.addEventListener('eshu:auth-logout', () => {
+      try { localStorage.removeItem(HUD_XP_KEY); } catch {}
+    });
   }
 
   if (document.readyState === 'loading') {

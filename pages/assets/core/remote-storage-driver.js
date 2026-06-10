@@ -217,16 +217,6 @@
       if (cacheKey) accountLocal = safeParseJson(localStorage.getItem(cacheKey));
     } catch {}
 
-    // Generic dbKey may contain data from a DIFFERENT account or a local-only
-    // session. Only use it as a fallback when there is no account-scoped cache
-    // AND the server has no profiles (truly empty account, first-ever login).
-    let genericLocal = null;
-    if (!accountLocal && cacheKey !== dbKey) {
-      try {
-        if (dbKey) genericLocal = safeParseJson(localStorage.getItem(dbKey));
-      } catch {}
-    }
-
     const serverHasProfiles = (() => {
       const profiles = Array.isArray(pulled.tables && pulled.tables.profiles)
         ? pulled.tables.profiles : [];
@@ -242,9 +232,9 @@
     }
 
     // Server has no profile yet (brand-new account, first activation).
-    // Prefer account-scoped local if it exists and is newer; fall back to
-    // generic local only as a last resort, and still union with the server.
-    const local = accountLocal || genericLocal;
+    // Only account-scoped local data is safe here. The generic dbKey can
+    // belong to whoever used this browser last and must not be imported.
+    const local = accountLocal;
     const pulledMs = toUpdatedAtMs(pulled);
     const localMs = toUpdatedAtMs(local);
     if (local && localMs > pulledMs) {
@@ -473,6 +463,7 @@
   // into the next account on the same browser.
   const ACCOUNT_SCOPED_PREFIXES = [
     'xp_history_',            // per-profile xp ring buffer
+    'eshu.hud.xp.',           // per-profile top-nav XP cache
     'comments_',              // per-group/game/creation thread blobs
     '_awards_granted_',       // one-shot game-end XP award guards
     'creationUploadUnlocked_',// upload gate (also lives in db.values)
@@ -883,8 +874,7 @@
     let driver = null;
     let phase1Rendered = false;
     try {
-      const localSnap = safeParseJson(localStorage.getItem(cacheKey))
-        || safeParseJson(localStorage.getItem(dbKey));
+      const localSnap = safeParseJson(localStorage.getItem(cacheKey));
       if (hasUsableData(localSnap)) {
         driver = createRemoteDriver(localSnap, dbKey, cacheKey);
         activeDriver = driver;
