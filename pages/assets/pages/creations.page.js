@@ -591,9 +591,9 @@
 
   function updateEditImageLockUi() {
     const locked = !!imageLockedForEdit;
-    const lockedTitle = 'Creation image is locked after upload. Enable Architect Mode to replace it.';
+    const lockedTitle = 'Creation image is locked after upload.';
     const unlockedTitle = editingCreation
-      ? 'Architect Mode is enabled. Choose an image to replace this creation asset.'
+      ? 'Choose an image to replace this creation asset.'
       : '';
     if (imageInput) imageInput.disabled = locked;
     if (imageDropzone) {
@@ -1404,7 +1404,7 @@
       return;
     }
     if (editingCreation && !isArchitectModeEnabled()) {
-      if (typeof TOAST !== 'undefined') TOAST.error('Enable Architect Mode to replace this creation image.');
+      if (typeof TOAST !== 'undefined') TOAST.error('Creation image is locked after upload.');
       refreshEditImageLockState();
       return;
     }
@@ -1595,7 +1595,7 @@
 
     const shouldExportStudioImage = !editingCreation || hasSelectedReplacementImage;
     if (editingCreation && hasSelectedReplacementImage && !isArchitectModeEnabled()) {
-      if (typeof TOAST !== 'undefined') TOAST.error('Enable Architect Mode to replace this creation image.');
+      if (typeof TOAST !== 'undefined') TOAST.error('Creation image is locked after upload.');
       refreshEditImageLockState();
       return;
     }

@@ -102,6 +102,7 @@
   const currentGameThumbImage = document.getElementById('currentGameThumbImage');
   const currentGameThumbFallback = document.getElementById('currentGameThumbFallback');
   const currentGameThumbTitle = document.getElementById('currentGameThumbTitle');
+  const currentGameThumbVotes = document.getElementById('currentGameThumbVotes');
   const currentGameInfoModal = document.getElementById('currentGameInfoModal');
   const currentGameInfoClose = document.getElementById('currentGameInfoClose');
   const currentGameInfoImageBtn = document.getElementById('currentGameInfoImageBtn');
@@ -236,6 +237,17 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     // the control reads as a call-to-action.
     if (currentGameThumbTitle) {
       currentGameThumbTitle.textContent = game?.name || 'Select game';
+    }
+    if (currentGameThumbVotes) {
+      if (game) {
+        const remaining = getRemainingVotes(game.id);
+        const total = getGameVoteCap(game.id);
+        currentGameThumbVotes.textContent = remaining === Infinity ? 'Votes: ∞' : `Votes: ${remaining}/${total}`;
+      } else if (currentGameId) {
+        currentGameThumbVotes.textContent = 'Votes: ...';
+      } else {
+        currentGameThumbVotes.textContent = 'Votes: —';
+      }
     }
 
     const imageSrc = resolveGameImage(game);
@@ -1978,7 +1990,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     const selectedGame = allGames.find((game) => game && game.id === selectedGameId);
     if (!selectedGame?.id) return;
 
-    runHype('RIGHT ON!', () => {
+    runHype('GAME ON!', () => {
       currentGameId = selectedGame.id;
       currentGameMode = selectedGame.gameType === 'book' ? 'book' : 'arena';
       updateCurrentGameContext();
