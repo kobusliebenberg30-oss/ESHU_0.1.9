@@ -11,7 +11,7 @@ export const createGroupSchema = z.object({
   privacy: PRIVACY,
   status: STATUS,
   isSystemDefault: z.boolean().optional(),
-  coverAssetId: z.string().optional(),
+  coverAssetId: z.string().nullable().optional(),
   // Legacy inline image (base64 data URL or external URL). Stored in
   // Group.data.image; survives /api/sync round trips without a schema migration.
   image: z.string().nullable().optional(),
