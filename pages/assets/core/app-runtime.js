@@ -131,12 +131,45 @@
     }
   }
 
+  function isRemoteMode() {
+    return !!(
+      window.ESHU_REMOTE &&
+      typeof window.ESHU_REMOTE.isEnabled === 'function' &&
+      window.ESHU_REMOTE.isEnabled()
+    );
+  }
+
+  function resolveProfileImage(profile) {
+    if (!profile || typeof profile !== 'object') return null;
+    if (profile.avatarAssetId && window.ESHU_ASSETS && typeof window.ESHU_ASSETS.urlFor === 'function') {
+      return window.ESHU_ASSETS.urlFor(profile.avatarAssetId);
+    }
+    // In remote mode, inline profile images are legacy cache data. They can be
+    // stale if a browser changed accounts, so only canonical asset ids render.
+    if (isRemoteMode()) return null;
+    if (typeof profile.image === 'string' && profile.image) return profile.image;
+    if (profile.data && typeof profile.data === 'object' && typeof profile.data.image === 'string') {
+      return profile.data.image;
+    }
+    return null;
+  }
+
+  function normalizeProfile(profile) {
+    if (!profile || typeof profile !== 'object') return profile;
+    return {
+      ...profile,
+      image: resolveProfileImage(profile),
+    };
+  }
+
   function getProfiles() {
     if (!window.ESHU_DB || typeof window.ESHU_DB.getTable !== 'function') {
       return [];
     }
 
-    const profiles = (window.ESHU_DB.getTable('profiles') || []).filter((profile) => profile && profile.isActive !== false);
+    const profiles = (window.ESHU_DB.getTable('profiles') || [])
+      .filter((profile) => profile && profile.isActive !== false)
+      .map(normalizeProfile);
     if (!profiles.length) {
       return [];
     }
@@ -319,6 +352,7 @@
     getEffectiveProfileName,
     getPlayerHeading,
     getActiveProfile,
+    resolveProfileImage,
     getProfileXpValue,
     applyHudXp,
     completeNavigationLoading,

@@ -101,7 +101,7 @@
         return {
           ...playerbaseProfile,
           ...ownProfile,
-          image: playerbaseProfile.image || ownProfile.image || null,
+          image: ownProfile.image || playerbaseProfile.image || null,
           name: ownProfile.name || playerbaseProfile.name,
           description: ownProfile.description || playerbaseProfile.description,
         };
@@ -113,12 +113,16 @@
 
   function normalizePlayerbaseProfile(profile) {
     if (!profile || !profile.id) return null;
+    const image = runtime && typeof runtime.resolveProfileImage === 'function'
+      ? runtime.resolveProfileImage(profile)
+      : (profile.image || null);
     return {
       id: profile.id,
       userId: profile.userId || null,
       name: profile.name || 'Player',
       description: profile.description || '',
-      image: profile.image || null,
+      image,
+      avatarAssetId: profile.avatarAssetId || null,
       xpPoints: Number.isFinite(Number(profile.xpPoints)) ? Number(profile.xpPoints) : 0,
       stats: {
         groups: Number(profile?.stats?.groups) || 0,

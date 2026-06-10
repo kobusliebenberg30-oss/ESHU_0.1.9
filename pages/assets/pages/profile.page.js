@@ -45,6 +45,14 @@
     return runtime?.getActiveProfile?.() || null;
   }
 
+  function isRemoteMode() {
+    return !!(
+      window.ESHU_REMOTE &&
+      typeof window.ESHU_REMOTE.isEnabled === 'function' &&
+      window.ESHU_REMOTE.isEnabled()
+    );
+  }
+
   function ensureDefaultProfile() {
     const profiles = getProfiles();
     if (profiles.length > 0) return;
@@ -197,20 +205,25 @@
     const active = getActiveProfile();
     profileName.value = active?.name || ESHU_DB.getValue('profileName') || '';
     profileDesc.value = active?.description || ESHU_DB.getValue('profileDesc') || '';
-    selectedProfileImage = active?.image || null;
+    selectedProfileImage = imageFromProfile(active);
     renderProfileImagePreview(selectedProfileImage);
     const headerName = document.getElementById('profileHeaderName');
     if (headerName) headerName.textContent = active?.name || 'Profile';
   }
 
   function imageFromProfile(profile) {
+    if (profile?.avatarAssetId && window.ESHU_ASSETS && typeof window.ESHU_ASSETS.urlFor === 'function') {
+      return window.ESHU_ASSETS.urlFor(profile.avatarAssetId);
+    }
+    if (runtime && typeof runtime.resolveProfileImage === 'function') {
+      const resolved = runtime.resolveProfileImage(profile);
+      if (resolved) return resolved;
+    }
+    if (isRemoteMode()) return null;
     const dataImage = profile?.data && typeof profile.data === 'object' && typeof profile.data.image === 'string'
       ? profile.data.image
       : null;
     if (dataImage) return dataImage;
-    if (profile?.avatarAssetId && window.ESHU_ASSETS && typeof window.ESHU_ASSETS.urlFor === 'function') {
-      return window.ESHU_ASSETS.urlFor(profile.avatarAssetId);
-    }
     return profile?.image || null;
   }
 
@@ -459,19 +472,13 @@
 
     const name = profileName.value.trim() || 'Player';
     const desc = profileDesc.value.trim();
+    const apiAvailable = !!(window.ESHU_API && window.ESHU_API.profiles);
 
     try {
-      const profiles = getProfiles();
-      const currentProfile = profiles[0] || null;
       const now = Date.now();
-      let activeProfile;
-
-      // Resolve the canonical (server-side) profile id whenever the API is
-      // available. Profile edits are account data, so the server row is the
-      // source of truth; local cache is just for instant UI.
       let canonicalProfileId = null;
       let serverProfileAvailable = false;
-      const apiAvailable = !!(window.ESHU_API && window.ESHU_API.profiles);
+
       if (apiAvailable) {
         try {
           const resp = await window.ESHU_API.profiles.list();
@@ -480,72 +487,25 @@
           else if (Array.isArray(list) && list[0] && list[0].id) canonicalProfileId = list[0].id;
           serverProfileAvailable = !!canonicalProfileId;
         } catch (err) {
-          if (err && err.status === 401) {
-            serverProfileAvailable = false;
-          } else {
-            throw err;
-          }
+          if (err && err.status === 401) serverProfileAvailable = false;
+          else throw err;
         }
       }
-
-      if (!currentProfile) {
-        const newProfile = {
-          id: canonicalProfileId || ('profile_' + now + '_' + Math.random().toString(36).slice(2, 8)),
-          name,
-          description: desc,
-          image: selectedProfileImage,
-          xpPoints: 0,
-          createdAt: now,
-          updatedAt: now,
-          isActive: true
-        };
-        activeProfile = newProfile;
-        ESHU_DB.setValue('currentProfileId', newProfile.id);
-      } else {
-        // If we have a canonical id and it differs from the local id, prefer
-        // the canonical so the bulk-sync push lands on the right Profile row.
-        const targetId = canonicalProfileId || currentProfile.id;
-        activeProfile = {
-          ...currentProfile,
-          id: targetId,
-          name,
-          description: desc,
-          image: selectedProfileImage,
-          updatedAt: now
-        };
-        ESHU_DB.setValue('currentProfileId', activeProfile.id);
-      }
-
-      ESHU_DB.setTable('profiles', [activeProfile]);
-      ensureDefaultGroupExists();
-      syncLegacyProfileValues(activeProfile);
-      updateNavProfile();
-      const headerName = document.getElementById('profileHeaderName');
-      if (headerName) headerName.textContent = name;
 
       if (serverProfileAvailable) {
         if (!canonicalProfileId) throw new Error('Could not find your server profile. Please sign in again.');
 
-      try {
-        // Upload the avatar bytes through the canonical asset pipeline when
-        // the user selected a fresh data URL. The resulting `avatarAssetId`
-        // is the durable, cross-device source of truth; `data.image` stays
-        // as a short-lived preview cache for instant UI while the upload
-        // completes and as a fallback for pre-asset rows.
         let avatarAssetId;
-        if (typeof selectedProfileImage === 'string' && selectedProfileImage.startsWith('data:') && window.ESHU_ASSETS) {
-          try {
-            const uploaded = await window.ESHU_ASSETS.uploadDataUrl(selectedProfileImage, 'avatar.png');
-            if (uploaded && uploaded.assetId) {
-              avatarAssetId = uploaded.assetId;
-              activeProfile.avatarAssetId = avatarAssetId;
-              ESHU_DB.setTable('profiles', [activeProfile]);
-            }
-          } catch (err) {
-            console.warn('[profile.save] avatar upload failed; falling back to inline data URL:', err);
+        if (typeof selectedProfileImage === 'string' && selectedProfileImage.startsWith('data:')) {
+          if (!window.ESHU_ASSETS || typeof window.ESHU_ASSETS.uploadDataUrl !== 'function') {
+            throw new Error('Profile image upload is unavailable. Please try again after refreshing.');
           }
+          const uploaded = await window.ESHU_ASSETS.uploadDataUrl(selectedProfileImage, 'avatar.png');
+          if (!uploaded || !uploaded.assetId) {
+            throw new Error('Profile image could not be uploaded. Please try another image.');
+          }
+          avatarAssetId = uploaded.assetId;
         } else if (selectedProfileImage === null) {
-          // User explicitly removed their avatar.
           avatarAssetId = null;
         }
 
@@ -553,27 +513,52 @@
           name,
           description: desc,
           ...(avatarAssetId !== undefined ? { avatarAssetId } : {}),
-          data: { image: selectedProfileImage },
+          // Clear legacy inline image cache in remote mode. The durable
+          // avatar source is Profile.avatarAssetId -> /api/assets/:id/raw.
+          data: { image: null },
         });
+
         if (updateResp && updateResp.profile) applyProfileToForm(updateResp.profile);
-        // Ask the playerbase / home page to refresh itself on next render.
+        try {
+          if (window.ESHU_SYNC && typeof window.ESHU_SYNC.refresh === 'function') {
+            await window.ESHU_SYNC.refresh();
+          }
+        } catch (err) {
+          console.warn('[profile.save] post-save refresh failed:', err);
+        }
         try { window.dispatchEvent(new CustomEvent('eshu:profile-updated', { detail: { id: canonicalProfileId } })); } catch {}
-      } catch (err) {
-        console.warn('[profile.save] granular PATCH failed:', err);
-        throw err;
-      }
+        showSaveToast('Profile saved');
+      } else {
+        const currentProfile = getProfiles()[0] || null;
+        const activeProfile = {
+          ...(currentProfile || {
+            id: 'profile_' + now + '_' + Math.random().toString(36).slice(2, 8),
+            xpPoints: 0,
+            createdAt: now,
+            isActive: true
+          }),
+          name,
+          description: desc,
+          image: selectedProfileImage,
+          updatedAt: now
+        };
+        ESHU_DB.setTable('profiles', [activeProfile]);
+        ESHU_DB.setValue('currentProfileId', activeProfile.id);
+        ensureDefaultGroupExists();
+        syncLegacyProfileValues(activeProfile);
+        updateNavProfile();
+        const headerName = document.getElementById('profileHeaderName');
+        if (headerName) headerName.textContent = name;
+        showSaveToast('Profile saved locally');
+
+        if (apiAvailable && window.ESHU_AUTH_UI && typeof window.ESHU_AUTH_UI.open === 'function') {
+          setTimeout(() => {
+            window.ESHU_AUTH_UI.open({ tab: 'signin', reloadOnSuccess: false });
+          }, 700);
+          return;
+        }
       }
 
-      // Replace the blocking alert with a subtle toast and auto-navigate back
-      // to the home surface. This is what the user expected: save, then the
-      // homepage profile section reflects the edit without extra clicks.
-      showSaveToast(serverProfileAvailable ? 'Profile saved' : 'Profile saved locally');
-      if (!serverProfileAvailable && apiAvailable && window.ESHU_AUTH_UI && typeof window.ESHU_AUTH_UI.open === 'function') {
-        setTimeout(() => {
-          window.ESHU_AUTH_UI.open({ tab: 'signin', reloadOnSuccess: false });
-        }, 700);
-        return;
-      }
       setTimeout(() => {
         try { location.assign('home.html'); } catch { location.reload(); }
       }, 650);
