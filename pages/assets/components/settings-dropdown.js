@@ -1,6 +1,177 @@
 (function () {
   'use strict';
 
+  const DEVELOPER_CODE = 'pijin.net';
+
+  function injectDeveloperCodeModalStyles() {
+    if (document.getElementById('developer-code-modal-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'developer-code-modal-styles';
+    style.textContent = `
+      .developer-code-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-modal-backdrop, 400);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .developer-code-modal {
+        width: min(420px, 100%);
+        background: var(--bg-panel, #fff);
+        color: var(--text-primary, #111);
+        border: 1px solid var(--border-color, #e5e5e5);
+        box-shadow: var(--shadow-2xl, 0 18px 45px rgba(0, 0, 0, 0.22));
+      }
+      .developer-code-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border-color, #e5e5e5);
+      }
+      .developer-code-header h2 {
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.2;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .developer-code-close {
+        width: 28px;
+        height: 28px;
+        border: 1px solid var(--accent-black, #111);
+        background: var(--accent-black, #111);
+        color: #fff;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .developer-code-body {
+        padding: 16px;
+      }
+      .developer-code-body p {
+        margin: 0 0 12px;
+        color: var(--text-secondary, #666);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .developer-code-input {
+        width: 100%;
+        height: 40px;
+        box-sizing: border-box;
+        padding: 0 12px;
+        background: var(--bg-input, #fff);
+        color: var(--text-primary, #111);
+        border: 1px solid var(--border-color, #ddd);
+        font: inherit;
+      }
+      .developer-code-input:focus {
+        outline: none;
+        border-color: var(--accent-black, #111);
+      }
+      .developer-code-error {
+        min-height: 16px;
+        margin-top: 8px;
+        color: var(--accent-coral, #e53935);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .developer-code-footer {
+        display: flex;
+        gap: 10px;
+        padding: 14px 16px;
+        border-top: 1px solid var(--border-color, #e5e5e5);
+      }
+      .developer-code-footer button {
+        flex: 1;
+        min-height: 38px;
+        border: 1px solid var(--border-color, #ddd);
+        background: var(--bg-card, #fff);
+        color: var(--text-primary, #111);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+      .developer-code-footer .developer-code-submit {
+        background: var(--accent-black, #111);
+        border-color: var(--accent-black, #111);
+        color: #fff;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function promptDeveloperCode() {
+    injectDeveloperCodeModalStyles();
+
+    return new Promise((resolve) => {
+      const previousActiveElement = document.activeElement;
+      const backdrop = document.createElement('div');
+      backdrop.className = 'developer-code-backdrop';
+      backdrop.innerHTML = `
+        <div class="developer-code-modal" role="dialog" aria-modal="true" aria-labelledby="developerCodeTitle">
+          <div class="developer-code-header">
+            <h2 id="developerCodeTitle">Developer Access</h2>
+            <button type="button" class="developer-code-close" aria-label="Close developer code prompt">✕</button>
+          </div>
+          <div class="developer-code-body">
+            <p>Enter the developer code to unlock Developer Settings for this browser.</p>
+            <input class="developer-code-input" type="password" autocomplete="off" spellcheck="false" placeholder="Developer code">
+            <div class="developer-code-error" role="alert" aria-live="polite"></div>
+          </div>
+          <div class="developer-code-footer">
+            <button type="button" class="developer-code-cancel">Cancel</button>
+            <button type="button" class="developer-code-submit">Unlock</button>
+          </div>
+        </div>
+      `;
+
+      const input = backdrop.querySelector('.developer-code-input');
+      const errorEl = backdrop.querySelector('.developer-code-error');
+      const close = (value) => {
+        backdrop.remove();
+        try {
+          if (previousActiveElement && typeof previousActiveElement.focus === 'function') previousActiveElement.focus();
+        } catch {}
+        resolve(value);
+      };
+      const submit = () => {
+        const value = (input && input.value ? input.value.trim() : '');
+        if (value === DEVELOPER_CODE) {
+          close(true);
+          return;
+        }
+        if (errorEl) errorEl.textContent = 'Incorrect developer code.';
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
+      };
+
+      backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) close(false);
+      });
+      backdrop.querySelector('.developer-code-close')?.addEventListener('click', () => close(false));
+      backdrop.querySelector('.developer-code-cancel')?.addEventListener('click', () => close(false));
+      backdrop.querySelector('.developer-code-submit')?.addEventListener('click', submit);
+      backdrop.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') close(false);
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          submit();
+        }
+      });
+
+      document.body.appendChild(backdrop);
+      setTimeout(() => input && input.focus(), 0);
+    });
+  }
+
   function initSettingsDropdown() {
     const settingsBtn = document.getElementById('settingsBtn');
     if (!settingsBtn) return;
@@ -324,7 +495,7 @@
     
     if (buildInfo) {
       buildInfo.style.cursor = 'pointer';
-      buildInfo.addEventListener('click', () => {
+      buildInfo.addEventListener('click', async () => {
         devModeClicks++;
         
         if (devModeClicks >= 6) {
@@ -337,7 +508,8 @@
             : false;
           
           if (!isDevModeEnabled) {
-            if (confirm('Enable Developer Mode?')) {
+            const unlocked = await promptDeveloperCode();
+            if (unlocked) {
               if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
                 ESHU_DB.setValue('devModeEnabled', true);
               }
@@ -345,6 +517,8 @@
               const devSection = document.getElementById('devSettingsSection');
               if (devSection) devSection.classList.remove('hidden');
               if (typeof TOAST !== 'undefined') TOAST.success('Developer Mode enabled');
+            } else if (typeof TOAST !== 'undefined') {
+              TOAST.error('Developer Mode locked');
             }
           } else {
             // Dev mode already enabled, toggle it off

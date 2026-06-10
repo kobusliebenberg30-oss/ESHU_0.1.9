@@ -40,6 +40,7 @@
   let hostGameLockedForEdit = false;
   let selectedGameId = null;
   let editImageObjectUrl = '';
+  let hasSelectedReplacementImage = false;
 
   const SUPPORTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
   // Inline preview is a fast-path/fallback only. The full-resolution original
@@ -199,6 +200,20 @@
       createBtn.dataset.originalText = creation ? 'Save Changes' : 'Cannot Edit';
       createBtn.disabled = !creation;
     }
+  }
+
+  function isArchitectModeEnabled() {
+    return !!(typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue && ESHU_DB.getValue('architectMode'));
+  }
+
+  function creationHasPublishedImage(creation) {
+    return !!(creation && (creation.image || creation.imageUrl || creation.imageAssetId || creation.imageRef?.id));
+  }
+
+  function refreshEditImageLockState() {
+    if (!editingCreation) return;
+    imageLockedForEdit = creationHasPublishedImage(editingCreation) && !isArchitectModeEnabled();
+    updateEditImageLockUi();
   }
 
   function getUploadUnlockStorageKey() {
@@ -424,10 +439,9 @@
     window.addEventListener('eshu:architect-mode-changed', (e) => {
       const architectMode = e?.detail?.enabled;
       if (editingCreation) {
-        const hasImage = !!(editingCreation.image || editingCreation.imageUrl);
+        const hasImage = creationHasPublishedImage(editingCreation);
         imageLockedForEdit = hasImage && !architectMode;
-        // Update UI to reflect lock state change
-        updateWizardImageLockUI();
+        updateEditImageLockUi();
       }
     });
     
@@ -462,12 +476,8 @@
     editingCreation = creation;
     setEditModeUi(creation);
     
-    // Lock image editing for published creations unless Architect Mode is enabled
-    const hasImage = !!(creation.image || creation.imageUrl);
-    const architectModeEnabled = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue) 
-      ? !!ESHU_DB.getValue('architectMode') 
-      : false;
-    imageLockedForEdit = hasImage && !architectModeEnabled;
+    hasSelectedReplacementImage = false;
+    refreshEditImageLockState();
 
     const titleEl = document.getElementById('creationTitle');
     const descEl = document.getElementById('creationDesc');
@@ -493,7 +503,7 @@
     if (privacyRadio) privacyRadio.checked = true;
 
     loadStudioImageForEdit(creation);
-    applyEditImageLockUi();
+    updateEditImageLockUi();
     applyHostGameLockUi();
 
     updateUploadAccessUi();
@@ -579,23 +589,31 @@
     loadStudioImageFromUrl(imageUrl);
   }
 
-  function applyEditImageLockUi() {
-    if (!imageLockedForEdit) return;
-    if (imageInput) imageInput.disabled = true;
+  function updateEditImageLockUi() {
+    const locked = !!imageLockedForEdit;
+    const lockedTitle = 'Creation image is locked after upload. Enable Architect Mode to replace it.';
+    const unlockedTitle = editingCreation
+      ? 'Architect Mode is enabled. Choose an image to replace this creation asset.'
+      : '';
+    if (imageInput) imageInput.disabled = locked;
     if (imageDropzone) {
-      imageDropzone.classList.add('is-locked');
-      imageDropzone.title = 'Creation image is locked after upload';
+      imageDropzone.classList.toggle('is-locked', locked);
+      imageDropzone.title = locked ? lockedTitle : unlockedTitle;
     }
     const trigger = document.getElementById('uploadTriggerBtn');
     if (trigger) {
-      trigger.disabled = true;
-      trigger.title = 'Creation image is locked after upload';
+      trigger.disabled = locked;
+      trigger.title = locked ? lockedTitle : unlockedTitle;
     }
     const emptyEl = document.getElementById('cuPreviewEmpty');
     if (emptyEl) {
-      emptyEl.style.pointerEvents = 'none';
-      emptyEl.title = 'Creation image is locked after upload';
+      emptyEl.style.pointerEvents = locked ? 'none' : '';
+      emptyEl.title = locked ? lockedTitle : unlockedTitle;
     }
+  }
+
+  function applyEditImageLockUi() {
+    updateEditImageLockUi();
   }
 
   function refreshState() {
@@ -859,7 +877,8 @@
   }
 
   function setSubmitDisabled(disabled) {
-    const baseDisabled = !!disabled || (!uploadUnlocked && !canUploadToSelectedOnboardingGame());
+    const isEditing = !!editingCreation || !!editCreationId;
+    const baseDisabled = !!disabled || (!isEditing && !uploadUnlocked && !canUploadToSelectedOnboardingGame());
     if (createBtn) {
       if (!createBtn.dataset.originalText) createBtn.dataset.originalText = createBtn.textContent || 'CREATE';
       createBtn.disabled = baseDisabled;
@@ -1384,10 +1403,19 @@
       if (typeof TOAST !== 'undefined') TOAST.error('Creation image cannot be changed after upload.');
       return;
     }
+    if (editingCreation && !isArchitectModeEnabled()) {
+      if (typeof TOAST !== 'undefined') TOAST.error('Enable Architect Mode to replace this creation image.');
+      refreshEditImageLockState();
+      return;
+    }
 
     if (!file || !file.type || !SUPPORTED_IMAGE_TYPES.includes(file.type.toLowerCase())) {
       if (typeof TOAST !== 'undefined') TOAST.error('Unsupported format. Use JPG, PNG, WEBP, or GIF');
       return;
+    }
+
+    if (editingCreation) {
+      hasSelectedReplacementImage = true;
     }
 
     const reader = new FileReader();
@@ -1424,7 +1452,11 @@
         const emptyEl = document.getElementById('cuPreviewEmpty');
         if (emptyEl) emptyEl.style.display = 'none';
 
-        if (typeof TOAST !== 'undefined') TOAST.success('Image loaded — use transform, border, and background controls');
+        if (typeof TOAST !== 'undefined') {
+          TOAST.success(editingCreation
+            ? 'Replacement image loaded. Save Changes to update this creation asset.'
+            : 'Image loaded — use transform, border, and background controls');
+        }
       };
       img.src = ev.target.result;
     };
@@ -1561,8 +1593,16 @@
       }
     }
 
-    // Export studio canvas if image is loaded (both create and edit mode)
-    if (studio.img) {
+    const shouldExportStudioImage = !editingCreation || hasSelectedReplacementImage;
+    if (editingCreation && hasSelectedReplacementImage && !isArchitectModeEnabled()) {
+      if (typeof TOAST !== 'undefined') TOAST.error('Enable Architect Mode to replace this creation image.');
+      refreshEditImageLockState();
+      return;
+    }
+
+    // Export the studio canvas for new creations, or for edit mode only after
+    // Architect Mode allowed the user to choose a replacement image.
+    if (shouldExportStudioImage && studio.img) {
       const exportedFile = await exportStudioImage();
       if (exportedFile) {
         setLoading(true, 'Processing image...');
@@ -1647,6 +1687,20 @@
       TOAST.info('Image was already uploaded, so ESHU reused the existing file.');
     }
 
+    if (
+      editingCreation &&
+      hasSelectedReplacementImage &&
+      window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() &&
+      window.ESHU_ASSETS &&
+      !imageAssetId
+    ) {
+      setLoading(false);
+      setSubmitDisabled(false);
+      isSubmitting = false;
+      if (typeof TOAST !== 'undefined') TOAST.error('Image replacement could not be uploaded. Please try again.');
+      return;
+    }
+
     try {
       if (editingCreation) {
         // --- Edit mode: update existing creation ---
@@ -1662,9 +1716,9 @@
               dateMade: dateMade,
               hostGameId: existingCreation.hostGameId || existingCreation.gameId || hostGameId,
               gameId: existingCreation.gameId || existingCreation.hostGameId || hostGameId,
-              image: uploadedImage?.previewDataUrl || existingCreation.image,
-              imageRef: uploadedImage?.imageRef || existingCreation.imageRef,
-              imageAssetId: imageAssetId || existingCreation.imageAssetId || null,
+              image: hasSelectedReplacementImage ? (uploadedImage?.previewDataUrl || existingCreation.image) : existingCreation.image,
+              imageRef: hasSelectedReplacementImage ? (uploadedImage?.imageRef || existingCreation.imageRef) : existingCreation.imageRef,
+              imageAssetId: hasSelectedReplacementImage ? (imageAssetId || existingCreation.imageAssetId || null) : (existingCreation.imageAssetId || null),
               // Image metadata for drawing system
               naturalWidth: studio.img ? studio.naturalW : (existingCreation.naturalWidth || null),
               naturalHeight: studio.img ? studio.naturalH : (existingCreation.naturalHeight || null),
@@ -1684,7 +1738,7 @@
               tags,
               dateMade,
               hostGameId: updatedCreation.hostGameId,
-              ...(imageAssetId !== undefined ? { imageAssetId } : {}),
+              ...(hasSelectedReplacementImage ? { imageAssetId: updatedCreation.imageAssetId } : {}),
               data: {
                 image: updatedCreation.image,
                 imageRef: updatedCreation.imageRef,
