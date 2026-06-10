@@ -51,6 +51,15 @@ router.patch('/:id', validate(updateGameSchema), async (req, res, next) => {
   }
 });
 
+router.post('/:id/join', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ game: await svc.join(String(req.params.id), profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete('/:id', async (req, res, next) => {
   try {
     const profileId = await ensureActiveProfileId(req.session.userId!);

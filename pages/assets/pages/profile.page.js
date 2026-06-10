@@ -79,7 +79,7 @@
     const defaultGroup = {
       id: DEFAULT_GROUP_ID,
       name: 'GROUP',
-      description: 'Default Group',
+      description: 'This is the group that users will join by default.',
       type: 'social',
       privacy: 'public',
       image: null,

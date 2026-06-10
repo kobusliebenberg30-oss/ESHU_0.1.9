@@ -198,6 +198,7 @@
     get:     (id)      => json.get('/games/' + encodeURIComponent(id)),
     create:  (input)   => json.post('/games', input),
     update:  (id, p)   => json.patch('/games/' + encodeURIComponent(id), p),
+    join:    (id)      => json.post('/games/' + encodeURIComponent(id) + '/join'),
     remove:  (id, mode) => json.delete('/games/' + encodeURIComponent(id) + qs({ mode })),
     /**
      * Authoritative finalization. Owner submits rankings; server picks top

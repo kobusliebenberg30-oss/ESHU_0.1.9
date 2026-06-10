@@ -159,7 +159,7 @@
       const defaultGroup = normalizeGroup({
         id: DEFAULT_GROUP_ID,
         name: 'GROUP',
-        description: 'Default Group',
+        description: 'This is the group that users will join by default.',
         type: 'arena',
         privacy: 'public',
         image: null,

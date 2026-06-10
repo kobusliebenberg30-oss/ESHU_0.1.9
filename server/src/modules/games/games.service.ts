@@ -216,6 +216,7 @@ export const list = async (
     OR: [
       { ownerProfileId: profileId },
       { memberships: { some: { profileId } } },
+      { privacy: 'public', status: 'ACTIVE' },
     ],
   };
   if (filters.status !== 'all') where.status = statusFromWire(filters.status);
@@ -265,7 +266,36 @@ export const list = async (
 };
 
 export const getById = async (id: string, profileId: string) => {
-  const game = await ensureOwned(id, profileId);
+  const game = await prisma.game.findUnique({ where: { id } });
+  if (!game) throw new HttpError(404, 'Game not found');
+  if (game.privacy === 'private' && game.ownerProfileId !== profileId) {
+    const member = await prisma.gameMember.findUnique({
+      where: { gameId_profileId: { gameId: id, profileId } },
+      select: { gameId: true },
+    });
+    if (!member) throw new HttpError(403, 'Forbidden');
+  }
+  const [memberIds, extensions] = await Promise.all([
+    loadMemberIds(id),
+    loadTimingExtensions(id),
+  ]);
+  return toWire(game, memberIds, extensions);
+};
+
+export const join = async (id: string, profileId: string) => {
+  const game = await prisma.game.findUnique({ where: { id } });
+  if (!game) throw new HttpError(404, 'Game not found');
+  if (game.status !== 'ACTIVE') throw new HttpError(409, 'Game is not active');
+  if (game.privacy === 'private' && game.ownerProfileId !== profileId) {
+    throw new HttpError(403, 'GAME_PRIVATE');
+  }
+
+  await prisma.gameMember.upsert({
+    where: { gameId_profileId: { gameId: id, profileId } },
+    create: { gameId: id, profileId },
+    update: {},
+  });
+
   const [memberIds, extensions] = await Promise.all([
     loadMemberIds(id),
     loadTimingExtensions(id),

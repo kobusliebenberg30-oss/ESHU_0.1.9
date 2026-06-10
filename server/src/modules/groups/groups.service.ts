@@ -185,6 +185,7 @@ export const list = async (
     OR: [
       { ownerProfileId: profileId },
       { memberships: { some: { profileId } } },
+      { privacy: 'public', status: 'ACTIVE' },
     ],
   };
   if (filters.status !== 'all') where.status = statusFromWire(filters.status);
@@ -208,7 +209,15 @@ export const list = async (
 };
 
 export const getById = async (id: string, profileId: string) => {
-  const g = await ensureOwned(id, profileId);
+  const g = await prisma.group.findUnique({ where: { id } });
+  if (!g) throw new HttpError(404, 'Group not found');
+  if (g.privacy === 'private' && g.ownerProfileId !== profileId) {
+    const member = await prisma.groupMember.findUnique({
+      where: { groupId_profileId: { groupId: id, profileId } },
+      select: { groupId: true },
+    });
+    if (!member) throw new HttpError(403, 'Forbidden');
+  }
   return toWire(g, await loadMemberIds(g.id));
 };
 

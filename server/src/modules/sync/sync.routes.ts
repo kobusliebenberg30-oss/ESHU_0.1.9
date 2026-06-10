@@ -58,7 +58,9 @@ router.get('/', async (req, res, next) => {
     // MEMBER of it (via the GroupMember / GameMember join tables). Filtering
     // by ownerProfileId only would silently drop joined-but-not-owned rows on
     // every sync pull, causing client snapshots to "forget" memberships and
-    // forcing the user to re-join every page navigation.
+    // forcing the user to re-join every page navigation. Public active rows
+    // are also hydrated so the frontend's All filters can work as discovery
+    // surfaces for new profiles while the default view remains "mine".
     const [memberGroupRows, memberGameRows] = await Promise.all([
       prisma.groupMember.findMany({ where: { profileId }, select: { groupId: true } }),
       prisma.gameMember.findMany({ where: { profileId }, select: { gameId: true } }),
@@ -75,12 +77,18 @@ router.get('/', async (req, res, next) => {
     // ones this profile owns. Without this, the ESHU compare engine renders
     // empty panels for fresh profiles in shared games like `game_default`
     // because they own no creations yet.
-    const ownedGames = await prisma.game.findMany({
-      where: { ownerProfileId: profileId },
-      select: { id: true },
-    });
+    const [ownedGames, publicGames] = await Promise.all([
+      prisma.game.findMany({
+        where: { ownerProfileId: profileId },
+        select: { id: true },
+      }),
+      prisma.game.findMany({
+        where: { privacy: 'public', status: 'ACTIVE' },
+        select: { id: true },
+      }),
+    ]);
     const visibleGameIds = Array.from(
-      new Set([...ownedGames.map((g) => g.id), ...memberGameIds]),
+      new Set([...ownedGames.map((g) => g.id), ...memberGameIds, ...publicGames.map((g) => g.id)]),
     );
 
     const [groups, games, creationsRaw, profiles, setting] = await Promise.all([
@@ -89,6 +97,7 @@ router.get('/', async (req, res, next) => {
           OR: [
             { ownerProfileId: profileId },
             { id: { in: memberGroupIds } },
+            { privacy: 'public', status: 'ACTIVE' },
           ],
         },
         orderBy: [{ isSystemDefault: 'desc' }, { createdAt: 'asc' }],
@@ -98,6 +107,7 @@ router.get('/', async (req, res, next) => {
           OR: [
             { ownerProfileId: profileId },
             { id: { in: memberGameIds } },
+            { privacy: 'public', status: 'ACTIVE' },
           ],
         },
         orderBy: { createdAt: 'asc' },

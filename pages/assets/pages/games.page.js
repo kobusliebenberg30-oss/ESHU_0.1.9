@@ -2381,17 +2381,14 @@
         });
       }
     } else if (scope === 'public') {
-      // Your Public Games: games you own or are member of that are public
+      // Public Games: all active public games in the database.
       filtered = games.filter(g => {
         if (!g || typeof g !== 'object') return false;
         if (g.privacy === 'private') return false;
-        const isOwned = !!g.ownerProfileId && g.ownerProfileId === activeProfileId;
-        if (isOwned) return true;
-        if (!ESHU_DB.isEntityActive(g)) return false;
-        return getGameMembers(g).includes(activeProfileId);
+        return ESHU_DB.isEntityActive(g);
       });
     } else if (scope === 'private') {
-      // Your Private Games: games you own or are member of that are private
+      // Private Games: only private games the active profile can access.
       filtered = games.filter(g => {
         if (!g || typeof g !== 'object') return false;
         if (g.privacy !== 'private') return false;
@@ -4244,7 +4241,7 @@
     }
   };
 
-  window.joinGame = function(gameId) {
+  window.joinGame = async function(gameId) {
     const games = STATE.get('games') || [];
     const idx = games.findIndex(g => g.id === gameId);
     const activeProfileId = getActiveProfileId();
@@ -4261,6 +4258,28 @@
     if (game.privacy === 'private') {
       TOAST.error('This is a private game. You need an invite.');
       return;
+    }
+
+    if (ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && ESHU_API.games && typeof ESHU_API.games.join === 'function') {
+      try {
+        const updatedGame = await ESHU_SYNC.mutate({
+          entity: 'games',
+          call: () => ESHU_API.games.join(gameId),
+          pick: (resp) => {
+            const serverGame = resp && resp.game ? resp.game : resp;
+            return { ...game, ...serverGame };
+          },
+          refresh: true,
+        });
+        if (updatedGame) {
+          TOAST.success('Joined game');
+          return;
+        }
+      } catch (err) {
+        console.warn('[joinGame] server join failed:', err);
+        TOAST.error('Could not join this game. Please try again.');
+        return;
+      }
     }
 
     const memberProfileIds = getGameMembers(game);
