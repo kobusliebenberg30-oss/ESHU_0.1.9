@@ -3933,18 +3933,24 @@
         createdByProfileId: activeProfileId
       };
 
-      // Optimistic create. The game is written into local state + cache
-      // immediately, so it exists the instant we leave this form — no waiting
-      // on a create round-trip or a full /api/sync pull (the old path awaited
-      // BOTH: ~4-6s on a high-latency link, during which the still-live Create
-      // button could be clicked again and mint a duplicate). Persistence is
-      // handled by the normal sync path: the client id is canonical end-to-end
-      // (the bulk /api/sync upsert keys on it and reconciles owner + membership
-      // from memberProfileIds), the pagehide keepalive flush is a best-effort
-      // head start, and the destination page's background reconcile
-      // union-pushes the not-yet-synced row via __forcePushNow. The in-flight
-      // guard in saveChanges() blocks double submits.
+      // Optimistic local insert, followed by an explicit remote flush in
+      // signed-in remote mode. The client id is canonical for the bulk /api/sync
+      // upsert, but we must confirm that push before showing success; otherwise
+      // a realtime/focus pull can rehydrate from an older server snapshot and
+      // make this just-created game disappear.
       ESHU_SYNC.applyEntityResponse('games', newGame);
+
+      if (ESHU_SYNC.isRemote() && window.ESHU_REMOTE && typeof window.ESHU_REMOTE.flushPending === 'function') {
+        const flushed = await Promise.race([
+          window.ESHU_REMOTE.flushPending({ retries: 3 }),
+          new Promise((resolve) => setTimeout(() => resolve(false), 10000)),
+        ]);
+        if (flushed === false) {
+          hideLoading();
+          TOAST.error('Game was saved locally, but it has not synced to the backend yet. Please check your connection and try again.');
+          return;
+        }
+      }
 
       // XP runs in the BACKGROUND so nothing blocks the jump into the game —
       // this is what makes it feel as instant as group creation. The award is

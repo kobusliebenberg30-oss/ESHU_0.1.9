@@ -10,14 +10,14 @@
  *
  * Three layers, most-instant first, each independently sufficient:
  *
- *   1. Supabase Realtime (`postgres_changes`)
- *      Subscribes to INSERT/UPDATE/DELETE on the core tables and triggers a
- *      coalesced `/api/sync` pull the moment the database changes. This is the
- *      "truly live" path. It only delivers events the signed-in user is
- *      allowed to read, so it requires Realtime to be enabled on those tables
- *      in Supabase (see SETUP note at the bottom of this file). If Realtime is
- *      not enabled or the socket can't connect, the layers below still keep
- *      the app live — just on a short delay instead of instant.
+ *   1. Supabase Realtime (Broadcast)
+ *      Subscribes to a PUBLIC Broadcast channel. The server emits a single
+ *      payload-free "changed" message after each successful write (see
+ *      server/src/lib/supabase.ts), which triggers a coalesced `/api/sync`
+ *      pull the moment the database changes. This is the "truly live" path.
+ *      Because the message carries NO row data, there is no RLS dependency and
+ *      nothing is exposed cross-user on the socket. If Realtime can't connect,
+ *      the layers below still keep the app live — just on a short delay.
  *
  *   2. Visibility-aware polling + pull-on-focus
  *      While the tab is visible we pull every POLL_VISIBLE_MS; we also pull
@@ -44,8 +44,12 @@
 
   if (window.ESHU_REALTIME) return; // idempotent
 
-  // Postgres table names (Prisma model names; no @@map, so PascalCase).
-  const WATCH_TABLES = ['Group', 'Game', 'Creation', 'Profile', 'GroupMember', 'GameMember', 'Comment'];
+  // Realtime Broadcast channel + event. MUST match the server constants in
+  // server/src/lib/supabase.ts (REALTIME_CHANGE_TOPIC / REALTIME_CHANGE_EVENT).
+  // We use a payload-free Broadcast (server emits after each write) rather than
+  // postgres_changes so no row data is ever exposed cross-user on the socket.
+  const CHANGE_TOPIC = 'eshu-db-changes';
+  const CHANGE_EVENT = 'changed';
 
   // Poll cadence while the tab is visible. Generous enough to be gentle on the
   // API, tight enough to feel live even if Supabase Realtime isn't enabled.
@@ -81,6 +85,24 @@
     return typeof document === 'undefined' || document.visibilityState !== 'hidden';
   }
 
+  async function flushPendingWritesBeforePull(reason) {
+    try {
+      if (!window.ESHU_REMOTE || typeof window.ESHU_REMOTE.flushPending !== 'function') return true;
+      const flushed = await Promise.race([
+        window.ESHU_REMOTE.flushPending({ retries: 2 }),
+        new Promise((resolve) => setTimeout(() => resolve(false), 8000)),
+      ]);
+      if (flushed === false) {
+        console.debug('[ESHU_REALTIME] skipped pull until local writes flush (' + reason + ')');
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.debug('[ESHU_REALTIME] pending-write flush failed before pull (' + reason + '):', err && err.message || err);
+      return false;
+    }
+  }
+
   // ---- Core pull -----------------------------------------------------------
 
   async function pullNow(reason) {
@@ -90,6 +112,14 @@
     lastPullAt = now;
     suppressBroadcast = true;
     try {
+      // Remote mode is still partly local-first: group/game/creation pages write
+      // to ESHU_DB, then the remote storage driver pushes the bulk snapshot to
+      // /api/sync on a short debounce. A realtime/focus/poll pull that lands
+      // first would apply the older server snapshot and make the user's new
+      // row vanish. Flush before pulling; if the flush cannot be confirmed,
+      // keep the local view and let the next realtime/poll tick retry.
+      const safeToPull = await flushPendingWritesBeforePull(reason);
+      if (!safeToPull) return;
       await window.ESHU_SYNC.refresh();
       // Pages listen for this to re-render lists/panels from the fresh snapshot.
       try { window.dispatchEvent(new CustomEvent('eshu:sync-success', { detail: { reason } })); } catch {}
@@ -188,33 +218,20 @@
     }
     if (!client || !client.channel) return;
 
-    // Keep the Realtime socket authenticated so RLS-protected rows are
-    // delivered to this signed-in user.
-    try {
-      if (client.auth && typeof client.auth.getSession === 'function') {
-        const { data } = await client.auth.getSession();
-        const token = data && data.session && data.session.access_token;
-        if (token && client.realtime && typeof client.realtime.setAuth === 'function') {
-          client.realtime.setAuth(token);
-        }
-      }
-    } catch {}
-
     realtimeClient = client;
     try {
-      let channel = client.channel('eshu-db-changes');
-      for (const table of WATCH_TABLES) {
-        channel = channel.on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table },
-          () => schedulePull('realtime:' + table),
-        );
-      }
+      // Subscribe to a PUBLIC Broadcast channel. The server POSTs a payload-
+      // free '{CHANGE_EVENT}' message after each successful write, so there is
+      // no row data on the socket and no RLS / auth dependency — we simply
+      // re-pull the server-authoritative /api/sync when notified.
+      const channel = client
+        .channel(CHANGE_TOPIC)
+        .on('broadcast', { event: CHANGE_EVENT }, () => schedulePull('realtime:broadcast'));
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.info('[ESHU_REALTIME] live updates active (Supabase Realtime).');
+          console.info('[ESHU_REALTIME] live updates active (Supabase Broadcast).');
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          // Realtime not enabled / not reachable: polling keeps us live.
+          // Realtime not reachable: polling keeps us live.
           console.debug('[ESHU_REALTIME] Realtime unavailable (' + status + '); using polling fallback.');
         }
       });
@@ -290,21 +307,19 @@
 
 /*
  * ───────────────────────── SUPABASE REALTIME SETUP ─────────────────────────
- * The polling + cross-tab layers work with NO configuration. To unlock the
- * INSTANT (sub-second) cross-device path via Supabase Realtime, enable
- * Realtime on the core tables once in your Supabase project:
+ * The polling + cross-tab layers work with NO configuration. The INSTANT
+ * (sub-second) cross-device path uses Supabase Realtime BROADCAST, not
+ * postgres_changes, so it needs NO database publication and NO RLS:
  *
- *   Supabase Dashboard → Database → Replication → "supabase_realtime"
- *   publication → add tables: Group, Game, Creation, Profile,
- *   GroupMember, GameMember, Comment.
+ *   - The server emits a payload-free "changed" message on the PUBLIC channel
+ *     "eshu-db-changes" after each successful write (server/src/lib/supabase.ts
+ *     broadcastChange(), wired in server/src/app.ts). This requires only that
+ *     SUPABASE_URL + a key (SUPABASE_SERVICE_ROLE_KEY preferred, else
+ *     SUPABASE_ANON_KEY) are set in the server environment.
+ *   - This browser subscribes to that channel and re-pulls the
+ *     server-authoritative /api/sync when notified. No row data ever crosses
+ *     the socket, so there is no cross-user exposure.
  *
- *   -- or via SQL:
- *   alter publication supabase_realtime add table
- *     "Group", "Game", "Creation", "Profile",
- *     "GroupMember", "GameMember", "Comment";
- *
- * Realtime only delivers rows the signed-in user is permitted to read, so the
- * tables also need RLS SELECT policies for the `authenticated` role (the app
- * already authenticates the browser via Supabase Auth). If RLS isn't set up,
- * the polling fallback still keeps every device live within POLL_VISIBLE_MS.
+ * If the Realtime socket can't connect, the polling fallback still keeps every
+ * device live within POLL_VISIBLE_MS.
  */

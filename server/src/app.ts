@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 
 import { env } from './env.js';
 import { logger } from './lib/logger.js';
-import { getSupabasePublicConfig } from './lib/supabase.js';
+import { getSupabasePublicConfig, broadcastChange } from './lib/supabase.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import { prisma } from './db/client.js';
 
@@ -265,6 +265,25 @@ export const buildApp = (): Express => {
       },
     }),
   );
+
+  // Live-sync notifier: after any SUCCESSFUL mutating /api request, fire a
+  // single payload-free Supabase Broadcast so other devices/tabs re-pull
+  // /api/sync immediately (Layer 1 of pages/assets/core/realtime-sync.js).
+  // Centralised here so every current and future write endpoint is covered
+  // without per-route wiring. Runs on response 'finish' so it never delays
+  // the response, and is gated to 2xx so failed writes don't trigger pulls.
+  // Excludes /api/auth (session lifecycle, not shared data) and read methods.
+  const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+  app.use('/api', (req, res, next) => {
+    if (MUTATING_METHODS.has(req.method) && !req.path.startsWith('/auth')) {
+      res.on('finish', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          broadcastChange();
+        }
+      });
+    }
+    next();
+  });
 
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);

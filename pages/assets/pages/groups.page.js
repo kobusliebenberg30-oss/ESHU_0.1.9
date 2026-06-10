@@ -1602,7 +1602,9 @@
               refresh: true
             }) || newGroup;
           } catch (err) {
-            console.warn('[groups.save] server create failed, falling back to local:', err);
+            console.warn('[groups.save] server create failed:', err);
+            TOAST.error('Could not sync this group to the backend. Please check your connection and try again.');
+            return;
           }
         }
 
@@ -1679,7 +1681,9 @@
               refresh: true
             }) || updatedGroup;
           } catch (err) {
-            console.warn('[groups.save] server update failed, falling back to local:', err);
+            console.warn('[groups.save] server update failed:', err);
+            TOAST.error('Could not sync this group update. Please check your connection and try again.');
+            return;
           }
         }
 
