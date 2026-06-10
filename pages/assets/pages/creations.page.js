@@ -814,7 +814,11 @@
 
   function setSubmitDisabled(disabled) {
     const baseDisabled = !!disabled || (!uploadUnlocked && !canUploadToSelectedOnboardingGame());
-    if (createBtn) createBtn.disabled = baseDisabled;
+    if (createBtn) {
+      if (!createBtn.dataset.originalText) createBtn.dataset.originalText = createBtn.textContent || 'CREATE';
+      createBtn.disabled = baseDisabled;
+      createBtn.textContent = disabled ? 'SAVING...' : createBtn.dataset.originalText;
+    }
   }
 
   function isQuotaExceededError(error) {
@@ -1700,18 +1704,46 @@
           timestamp: Date.now()
         };
 
-        // Optimistic + instant: write the creation locally and leave for the
-        // game's front page right away. The only awaited server work was the
-        // image upload above (the actual bytes other players hydrate). The
-        // creation ROW persists via the normal sync path — the client id is
-        // canonical (the bulk /api/sync upsert keys on it), applyEntityResponse
-        // schedules a push, the pagehide keepalive flush is a head start, and
-        // the destination page union-pushes any not-yet-synced row. The old
-        // path additionally awaited a create POST, a refresh pull, AND a second
-        // ESHU_SYNC.refresh() pull — three extra round-trips that made this
-        // feel long. The isSubmitting guard already blocks double-submits.
+        let savedCreation = newCreation;
         if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
-          ESHU_SYNC.applyEntityResponse('creations', newCreation);
+          savedCreation = await ESHU_SYNC.mutate({
+            entity: 'creations',
+            call: () => ESHU_API.creations.create({
+              name: newCreation.name,
+              description: newCreation.description,
+              devices: newCreation.devices,
+              tags: newCreation.tags,
+              dateMade: newCreation.dateMade,
+              hostGameId: newCreation.hostGameId,
+              imageAssetId: newCreation.imageAssetId,
+              status: newCreation.status,
+              timestamp: newCreation.timestamp,
+              data: {
+                title: newCreation.title,
+                gameId: newCreation.gameId,
+                image: newCreation.image,
+                imageRef: newCreation.imageRef,
+                naturalWidth: newCreation.naturalWidth,
+                naturalHeight: newCreation.naturalHeight,
+                bgColor: newCreation.bgColor,
+                border: newCreation.border,
+                privacy: newCreation.privacy,
+                votes: newCreation.votes,
+                burns: newCreation.burns,
+                author: newCreation.author,
+                authorName: newCreation.authorName,
+                authorId: newCreation.authorId,
+                authorProfileId: newCreation.authorProfileId,
+                createdByProfileId: newCreation.createdByProfileId,
+                location: newCreation.location
+              }
+            }),
+            pick: (resp) => {
+              const serverCreation = resp && resp.creation ? resp.creation : resp;
+              return { ...newCreation, ...serverCreation };
+            },
+            refresh: true
+          }) || newCreation;
         } else if (typeof ESHU_DB !== 'undefined') {
           ESHU_DB.updateTable('creations', (currentCreations) => [newCreation, ...currentCreations]);
         } else if (typeof STATE !== 'undefined') {
@@ -1739,7 +1771,7 @@
               credentials: 'include',
               keepalive: true,
               headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-              body: JSON.stringify({ kind: 'creation_uploaded', refId: newCreation.id }),
+              body: JSON.stringify({ kind: 'creation_uploaded', refId: savedCreation.id }),
             }).catch(() => {});
           } catch (err) {
             console.warn('[creations.save] background XP award failed (non-fatal):', err);
@@ -1747,7 +1779,7 @@
         } else {
           // Local-only mode: synchronous award keeps the offline path intact
           // (it bumps ESHU_DB profile XP directly; no server to reconcile with).
-          try { ESHU_API.xp.awardSafe('creation_uploaded', newCreation.id); } catch {}
+          try { ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id); } catch {}
         }
 
         const optimisticXp = xpBeforeUpload + 1; // creation_uploaded = 1 XP
@@ -1774,26 +1806,8 @@
         const returnToGameFront = () => {
           window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
         };
-        // Durability: the creation row (and its image data) is persisted via
-        // the bulk /api/sync push. On a high-latency deployment the debounced
-        // push often doesn't land before we navigate, and the pagehide
-        // keepalive flush can't save it because keepalive bodies are capped at
-        // ~64KB while the snapshot carries image bytes — so the upload was
-        // silently lost and "didn't sync" on the next sign-in. Force an
-        // explicit flush now and wait for it to LAND before leaving the page.
-        // It runs in parallel with the hype animation, and is capped so a dead
-        // network can't trap the user here.
-        const uploadFlush = (window.ESHU_REMOTE && typeof window.ESHU_REMOTE.flushPending === 'function')
-          ? window.ESHU_REMOTE.flushPending({ retries: 3 }).catch(() => false)
-          : Promise.resolve(true);
         await new Promise((resolve) => {
-          runHype('RIGHT ON!', async () => {
-            try {
-              await Promise.race([
-                uploadFlush,
-                new Promise((r) => setTimeout(r, 8000)),
-              ]);
-            } catch {}
+          runHype('RIGHT ON!', () => {
             returnToGameFront();
             resolve();
           }, 1500);
