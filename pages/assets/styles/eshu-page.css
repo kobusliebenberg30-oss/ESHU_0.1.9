@@ -97,6 +97,18 @@
   padding: 14px;
 }
 
+.creation-display.empty-panel-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary, #666);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
 .creation-fallback-card {
   display: flex;
   flex-direction: column;

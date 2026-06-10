@@ -214,6 +214,10 @@
       ? !!ESHU_DB.getValue('architectMode')
       : false;
 
+    const metaModeEnabled = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue)
+      ? !!ESHU_DB.getValue('metaModeEnabled')
+      : false;
+
     dropdown.innerHTML = `
       <div class="settings-panel-card" role="dialog" aria-modal="false" aria-label="Settings">
         <div class="settings-dropdown-header">
@@ -284,6 +288,17 @@
               </button>
             </div>
             <div class="settings-row">
+              <span class="settings-label" id="globalMetaToggleLabel">Meta</span>
+              <button type="button"
+                      class="theme-toggle meta-toggle${metaModeEnabled ? ' is-dark' : ''}"
+                      id="globalMetaToggle"
+                      role="switch"
+                      aria-checked="${metaModeEnabled}"
+                      aria-label="Toggle engine meta placeholder panels">
+                <span class="theme-toggle-thumb" aria-hidden="true"></span>
+              </button>
+            </div>
+            <div class="settings-row">
               <span class="settings-label">Data Management</span>
               <div class="settings-data-actions">
                 <button type="button" id="eshuDownloadDataBtn" class="settings-action-btn">Export Data</button>
@@ -347,6 +362,13 @@
           const architectMode = !!ESHU_DB.getValue('architectMode');
           architectToggle.classList.toggle('is-dark', architectMode);
           architectToggle.setAttribute('aria-checked', String(architectMode));
+        }
+
+        const metaToggle = document.getElementById('globalMetaToggle');
+        if (metaToggle) {
+          const metaModeEnabled = !!ESHU_DB.getValue('metaModeEnabled');
+          metaToggle.classList.toggle('is-dark', metaModeEnabled);
+          metaToggle.setAttribute('aria-checked', String(metaModeEnabled));
         }
 
         const burnToggle = document.getElementById('globalBurnToggle');
@@ -481,6 +503,25 @@
         window.dispatchEvent(new CustomEvent('eshu:architect-mode-changed', { detail: { enabled: nextState } }));
         if (typeof TOAST !== 'undefined') {
           TOAST.success(nextState ? 'Architect Mode enabled - creation assets editable' : 'Architect Mode disabled - creation assets locked');
+        }
+      });
+    }
+
+    // Meta toggle - shows or hides empty-panel placeholder text in the engine
+    const metaToggle = document.getElementById('globalMetaToggle');
+    if (metaToggle) {
+      metaToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nextState = !metaToggle.classList.contains('is-dark');
+        metaToggle.classList.toggle('is-dark', nextState);
+        metaToggle.setAttribute('aria-checked', String(nextState));
+
+        if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
+          ESHU_DB.setValue('metaModeEnabled', nextState);
+        }
+        window.dispatchEvent(new CustomEvent('eshu:meta-mode-changed', { detail: { enabled: nextState } }));
+        if (typeof TOAST !== 'undefined') {
+          TOAST.success(nextState ? 'Meta enabled' : 'Meta disabled');
         }
       });
     }

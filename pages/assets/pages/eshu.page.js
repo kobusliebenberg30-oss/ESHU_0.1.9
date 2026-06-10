@@ -118,10 +118,15 @@
   let randomGameQueue = [];
   const bookCursorByGame = {};
   const GAME_VOTE_USAGE_KEY = 'gameVoteUsageByProfile';
+  const EMPTY_CREATION_PANEL_MESSAGE = 'There is nothing here yet, but there will be soon...';
 
   function getSourceGroupIdFromUrl() {
     const params = new URLSearchParams(window.location.search);
     return params.get('sourceGroupId') || '';
+  }
+
+  function isMetaModeEnabled() {
+    return !!(typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue && ESHU_DB.getValue('metaModeEnabled'));
   }
 
   function getCurrentGame() {
@@ -406,6 +411,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     imageEl.style.display = 'block';
     if (textEl) {
       textEl.classList.remove('fallback-active');
+      textEl.classList.remove('empty-panel-placeholder');
       textEl.style.display = 'none';
     }
     if (window.ESHU_IMAGE_VIEWER) window.ESHU_IMAGE_VIEWER.attach(imageEl);
@@ -419,6 +425,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     if (textEl) {
       textEl.innerHTML = buildCreationFallbackMarkup(creation, gameName, hostGame);
       textEl.classList.add('fallback-active');
+      textEl.classList.remove('empty-panel-placeholder');
       textEl.style.display = 'block';
     }
   }
@@ -435,6 +442,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
       if (textEl) {
         textEl.textContent = '';
         textEl.classList.remove('fallback-active');
+        textEl.classList.remove('empty-panel-placeholder');
         textEl.style.display = 'none';
       }
       if (imageEl) {
@@ -464,6 +472,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     if (textEl) {
       textEl.textContent = `${title}\n${desc}`;
       textEl.classList.remove('fallback-active');
+      textEl.classList.remove('empty-panel-placeholder');
       textEl.style.display = 'none';
     }
     if (titleEl) titleEl.textContent = title;
@@ -558,6 +567,64 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
     };
 
     resolveAndShow();
+  }
+
+  function showEmptyCreationPanel(side, message = EMPTY_CREATION_PANEL_MESSAGE) {
+    setSideImageLoading(side, false);
+    if (side === 'left') {
+      leftCreationId = null;
+      leftCreationRef = null;
+    } else if (side === 'right') {
+      rightCreationId = null;
+      rightCreationRef = null;
+    }
+
+    const textEl = document.getElementById(`${side}Creation`);
+    const imageEl = document.getElementById(`${side}CreationImage`);
+    const titleEl = document.getElementById(`${side}OverlayTitle`);
+    const authorEl = document.getElementById(`${side}OverlayAuthor`);
+    const gameEl = document.getElementById(`${side}OverlayGame`);
+    const commentsEl = document.getElementById(`${side}Comments`);
+    const commentsCountEl = document.getElementById(`${side}CommentsCount`);
+    const inputEl = document.getElementById(`${side}Input`);
+    const iframeEl = document.getElementById(`${side}DrawIframe`);
+
+    if (imageEl) {
+      imageEl.onload = null;
+      imageEl.onerror = null;
+      delete imageEl.dataset.creationId;
+      imageEl.removeAttribute('src');
+      imageEl.style.display = 'none';
+      const imageBox = imageEl.closest('.image-box');
+      if (imageBox) imageBox.style.background = '';
+    }
+
+    const showMetaPlaceholder = isMetaModeEnabled() && !!message;
+    if (textEl) {
+      textEl.textContent = message;
+      textEl.classList.toggle('fallback-active', showMetaPlaceholder);
+      textEl.classList.toggle('empty-panel-placeholder', showMetaPlaceholder);
+      textEl.style.display = showMetaPlaceholder ? 'flex' : 'none';
+    }
+
+    if (titleEl) titleEl.textContent = showMetaPlaceholder ? 'Nothing here yet' : 'Untitled';
+    if (authorEl) authorEl.textContent = showMetaPlaceholder ? '—' : 'Player';
+    if (gameEl) {
+      const game = getCurrentGame();
+      gameEl.textContent = game?.name || '—';
+    }
+    if (commentsEl) commentsEl.innerHTML = '<div class="comment-empty">No creation loaded.</div>';
+    if (commentsCountEl) commentsCountEl.textContent = '0 comments';
+    if (inputEl) {
+      inputEl.value = '';
+      inputEl.placeholder = 'No creation loaded yet...';
+      inputEl.classList.remove('has-pending-animation');
+    }
+    if (iframeEl) iframeEl.src = 'about:blank';
+
+    updateLikedState(side, null);
+    updateFollowedState(side, null);
+    updateVoteState(side, null);
   }
 
   function openCreationDetailsFromSide(side) {
@@ -958,6 +1025,13 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   function chooseSide(side) {
     if (nextReady) return;
 
+    const selectedCreationId = side === 'left' ? leftCreationId : rightCreationId;
+    const selectedCreationRef = side === 'left' ? leftCreationRef : rightCreationRef;
+    if (!selectedCreationId && !selectedCreationRef) {
+      if (typeof TOAST !== 'undefined') TOAST.info(EMPTY_CREATION_PANEL_MESSAGE);
+      return;
+    }
+
     // Book mode: just turn pages, no voting
     if (currentGameMode === 'book') {
       nextReady = true;
@@ -985,7 +1059,6 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
       return;
     }
 
-    const selectedCreationRef = side === 'left' ? leftCreationRef : rightCreationRef;
     const voteGameId = selectedCreationRef?.hostGameId || selectedCreationRef?.gameId || currentGameId || null;
     if (voteGameId) {
       const remaining = getRemainingVotes(voteGameId);
@@ -1043,22 +1116,31 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   }
 
   function renderPair(left, right) {
-    if (!left.id) left.id = `creation_${left.timestamp}`;
-    if (!right.id) right.id = `creation_${right.timestamp}`;
-    leftCreationId = left.id;
-    rightCreationId = right.id;
-    leftCreationRef = left;
-    rightCreationRef = right;
-    const leftHasVisual = !!(left.image || left.imageAssetId || left.imageRef?.id);
-    const rightHasVisual = !!(right.image || right.imageAssetId || right.imageRef?.id);
-    if (leftHasVisual) setSideImageLoading('left', true);
-    if (rightHasVisual) setSideImageLoading('right', true);
-    updateCreationVisual('left', left);
-    updateCreationVisual('right', right);
-    document.getElementById('leftDrawIframe').src = `color-tone.html?creationId=${left.id}`;
-    document.getElementById('rightDrawIframe').src = `color-tone.html?creationId=${right.id}`;
-    setupComments('leftForm', 'leftInput', 'leftComments', left.id, 'leftCommentsCount');
-    setupComments('rightForm', 'rightInput', 'rightComments', right.id, 'rightCommentsCount');
+    if (left) {
+      if (!left.id) left.id = `creation_${left.timestamp}`;
+      leftCreationId = left.id;
+      leftCreationRef = left;
+      const leftHasVisual = !!(left.image || left.imageAssetId || left.imageRef?.id);
+      if (leftHasVisual) setSideImageLoading('left', true);
+      updateCreationVisual('left', left);
+      document.getElementById('leftDrawIframe').src = `color-tone.html?creationId=${left.id}`;
+      setupComments('leftForm', 'leftInput', 'leftComments', left.id, 'leftCommentsCount');
+    } else {
+      showEmptyCreationPanel('left');
+    }
+
+    if (right) {
+      if (!right.id) right.id = `creation_${right.timestamp}`;
+      rightCreationId = right.id;
+      rightCreationRef = right;
+      const rightHasVisual = !!(right.image || right.imageAssetId || right.imageRef?.id);
+      if (rightHasVisual) setSideImageLoading('right', true);
+      updateCreationVisual('right', right);
+      document.getElementById('rightDrawIframe').src = `color-tone.html?creationId=${right.id}`;
+      setupComments('rightForm', 'rightInput', 'rightComments', right.id, 'rightCommentsCount');
+    } else {
+      showEmptyCreationPanel('right');
+    }
   }
 
   function getActiveGameMode() {
@@ -1081,14 +1163,18 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   /* Load random creations */
   function loadRandomPair() {
     if (!currentGameId) {
-      document.getElementById('leftCreation').textContent = "Select a game first!";
-      document.getElementById('rightCreation').textContent = "";
+      showEmptyCreationPanel('left', 'Select a game first!');
+      showEmptyCreationPanel('right', '');
       return;
     }
     const allCreations = getVisibleGameCreations(currentGameId);
-    if (allCreations.length < 2) {
-      document.getElementById('leftCreation').textContent = "Not enough creations!";
-      document.getElementById('rightCreation').textContent = "Create more!";
+    if (allCreations.length === 0) {
+      showEmptyCreationPanel('left');
+      showEmptyCreationPanel('right');
+      return;
+    }
+    if (allCreations.length === 1) {
+      renderPair(allCreations[0], null);
       return;
     }
     let leftIndex = Math.floor(Math.random() * allCreations.length);
@@ -1099,8 +1185,8 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
 
   function loadBookPair(direction) {
     if (!currentGameId) {
-      document.getElementById('leftCreation').textContent = 'Select a game first!';
-      document.getElementById('rightCreation').textContent = '';
+      showEmptyCreationPanel('left', 'Select a game first!');
+      showEmptyCreationPanel('right', '');
       return;
     }
 
@@ -1109,13 +1195,13 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
 
     const len = allCreations.length;
     if (len === 0) {
-      document.getElementById('leftCreation').textContent = 'No pages yet!';
-      document.getElementById('rightCreation').textContent = 'Create more!';
+      showEmptyCreationPanel('left');
+      showEmptyCreationPanel('right');
       return;
     }
 
     if (len === 1) {
-      renderPair(allCreations[0], allCreations[0]);
+      renderPair(allCreations[0], null);
       return;
     }
 
@@ -1143,8 +1229,8 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
       currentGameId = null;
       leftCreationId = null;
       rightCreationId = null;
-      document.getElementById('leftCreation').textContent = 'Select a game first!';
-      document.getElementById('rightCreation').textContent = '';
+      showEmptyCreationPanel('left', 'Select a game first!');
+      showEmptyCreationPanel('right', '');
       return;
     }
 
@@ -1969,7 +2055,7 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   }
 
   function loadRandomGame() {
-    const allGames = getGames();
+    const allGames = getGames().filter((game) => game && getVisibleGameCreations(game.id).length > 0);
     if (!allGames.length) {
       if (typeof TOAST !== 'undefined') TOAST.info('There is nothing here now, but there will be soon...');
       return;
@@ -2053,6 +2139,11 @@ const title = game?.name || (currentGameId ? 'Loading game…' : 'Select a game'
   window.addEventListener('eshu:infinite-votes-changed', () => {
     // Refresh vote display immediately when infinite votes is toggled
     updateCurrentGameContext();
+  });
+
+  window.addEventListener('eshu:meta-mode-changed', () => {
+    if (!leftCreationId && !leftCreationRef) showEmptyCreationPanel('left');
+    if (!rightCreationId && !rightCreationRef) showEmptyCreationPanel('right');
   });
 
   ESHU_DB.subscribe(() => {

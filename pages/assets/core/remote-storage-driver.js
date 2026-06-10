@@ -93,7 +93,7 @@
 
   // UI-only preferences that are never stored on the server and must always
   // be taken from the local snapshot when merging with a server pull.
-  const LOCAL_ONLY_VALUE_KEYS = ['uiTheme', 'hideBurned', 'devModeEnabled', 'infiniteVotes'];
+  const LOCAL_ONLY_VALUE_KEYS = ['uiTheme', 'hideBurned', 'devModeEnabled', 'infiniteVotes', 'metaModeEnabled'];
 
   function mergeProfileScopedFlags(baseSnapshot, localSnapshot) {
     if (!baseSnapshot || typeof baseSnapshot !== 'object') return baseSnapshot;
