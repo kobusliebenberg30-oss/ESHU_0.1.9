@@ -3827,12 +3827,15 @@
   async function saveChanges() {
     if (isSavingGame) return;
     isSavingGame = true;
+    const originalSaveText = saveBtn ? saveBtn.textContent : null;
     if (saveBtn) saveBtn.disabled = true;
+    if (saveBtn) saveBtn.textContent = 'SAVING...';
     try {
       await saveChangesImpl();
     } finally {
       isSavingGame = false;
       if (saveBtn) saveBtn.disabled = false;
+      if (saveBtn && originalSaveText !== null) saveBtn.textContent = originalSaveText;
     }
   }
   async function saveChangesImpl() {
@@ -3933,23 +3936,48 @@
         createdByProfileId: activeProfileId
       };
 
-      // Optimistic local insert, followed by an explicit remote flush in
-      // signed-in remote mode. The client id is canonical for the bulk /api/sync
-      // upsert, but we must confirm that push before showing success; otherwise
-      // a realtime/focus pull can rehydrate from an older server snapshot and
-      // make this just-created game disappear.
-      ESHU_SYNC.applyEntityResponse('games', newGame);
-
-      if (ESHU_SYNC.isRemote() && window.ESHU_REMOTE && typeof window.ESHU_REMOTE.flushPending === 'function') {
-        const flushed = await Promise.race([
-          window.ESHU_REMOTE.flushPending({ retries: 3 }),
-          new Promise((resolve) => setTimeout(() => resolve(false), 10000)),
-        ]);
-        if (flushed === false) {
+      let savedGame = newGame;
+      if (ESHU_SYNC.isRemote() && ESHU_API.games && typeof ESHU_API.games.create === 'function') {
+        try {
+          savedGame = await ESHU_SYNC.mutate({
+            entity: 'games',
+            call: () => ESHU_API.games.create({
+              name: newGame.name,
+              description: newGame.description,
+              rules: newGame.rules,
+              hostGroupId: newGame.hostGroupId,
+              hostGroupName: newGame.hostGroupName,
+              image: newGame.image,
+              privacy: newGame.privacy,
+              gameType: newGame.gameType,
+              timingMode: newGame.timingMode,
+              status: newGame.status,
+              startTime: newGame.startTime,
+              submissionCloseTime: newGame.submissionCloseTime,
+              endTime: newGame.endTime,
+              timingOffsets: newGame.timingOffsets,
+              timingExtensions: newGame.timingExtensions,
+              memberProfileIds: newGame.memberProfileIds,
+              data: {
+                tags: newGame.tags,
+                ownerName: newGame.ownerName,
+                createdByProfileId: newGame.createdByProfileId
+              }
+            }),
+            pick: (resp) => {
+              const serverGame = resp && resp.game ? resp.game : resp;
+              return { ...newGame, ...serverGame };
+            },
+            refresh: true
+          }) || newGame;
+        } catch (err) {
+          console.warn('[createGame] server create failed:', err);
           hideLoading();
-          TOAST.error('Game was saved locally, but it has not synced to the backend yet. Please check your connection and try again.');
+          TOAST.error('Could not sync this game to the backend. Please check your connection and try again.');
           return;
         }
+      } else {
+        ESHU_SYNC.applyEntityResponse('games', newGame);
       }
 
       // XP runs in the BACKGROUND so nothing blocks the jump into the game —
@@ -3968,17 +3996,17 @@
             credentials: 'include',
             keepalive: true,
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({ kind: 'game_created', refId: newGame.id }),
+            body: JSON.stringify({ kind: 'game_created', refId: savedGame.id }),
           }).catch(() => {});
         } else {
-          ESHU_API.xp.awardSafe('game_created', newGame.id);
+          ESHU_API.xp.awardSafe('game_created', savedGame.id);
         }
       } catch (err) {
         console.warn('[createGame] background XP award failed (non-fatal):', err);
       }
 
       TOAST.success('Game created!');
-      openCreatedGameFrontInPlace(newGame.id);
+      openCreatedGameFrontInPlace(savedGame.id);
       runHype('GAME ON!');
       return;
     } else {

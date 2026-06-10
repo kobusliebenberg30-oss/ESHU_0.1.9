@@ -1528,7 +1528,9 @@
   }
 
   // ===== Save Group =====
+  let isSavingGroup = false;
   async function saveGroup() {
+    if (isSavingGroup) return;
     const name = groupName.value.trim();
     if (!name) {
       TOAST.error('Please enter a group title');
@@ -1540,6 +1542,12 @@
       return;
     }
 
+    isSavingGroup = true;
+    const originalSaveText = saveGroupBtn ? saveGroupBtn.textContent : null;
+    if (saveGroupBtn) {
+      saveGroupBtn.disabled = true;
+      saveGroupBtn.textContent = 'SAVING...';
+    }
     showLoading();
 
     const activeProfile = getActiveProfile();
@@ -1705,6 +1713,11 @@
       }
     } finally {
       hideLoading();
+      isSavingGroup = false;
+      if (saveGroupBtn) {
+        saveGroupBtn.disabled = false;
+        if (originalSaveText !== null) saveGroupBtn.textContent = originalSaveText;
+      }
     }
   }
 
