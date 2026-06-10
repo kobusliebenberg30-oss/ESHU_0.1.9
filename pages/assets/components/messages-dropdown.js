@@ -111,27 +111,17 @@
       id: 'onboard-join-group',
       type: 'onboard',
       icon: '👋',
-      title: 'Get Started',
-      text: 'Manually join a Group to unlock game creation and start playing!',
-      check: function (profileId, inGroup, xp) { return true; }
+      title: 'Default Group Joined',
+      text: "You've joined the default group and can now create games.",
+      check: function (profileId, inGroup, xp) { return inGroup; }
     },
     {
       id: 'unlock-create-games',
       type: 'unlock',
       icon: '🎮',
-      title: 'Create Games Unlocked',
-      text: 'You joined a Group. You can now Create Games!',
-      check: function (profileId, inGroup, xp) { return inGroup; }
-    },
-    {
-      id: 'unlock-upload-creations',
-      type: 'unlock',
-      icon: '🎨',
-      title: 'Upload Creation Unlocked',
-      text: 'You Can Now Upload Creations!',
-      check: function (profileId, inGroup, xp) {
-        return hasCreatedAnyGame(profileId) || isMemberOfDefaultGame(profileId);
-      }
+      title: 'Unlock Comments',
+      text: 'Upload your first creation to unlock comments.',
+      check: function (profileId, inGroup, xp) { return inGroup && xp < COMMENTS_UNLOCK_XP; }
     },
     {
       id: 'unlock-comments',

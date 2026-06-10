@@ -1,10 +1,9 @@
 /**
  * Onboarding XP calibration invariants.
  *
- * Pins the contract that joining `group_default` grants exactly the same XP
- * a player would earn for creating their own first game, idempotently, so
- * the default and self-create onboarding paths converge at the same XP gate
- * (upload_creations at 2 XP, comments at 3 XP).
+ * Pins the contract that first-touch account hydration places every player in
+ * `group_default` / `game_default` and grants the default-game XP exactly once.
+ * Uploading a creation then crosses the comments threshold.
  */
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, registerAndAuth, truncateAll } from './helpers.js';
@@ -22,23 +21,26 @@ describe('onboarding XP calibration', () => {
     await closeDb();
   });
 
-  it('joining the default group grants game_created XP exactly once', async () => {
+  it('first touch joins the default group/game and grants game_created XP exactly once', async () => {
     const { agent } = await registerAndAuth();
 
-    const gates0 = await agent.get('/api/xp/gates').expect(200);
-    expect(gates0.body.xpPoints).toBe(0);
-    expect(gates0.body.unlocks).not.toContain('upload_creations');
-
-    // First join awards the XP.
-    await agent.post(`/api/groups/${DEFAULT_GROUP_ID}/join`).expect(200);
-
+    // /api/xp/gates calls ensureActiveProfileId, which now provisions the
+    // default memberships as part of normal account hydration.
     const gates1 = await agent.get('/api/xp/gates').expect(200);
     expect(gates1.body.xpPoints).toBe(GAME_CREATED_XP);
     expect(gates1.body.xpPoints).toBeGreaterThanOrEqual(UPLOAD_CREATIONS_THRESHOLD);
     expect(gates1.body.unlocks).toContain('upload_creations');
     expect(gates1.body.unlocks).not.toContain('comments');
 
-    // Second join is a no-op for XP (idempotent ledger on (kind, refId)).
+    const groups = await agent.get('/api/groups').expect(200);
+    const defaultGroup = groups.body.groups.find((g: { id: string }) => g.id === DEFAULT_GROUP_ID);
+    expect(defaultGroup?.memberProfileIds).toContain(gates1.body.profileId);
+
+    const games = await agent.get('/api/games').expect(200);
+    const defaultGame = games.body.games.find((g: { id: string }) => g.id === DEFAULT_GAME_ID);
+    expect(defaultGame?.memberProfileIds).toContain(gates1.body.profileId);
+
+    // Explicit joins after first-touch provisioning are no-ops for XP.
     await agent.post(`/api/groups/${DEFAULT_GROUP_ID}/join`).expect(200);
     await agent.post(`/api/groups/${DEFAULT_GROUP_ID}/join`).expect(200);
 
@@ -46,41 +48,10 @@ describe('onboarding XP calibration', () => {
     expect(gates2.body.xpPoints).toBe(GAME_CREATED_XP);
   });
 
-  it('default path and self-create path converge at the same XP', async () => {
-    // Path A: a user who joins the default group only.
-    const a = await registerAndAuth();
-    await a.agent.post(`/api/groups/${DEFAULT_GROUP_ID}/join`).expect(200);
-    const aGates = await a.agent.get('/api/xp/gates').expect(200);
-
-    // Path B: a user who skips the default group join and creates their own
-    // game directly. Their XP awarder is the `/api/xp/award` endpoint that
-    // the games.page.js client calls right after a successful POST /games.
-    const b = await registerAndAuth();
-    const created = await b.agent
-      .post('/api/games')
-      .send({
-        name: 'Path B Game',
-        description: 'self-create onboarding',
-        gameType: 'book',
-        timingMode: 'infinite',
-        status: 'active',
-        privacy: 'public',
-      })
-      .expect(201);
-    await b.agent
-      .post('/api/xp/award')
-      .send({ kind: 'game_created', refId: created.body.game.id })
-      .expect(200);
-    const bGates = await b.agent.get('/api/xp/gates').expect(200);
-
-    expect(aGates.body.xpPoints).toBe(bGates.body.xpPoints);
-    expect(aGates.body.unlocks.sort()).toEqual(bGates.body.unlocks.sort());
-  });
-
-  it('joining default + uploading one creation crosses the comments threshold', async () => {
+  it('default membership + uploading one creation crosses the comments threshold', async () => {
     const { agent } = await registerAndAuth();
 
-    await agent.post(`/api/groups/${DEFAULT_GROUP_ID}/join`).expect(200);
+    await agent.get('/api/xp/gates').expect(200);
 
     // Simulate a creation upload by awarding `creation_uploaded`.
     // (The client awards this after a successful POST /api/creations.)
@@ -179,12 +150,12 @@ describe('bulk sync onboarding XP parity', () => {
   });
 
   it('joining default group via PUT /api/sync awards the same onboarding XP as POST /join', async () => {
-    // Reproduces the bug where a snapshot-push joiner ended up at 0 XP and
-    // therefore could never cross the comments unlock with a single upload.
+    // First-touch provisioning now joins default automatically; a legacy
+    // snapshot push of the same membership must remain idempotent.
     const { agent } = await registerAndAuth();
 
     const gates0 = await agent.get('/api/xp/gates').expect(200);
-    expect(gates0.body.xpPoints).toBe(0);
+    expect(gates0.body.xpPoints).toBe(2);
 
     // Push a legacy-style snapshot that places the caller into group_default.
     await agent

@@ -9,6 +9,11 @@ import {
   profileToLegacy,
 } from '../sync/sync.service.js';
 import { HttpError } from '../../middleware/error.js';
+import {
+  DEFAULT_GROUP_ID,
+  ensureDefaultOnboardingContent,
+  grantDefaultOnboardingXp,
+} from '../groups/groups.service.js';
 
 const selectProfileFields = {
   id: true,
@@ -52,6 +57,26 @@ const findCanonicalProfile = (userId: string) =>
     select: selectProfileFields,
   });
 
+const ensureDefaultMembershipForAccount = async (userId: string, profileId: string) => {
+  try {
+    await ensureDefaultOnboardingContent(profileId);
+    const setting = await prisma.userSetting.findUnique({
+      where: { userId },
+      select: { primaryGroupId: true },
+    });
+    if (!setting || !setting.primaryGroupId) {
+      await prisma.userSetting.upsert({
+        where: { userId },
+        create: { userId, currentProfileId: profileId, primaryGroupId: DEFAULT_GROUP_ID },
+        update: { primaryGroupId: DEFAULT_GROUP_ID },
+      });
+    }
+    await grantDefaultOnboardingXp(profileId);
+  } catch (err) {
+    console.warn('[profiles.ensureActiveProfileId] failed to provision default membership:', err);
+  }
+};
+
 /**
  * Returns the active Profile id for a User, creating one + a UserSetting row
  * on first access. Mirrors the legacy `db.values.currentProfileId` behaviour.
@@ -75,12 +100,13 @@ export const ensureActiveProfileId = async (userId: string): Promise<string> => 
     try {
       await prisma.userSetting.upsert({
         where: { userId },
-        create: { userId, currentProfileId: existing.id },
+        create: { userId, currentProfileId: existing.id, primaryGroupId: DEFAULT_GROUP_ID },
         update: { currentProfileId: existing.id },
       });
     } catch (err) {
       console.warn('[profiles.ensureActiveProfileId] failed to persist currentProfileId for existing profile:', err);
     }
+    await ensureDefaultMembershipForAccount(userId, existing.id);
     return existing.id;
   }
 
@@ -103,13 +129,14 @@ export const ensureActiveProfileId = async (userId: string): Promise<string> => 
   try {
     await prisma.userSetting.upsert({
       where: { userId },
-      create: { userId, currentProfileId: created.id },
+      create: { userId, currentProfileId: created.id, primaryGroupId: DEFAULT_GROUP_ID },
       update: { currentProfileId: created.id },
     });
   } catch (err) {
     console.warn('[profiles.ensureActiveProfileId] failed to persist currentProfileId for new profile:', err);
   }
 
+  await ensureDefaultMembershipForAccount(userId, created.id);
   return created.id;
 };
 

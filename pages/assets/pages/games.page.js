@@ -223,8 +223,8 @@
       window.location.href = 'groups.html?action=create&return=create-game';
       return;
     }
-    TOAST.info('Start by joining the Default Group. That unlocks the Default Game and Create Game.');
-    window.location.href = 'groups.html?onboarding=join-default';
+    TOAST.info('Your default group is being prepared. Please refresh and try again.');
+    window.location.href = 'groups.html';
   }
 
   function canUploadCreation(profileId) {
@@ -2385,8 +2385,8 @@
       filtered = games.filter(g => {
         if (!g || typeof g !== 'object') return false;
         if (g.privacy === 'private') return false;
-        const canManage = !g.ownerProfileId || g.ownerProfileId === activeProfileId;
-        if (canManage) return true;
+        const isOwned = !!g.ownerProfileId && g.ownerProfileId === activeProfileId;
+        if (isOwned) return true;
         if (!ESHU_DB.isEntityActive(g)) return false;
         return getGameMembers(g).includes(activeProfileId);
       });
@@ -2395,8 +2395,8 @@
       filtered = games.filter(g => {
         if (!g || typeof g !== 'object') return false;
         if (g.privacy !== 'private') return false;
-        const canManage = !g.ownerProfileId || g.ownerProfileId === activeProfileId;
-        if (canManage) return true;
+        const isOwned = !!g.ownerProfileId && g.ownerProfileId === activeProfileId;
+        if (isOwned) return true;
         if (!ESHU_DB.isEntityActive(g)) return false;
         return getGameMembers(g).includes(activeProfileId);
       });
@@ -2405,13 +2405,12 @@
       // - Owner branch keeps deleted/burned visible so restore/delete actions
       //   stay available to the owner.
       // - Member branch shows only active games (members shouldn't see other
-      //   owners' tombstones). This is what surfaces game_default after the
-      //   player joins group_default — its ownerProfileId is null and the
-      //   profile is attached via memberProfileIds.
+      //   owners' tombstones). System games with no owner only appear here
+      //   when the active profile is an explicit member.
       filtered = games.filter(g => {
         if (!g || typeof g !== 'object') return false;
-        const canManage = !g.ownerProfileId || g.ownerProfileId === activeProfileId;
-        if (canManage) return true;
+        const isOwned = !!g.ownerProfileId && g.ownerProfileId === activeProfileId;
+        if (isOwned) return true;
         if (!ESHU_DB.isEntityActive(g)) return false;
         return getGameMembers(g).includes(activeProfileId);
       });
@@ -2439,7 +2438,7 @@
       } else if (scope === 'all') {
         gamesList.innerHTML = '<div class="u-card-empty">No games exist yet. Be the first to create one!</div>';
       } else {
-        gamesList.innerHTML = '<div class="u-card-empty">No games yet. Join the Default Group to unlock the Default Game and Create Game.</div>';
+        gamesList.innerHTML = '<div class="u-card-empty">No games yet. Create or join a group to host games.</div>';
       }
       completeListLoadingWhenReady();
       return;
@@ -2469,7 +2468,7 @@
         displayName = 'BOOTED';
       }
 
-      const isOwner = !game.ownerProfileId || game.ownerProfileId === activeProfileId;
+      const isOwner = !!game.ownerProfileId && game.ownerProfileId === activeProfileId;
       const isMember = getGameMembers(game).includes(activeProfileId);
       const showJoin = !isOwner && !isMember && game.privacy !== 'private' && !isDeleted && !isBurned;
       const DEFAULT_GAME_ID = 'game_default';
@@ -4731,9 +4730,6 @@
       const game = getGameById(gameId);
       if (game) {
         openGameFrontModal(gameId);
-        if (urlParams.get('onboarding') === 'joined' && gameId === 'game_default' && typeof TOAST !== 'undefined') {
-          TOAST.success('Default Game unlocked. Upload here, or use Create Game to make your own. After one upload, Comments unlock.');
-        }
         window.history.replaceState({}, document.title, window.location.pathname);
         return true;
       }

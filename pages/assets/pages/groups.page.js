@@ -17,6 +17,7 @@
   const PENCIL_SVG = '<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 000-1.41l-2.34-2.34a1 1 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>';
   const DEFAULT_GROUP_ID = 'group_default';
   const DEFAULT_GAME_ID = 'game_default';
+  const DEFAULT_GROUP_DESCRIPTION = 'This is the group that users will join by default.';
 
   // Initialize XP Counter
   const xpCounter = document.getElementById('xpCounter');
@@ -145,15 +146,17 @@
 
   function createDefaultGroup() {
     const now = Date.now();
+    const activeProfileId = getActiveProfileId();
+    const memberProfileIds = activeProfileId ? [activeProfileId] : [];
     return {
       id: DEFAULT_GROUP_ID,
       name: 'GROUP',
-      description: 'Default Group',
+      description: DEFAULT_GROUP_DESCRIPTION,
       type: 'social',
       privacy: 'public',
       image: null,
-      members: 0,
-      memberProfileIds: [],
+      members: memberProfileIds.length,
+      memberProfileIds,
       createdAt: now,
       updatedAt: now,
       ownerProfileId: null,
@@ -176,11 +179,15 @@
 
     const existing = groups[defaultIndex] || {};
     const normalizedMemberProfileIds = Array.isArray(existing.memberProfileIds) ? existing.memberProfileIds.filter(Boolean) : [];
+    const activeProfileId = getActiveProfileId();
+    if (activeProfileId && !normalizedMemberProfileIds.includes(activeProfileId)) {
+      normalizedMemberProfileIds.push(activeProfileId);
+    }
     const healed = {
       ...existing,
       id: DEFAULT_GROUP_ID,
       name: 'GROUP',
-      description: 'Default Group',
+      description: DEFAULT_GROUP_DESCRIPTION,
       type: existing.type || 'social',
       privacy: existing.privacy || 'public',
       image: existing.image || null,
@@ -234,11 +241,7 @@
   }
 
   function shouldShowOnboardingJoinGroup(group, profileId) {
-    return !!group &&
-      group.id === DEFAULT_GROUP_ID &&
-      group.status !== 'deleted' &&
-      group.status !== 'burned' &&
-      !isGroupMember(group, profileId);
+    return false;
   }
 
   function ensureDefaultOnboardingGame(profileId) {
@@ -253,7 +256,7 @@
       ...existing,
       id: DEFAULT_GAME_ID,
       name: 'Default Game',
-      description: 'Upload your first onboarding creations here.',
+      description: 'Upload your first creation here.',
       rules: 'Upload image assets. Each upload awards XP toward the next unlock.',
       hostGroupId: DEFAULT_GROUP_ID,
       hostGroupName: 'GROUP',
@@ -615,11 +618,6 @@
     if (wasMember) {
       TOAST.info('Already a member of this group');
     } else {
-      if (groupId === DEFAULT_GROUP_ID) {
-        TOAST.success('Default Group joined. Default Game and Create Game are unlocked.');
-        window.location.href = `games.html?view=front&gameId=${encodeURIComponent(DEFAULT_GAME_ID)}&sourceGroupId=${encodeURIComponent(DEFAULT_GROUP_ID)}&onboarding=joined`;
-        return;
-      }
       TOAST.success('Joined group. Game creation is now unlocked.');
     }
     } finally {
@@ -829,20 +827,6 @@
   function checkUrlActions() {
     const params = new URLSearchParams(window.location.search);
     const action = params.get('action');
-    const onboarding = params.get('onboarding');
-
-    if (onboarding === 'join-default') {
-      selectGroup(DEFAULT_GROUP_ID);
-      setTimeout(() => {
-        const card = groupsList ? groupsList.querySelector(`.u-card[data-id="${DEFAULT_GROUP_ID}"]`) : null;
-        if (card) card.classList.add('expanded');
-      }, 0);
-      if (typeof TOAST !== 'undefined') {
-        TOAST.info('Start here: join the Default Group to unlock the Default Game and Create Game.');
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
 
     if (action === 'create') {
       openCreateMode();
@@ -1078,7 +1062,7 @@
       if (showInvite) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); inviteToGroup('${group.id}')">Invite</button>`;
       if (canLeaveCard) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); leaveGroup('${group.id}')">Leave</button>`;
       if (showBootBurn) expandBtns += `<button class="u-card-btn" onclick="event.stopPropagation(); bootGroup('${group.id}')">Restore</button><button class="u-card-btn danger" onclick="event.stopPropagation(); burnGroup('${group.id}')">Delete</button>`;
-      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">${isOnboardingJoin ? 'Join Default Group' : 'Join'}</button>`;
+      if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">Join</button>`;
 
       return `
         <div class="u-card ${isSelected ? 'selected' : ''} ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}" data-id="${group.id}">
@@ -1243,7 +1227,7 @@
       }
       if (previewJoinBtn) {
         previewJoinBtn.style.display = canJoin ? 'inline-flex' : 'none';
-        previewJoinBtn.textContent = shouldShowOnboardingJoinGroup(group, activeProfileId) ? 'Join Default Group' : 'Join';
+        previewJoinBtn.textContent = 'Join';
       }
       if (previewInviteBtn) {
         previewInviteBtn.style.display = canInvite ? 'inline-flex' : 'none';

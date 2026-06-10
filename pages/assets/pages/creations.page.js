@@ -246,7 +246,7 @@
       ...existing,
       id: DEFAULT_GAME_ID,
       name: 'Default Game',
-      description: 'Upload your first onboarding creations here.',
+      description: 'Upload your first creation here.',
       rules: 'Upload image assets. Each upload awards XP toward the next unlock.',
       hostGroupId: DEFAULT_GROUP_ID,
       hostGroupName: 'GROUP',

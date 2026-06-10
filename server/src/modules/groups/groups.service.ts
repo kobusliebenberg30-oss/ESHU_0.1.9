@@ -2,11 +2,21 @@ import type { Group, Prisma } from '@prisma/client';
 import { prisma } from '../../db/client.js';
 import { HttpError } from '../../middleware/error.js';
 import { statusFromWire, statusToWire } from '../../lib/status.js';
-import { awardToProfile as xpAwardToProfile } from '../xp/xp.service.js';
 import type { CreateGroupInput, UpdateGroupInput } from './groups.schemas.js';
 
 export const DEFAULT_GROUP_ID = 'group_default';
 export const DEFAULT_GAME_ID = 'game_default';
+export const DEFAULT_GROUP_DESCRIPTION = 'This is the group that users will join by default.';
+export const DEFAULT_GAME_DESCRIPTION = 'Upload your first creation here.';
+
+export const grantDefaultOnboardingXp = async (profileId: string) => {
+  try {
+    const xp = await import('../xp/xp.service.js');
+    await xp.awardToProfile(profileId, 'game_created', DEFAULT_GAME_ID);
+  } catch (err) {
+    console.warn('[groups.default] onboarding XP grant failed:', err);
+  }
+};
 
 export const ensureDefaultOnboardingContent = async (
   profileId?: string,
@@ -18,7 +28,7 @@ export const ensureDefaultOnboardingContent = async (
       id: DEFAULT_GROUP_ID,
       ownerProfileId: null,
       name: 'GROUP',
-      description: 'Default Group',
+      description: DEFAULT_GROUP_DESCRIPTION,
       type: 'social',
       privacy: 'public',
       status: 'ACTIVE',
@@ -29,7 +39,7 @@ export const ensureDefaultOnboardingContent = async (
     update: {
       ownerProfileId: null,
       name: 'GROUP',
-      description: 'Default Group',
+      description: DEFAULT_GROUP_DESCRIPTION,
       type: 'social',
       privacy: 'public',
       status: 'ACTIVE',
@@ -45,7 +55,7 @@ export const ensureDefaultOnboardingContent = async (
       hostGroupId: DEFAULT_GROUP_ID,
       hostGroupName: 'GROUP',
       name: 'Default Game',
-      description: 'Upload your first onboarding creations here.',
+      description: DEFAULT_GAME_DESCRIPTION,
       rules: 'Upload image assets. Each upload awards XP toward the next unlock.',
       privacy: 'public',
       gameType: 'book',
@@ -63,7 +73,7 @@ export const ensureDefaultOnboardingContent = async (
       hostGroupId: DEFAULT_GROUP_ID,
       hostGroupName: 'GROUP',
       name: 'Default Game',
-      description: 'Upload your first onboarding creations here.',
+      description: DEFAULT_GAME_DESCRIPTION,
       rules: 'Upload image assets. Each upload awards XP toward the next unlock.',
       privacy: 'public',
       gameType: 'book',
@@ -79,6 +89,13 @@ export const ensureDefaultOnboardingContent = async (
   });
 
   if (profileId) {
+    await client.groupMember.upsert({
+      where: { groupId_profileId: { groupId: DEFAULT_GROUP_ID, profileId } },
+      create: { groupId: DEFAULT_GROUP_ID, profileId },
+      update: {},
+    });
+    const total = await client.groupMember.count({ where: { groupId: DEFAULT_GROUP_ID } });
+    await client.group.update({ where: { id: DEFAULT_GROUP_ID }, data: { members: total } });
     await client.gameMember.upsert({
       where: { gameId_profileId: { gameId: DEFAULT_GAME_ID, profileId } },
       create: { gameId: DEFAULT_GAME_ID, profileId },
@@ -303,10 +320,8 @@ export const join = async (id: string, profileId: string) => {
     // double-award. Failures are swallowed: XP is a UX bonus, not a
     // correctness constraint on group membership.
     try {
-      await xpAwardToProfile(profileId, 'game_created', DEFAULT_GAME_ID);
-    } catch (err) {
-      console.warn('[groups.join] onboarding XP grant failed:', err);
-    }
+      await grantDefaultOnboardingXp(profileId);
+    } catch {}
 
     const fresh = await prisma.group.findUniqueOrThrow({ where: { id } });
     return toWire(fresh, await loadMemberIds(id));
