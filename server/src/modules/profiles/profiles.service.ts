@@ -1,4 +1,5 @@
 import { prisma } from '../../db/client.js';
+import { EntityStatus } from '@prisma/client';
 import {
   creationToLegacy,
   gameToLegacy,
@@ -8,6 +9,7 @@ import {
   loadGroupMembers,
   profileToLegacy,
 } from '../sync/sync.service.js';
+import { toWire as commentToWire } from '../comments/comments.service.js';
 import { HttpError } from '../../middleware/error.js';
 import {
   DEFAULT_GROUP_ID,
@@ -228,6 +230,14 @@ export const getPublicProfileContent = async (profileId: string) => {
     orderBy: [{ timestamp: 'desc' }, { createdAt: 'desc' }],
   });
 
+  const comments = await prisma.comment.findMany({
+    where: {
+      authorProfileId: profileId,
+      status: EntityStatus.ACTIVE,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
   const [groupMembersMap, gameMembersMap, gameTimingExtensionsMap] = await Promise.all([
     loadGroupMembers(groupIds),
     loadGameMembers(gameIds),
@@ -245,6 +255,7 @@ export const getPublicProfileContent = async (profileId: string) => {
       ),
     ),
     creations: creations.map(creationToLegacy),
+    comments: comments.map(commentToWire),
   };
 };
 

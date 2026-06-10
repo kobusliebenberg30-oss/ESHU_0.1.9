@@ -81,13 +81,12 @@
     if (!ownId) return;
     selectedProfileId = ownId;
     currentTab = 'player';
+    refreshState();
     tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
     updateSidebarActiveState();
     renderProfilePanel();
     renderCurrentTab();
-    if (typeof TOAST !== 'undefined') {
-      TOAST.success('Returned to your profile');
-    }
+    if (typeof TOAST !== 'undefined') TOAST.success('MY PROFILE');
   }
 
   function getSelectedProfileView() {
@@ -213,12 +212,17 @@
     publicProfileContentLoading.add(profileId);
     try {
       const response = await window.ESHU_API.profiles.publicContent(profileId);
-      publicProfileContentById.set(profileId, {
+      const content = {
         profile: response?.profile || null,
         groups: Array.isArray(response?.groups) ? response.groups : [],
         games: Array.isArray(response?.games) ? response.games : [],
         creations: Array.isArray(response?.creations) ? response.creations : [],
-      });
+        comments: [],
+      };
+      content.comments = (Array.isArray(response?.comments) ? response.comments : [])
+        .map((comment) => normalizePublicProfileComment(comment, content))
+        .filter(Boolean);
+      publicProfileContentById.set(profileId, content);
       renderProfilePanel();
       renderCurrentTab();
     } catch (err) {
@@ -226,6 +230,38 @@
     } finally {
       publicProfileContentLoading.delete(profileId);
     }
+  }
+
+  function normalizePublicProfileComment(comment, content) {
+    if (!comment || typeof comment !== 'object') return null;
+    const targetKind = String(comment.targetKind || '').toLowerCase();
+    const targetId = comment.targetId || null;
+    const creation = targetKind === 'creation'
+      ? (content.creations || []).find((item) => item && item.id === targetId)
+      : null;
+    const game = targetKind === 'game'
+      ? (content.games || []).find((item) => item && item.id === targetId)
+      : null;
+    const group = targetKind === 'group'
+      ? (content.groups || []).find((item) => item && item.id === targetId)
+      : null;
+    return {
+      id: comment.id,
+      text: comment.text || '',
+      status: comment.status || 'active',
+      likedBy: Array.isArray(comment.likedBy) ? comment.likedBy : [],
+      followedBy: Array.isArray(comment.followedBy) ? comment.followedBy : [],
+      authorProfileId: comment.authorProfileId || null,
+      authorName: content.profile?.name || 'Player',
+      timestamp: comment.createdAt || comment.timestamp || null,
+      creationId: targetKind === 'creation' ? targetId : null,
+      gameId: targetKind === 'game' ? targetId : null,
+      groupId: targetKind === 'group' ? targetId : null,
+      creationName: creation?.name || creation?.title || '',
+      gameName: game?.name || game?.title || '',
+      groupName: group?.name || group?.title || '',
+      entityType: targetKind || 'comment',
+    };
   }
 
   function canManageEntity(entity) {
@@ -850,7 +886,7 @@
         scopedGroups: publicContent.groups || [],
         scopedGames: publicContent.games || [],
         scopedCreations: publicContent.creations || [],
-        scopedComments: comments.filter(c => itemBelongsToProfile(c, profileId)),
+        scopedComments: publicContent.comments || [],
         scopedLikedItems: likedItems,
         scopedFollowedItems: followedItems
       };
@@ -1033,6 +1069,9 @@
       
       avatar.addEventListener('click', () => {
         selectedProfileId = profile.id;
+        currentTab = 'player';
+        refreshState();
+        tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
         updateSidebarActiveState();
         loadPublicProfileContent(selectedProfileId);
         renderProfilePanel();
@@ -1071,8 +1110,8 @@
     let actionsContainer = document.getElementById('profileActionButtons');
     if (actionsContainer) actionsContainer.remove();
 
-    // Other-player profiles are intentionally read-only and quiet.
-    // The subtle back link below is the only profile-level action.
+    // Other-player profiles stay read-only. The pinned arched avatar is the
+    // natural way back to the current user's own profile.
   }
 
   function toggleProfileLike(profileId, btnElement) {
@@ -1171,7 +1210,7 @@
     }
     if (profileViewMode) {
       if (readOnlyView) {
-        profileViewMode.textContent = 'viewing profile';
+        profileViewMode.textContent = 'VIEW MODE';
         profileViewMode.classList.remove('my-profile-badge');
       } else {
         profileViewMode.textContent = 'MY PROFILE';
@@ -1179,25 +1218,9 @@
       }
     }
 
-    // Close/Back button when viewing another profile
+    // Returning to your profile is handled by the pinned arched avatar.
     let closeProfileBtn = document.getElementById('closeProfileBtn');
-    if (readOnlyView) {
-      currentTab = 'player';
-      tabButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.tab === currentTab));
-      if (!closeProfileBtn) {
-        closeProfileBtn = document.createElement('button');
-        closeProfileBtn.id = 'closeProfileBtn';
-        closeProfileBtn.className = 'profile-back-link';
-        closeProfileBtn.textContent = 'back to my profile';
-        closeProfileBtn.addEventListener('click', resetToOwnProfile);
-        // Insert after the view mode element
-        if (profileViewMode && profileViewMode.parentNode) {
-          profileViewMode.parentNode.insertBefore(closeProfileBtn, profileViewMode.nextSibling);
-        }
-      }
-    } else if (closeProfileBtn) {
-      closeProfileBtn.remove();
-    }
+    if (closeProfileBtn) closeProfileBtn.remove();
 
     // Profile image
     const profileImage = document.getElementById('profileImage');
@@ -1455,9 +1478,9 @@
   function renderCurrentTab() {
     const { scopedGroups, scopedGames, scopedCreations, scopedComments, scopedLikedItems, scopedFollowedItems } = getScopedData(selectedProfileId);
     if (mainContainer) {
-      mainContainer.classList.toggle('profile-non-player-tab', currentTab !== 'player');
+      mainContainer.classList.toggle('profile-non-player-tab', currentTab !== 'player' && !isReadOnlyProfileView());
     }
-    if (currentTab === 'player') {
+    if (currentTab === 'player' || isReadOnlyProfileView()) {
       renderAvatarSidebar();
     }
 
