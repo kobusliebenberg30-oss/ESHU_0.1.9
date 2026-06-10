@@ -352,7 +352,7 @@
 
   function getGameVoteCapForProfile(game) {
     if (!game?.id) return 0;
-    return getGameCreationsForProfile(game, { limit: 5000 }).length;
+    return getGameCreationsForProfile(game).length;
   }
 
   function getRemainingVotesForProfile(game) {
@@ -1038,7 +1038,7 @@
   }
 
   function getGameCreationsForProfile(game, options = {}) {
-    const { search = '', limit = 50 } = options;
+    const { search = '', limit = Infinity } = options;
     const activeProfileId = getActiveProfileId();
     const groups = STATE.get('groups') || [];
     const query = search.trim().toLowerCase();
@@ -1059,9 +1059,9 @@
       });
     }
 
-    return filtered
-      .sort((a, b) => (a.createdAt || a.timestamp || 0) - (b.createdAt || b.timestamp || 0))
-      .slice(0, limit);
+    const sorted = filtered
+      .sort((a, b) => (a.createdAt || a.timestamp || 0) - (b.createdAt || b.timestamp || 0));
+    return Number.isFinite(limit) ? sorted.slice(0, limit) : sorted;
   }
 
   function buildGameFrontReturnUrl(gameId) {
@@ -2817,7 +2817,7 @@
     // Title and stats
     if (gfGameTitle) gfGameTitle.textContent = game.name || 'Untitled Game';
     
-    const gameCreations = getGameCreationsForProfile(game, { limit: 5000 });
+    const gameCreations = getGameCreationsForProfile(game);
     const activeCreations = gameCreations.filter(c => c.status !== 'deleted' && c.status !== 'burned');
     const remainingVotes = getRemainingVotesForProfile(game);
     const playersSet = new Set(activeCreations.map(c => getCreationOwnerProfileId(c) || getCreationAuthorName(c)));
@@ -3154,7 +3154,7 @@
     const filterVal = filterInput ? filterInput.value : 'all';
     const sortVal = sortInput ? sortInput.value : 'recent';
     const activeProfileId = getActiveProfileId();
-    let gameCreations = getGameCreationsForProfile(game, { limit: 50 });
+    let gameCreations = getGameCreationsForProfile(game);
 
     // Filter
     if (filterVal === 'liked') {
@@ -3188,7 +3188,7 @@
     }
 
     if (countEl) {
-      countEl.textContent = `${gameCreations.length} / 50`;
+      countEl.textContent = `${gameCreations.length}`;
     }
 
     if (gameCreations.length === 0) {
@@ -3335,40 +3335,68 @@
 
   }
 
-  window.clearGameCreation = function(creationId, gameId) {
+  async function persistGameCreationStatus(creation, status) {
+    const updated = { ...creation, status };
+    if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && window.ESHU_API?.creations?.update) {
+      const saved = await ESHU_SYNC.mutate({
+        entity: 'creations',
+        call: () => ESHU_API.creations.update(creation.id, { status }),
+        pick: (resp) => {
+          const serverCreation = resp && resp.creation ? resp.creation : resp;
+          return { ...updated, ...serverCreation };
+        },
+        refresh: true,
+      });
+      return saved || updated;
+    }
+    if (window.ESHU_SYNC && typeof ESHU_SYNC.applyEntityResponse === 'function') {
+      ESHU_SYNC.applyEntityResponse('creations', updated);
+    }
+    return updated;
+  }
+
+  async function applyGameCreationStatus(creationId, gameId, status) {
     const creations = STATE.get('creations') || [];
     const idx = creations.findIndex(c => c.id === creationId);
-    if (idx === -1) return;
+    if (idx === -1) return null;
     const activeProfileId = getActiveProfileId();
     const ownerId = getCreationOwnerProfileId(creations[idx]);
+    const actionName = status === 'active' ? 'restore' : status === 'burned' ? 'burn' : 'boot';
     if (ownerId && ownerId !== activeProfileId) {
-      TOAST.error('Only the creation owner can boot this creation');
-      return;
+      TOAST.error(`Only the creation owner can ${actionName} this creation`);
+      return null;
     }
-    const next = [...creations];
-    next[idx] = { ...next[idx], status: 'deleted' };
+
+    let savedCreation;
+    try {
+      savedCreation = await persistGameCreationStatus(creations[idx], status);
+    } catch (err) {
+      console.warn('[games.creation-status] failed:', err);
+      TOAST.error('Could not update this creation. Please try again.');
+      return null;
+    }
+
+    const latest = STATE.get('creations') || creations;
+    const next = latest.map(c => c && c.id === creationId ? { ...c, ...savedCreation } : c);
     STATE.set('creations', next);
-    TOAST.info('Creation booted - Boot to restore or Delete permanently');
     const game = gameId ? getGameById(gameId) : null;
-    if (game) { populateCreationsTab(game); populateGameTab(game); }
+    if (game) {
+      populateCreationsTab(game);
+      populateGameTab(game);
+    }
+    return savedCreation;
+  }
+
+  window.clearGameCreation = async function(creationId, gameId) {
+    const saved = await applyGameCreationStatus(creationId, gameId, 'deleted');
+    if (!saved) return;
+    TOAST.info('Creation booted - Boot to restore or Delete permanently');
   };
 
-  window.bootGameCreation = function(creationId, gameId) {
-    const creations = STATE.get('creations') || [];
-    const idx = creations.findIndex(c => c.id === creationId);
-    if (idx === -1) return;
-    const activeProfileId = getActiveProfileId();
-    const ownerId = getCreationOwnerProfileId(creations[idx]);
-    if (ownerId && ownerId !== activeProfileId) {
-      TOAST.error('Only the creation owner can restore this creation');
-      return;
-    }
-    const next = [...creations];
-    next[idx] = { ...next[idx], status: 'active' };
-    STATE.set('creations', next);
+  window.bootGameCreation = async function(creationId, gameId) {
+    const saved = await applyGameCreationStatus(creationId, gameId, 'active');
+    if (!saved) return;
     TOAST.success('Creation restored!');
-    const game = gameId ? getGameById(gameId) : null;
-    if (game) { populateCreationsTab(game); populateGameTab(game); }
   };
 
   window.burnGameCreation = async function(creationId, gameId) {
@@ -3383,12 +3411,9 @@
     }
     const yes = await MODAL.confirm({ title: 'Burn Creation', message: 'Delete (burn) this creation permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
-    const next = [...creations];
-    next[idx] = { ...next[idx], status: 'burned' };
-    STATE.set('creations', next);
+    const saved = await applyGameCreationStatus(creationId, gameId, 'burned');
+    if (!saved) return;
     TOAST.error('Creation burned!');
-    const game = gameId ? getGameById(gameId) : null;
-    if (game) { populateCreationsTab(game); populateGameTab(game); }
   };
 
   function toggleChamferOverlay(forceState) {

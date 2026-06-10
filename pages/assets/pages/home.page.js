@@ -1840,7 +1840,7 @@
         return;
       }
 
-      filtered.slice(0, 50).forEach((creation, index) => {
+      filtered.forEach((creation, index) => {
         const card = createCreationCard(creation, index);
         playerContent.appendChild(card);
       });
@@ -1939,9 +1939,9 @@
         return;
       }
 
-      if (gamesCountEl) gamesCountEl.textContent = `${Math.min(filtered.length, 50)} / ${scopedGames.length}`;
+      if (gamesCountEl) gamesCountEl.textContent = `${filtered.length} / ${scopedGames.length}`;
 
-      filtered.slice(0, 50).forEach(game => {
+      filtered.forEach(game => {
         const hostGroup = getScopedData(selectedProfileId).scopedGroups.find(g => g.id === game.hostGroupId);
         const isDeleted = game.status === 'deleted' || game.status === 'booted';
         const isBurned = game.status === 'burned';
@@ -2054,10 +2054,10 @@
         return;
       }
 
-      const shown = Math.min(filtered.length, 50);
+      const shown = filtered.length;
       if (creationsCountEl) creationsCountEl.textContent = `${shown} / ${scopedCreations.length}`;
 
-      filtered.slice(0, 50).forEach(creation => {
+      filtered.forEach(creation => {
         const game = games.find(g => g.id === creation.hostGameId);
         const title = creation.name || creation.title || 'Untitled';
         const author = creation.authorName || creation.author || 'Unknown';
@@ -2330,10 +2330,10 @@
         return;
       }
 
-      const shown = Math.min(filtered.length, 50);
+      const shown = filtered.length;
       if (countEl) countEl.textContent = `${shown} / ${scopedComments.length}`;
 
-      filtered.slice(0, 50).forEach(comment => {
+      filtered.forEach(comment => {
         const isDeleted = comment.status === 'deleted';
         const isBurned = comment.status === 'burned';
         const canManage = canManageEntity(comment);
@@ -2475,10 +2475,10 @@
         return;
       }
 
-      const shown = Math.min(filtered.length, 50);
+      const shown = filtered.length;
       if (countEl) countEl.textContent = `${shown} / ${items.length}`;
 
-      filtered.slice(0, 50).forEach(item => {
+      filtered.forEach(item => {
         const isBurned = item.status === 'burned';
         const isDeleted = item.status === 'deleted';
         const type = item.type || 'unknown';
@@ -2591,10 +2591,10 @@
         return;
       }
 
-      const shown = Math.min(filtered.length, 50);
+      const shown = filtered.length;
       if (countEl) countEl.textContent = `${shown} / ${items.length}`;
 
-      filtered.slice(0, 50).forEach(item => {
+      filtered.forEach(item => {
         const isBurned = item.status === 'burned';
         const isDeleted = item.status === 'deleted';
         const type = item.type || 'unknown';

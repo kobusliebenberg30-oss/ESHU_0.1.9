@@ -22,6 +22,8 @@
   const EXPORT_PASSWORD_SHA256 = 'c2d363c54df21d3d3da733ed5f5935fa355d501a638d5e289a82c29c4d4ad49b';
   const runtime = window.ESHU_RUNTIME;
   let selectedProfileImage = null;
+  let profileFormTouched = false;
+  let profileHydrationRequest = 0;
 
   // Load profile and XP
   ESHU_DB.ensure();
@@ -201,6 +203,10 @@
     }
   }
 
+  function markProfileFormTouched() {
+    profileFormTouched = true;
+  }
+
   function loadFormFromActiveProfile() {
     const active = getActiveProfile();
     profileName.value = active?.name || ESHU_DB.getValue('profileName') || '';
@@ -251,7 +257,7 @@
     if (headerName) headerName.textContent = profile.name || 'Profile';
   }
 
-  async function hydrateFormFromServerProfile() {
+  async function hydrateFormFromServerProfile({ force = false } = {}) {
     if (!window.ESHU_API || !window.ESHU_API.profiles) return null;
     try {
       const resp = await window.ESHU_API.profiles.list();
@@ -259,7 +265,7 @@
       const profile = Array.isArray(list)
         ? (list.find((p) => p && p.id === resp.currentProfileId) || list[0])
         : null;
-      if (profile) applyProfileToForm(profile);
+      if (profile && (force || !profileFormTouched)) applyProfileToForm(profile);
       return profile || null;
     } catch (err) {
       console.warn('[profile] could not hydrate server profile:', err);
@@ -267,9 +273,31 @@
     }
   }
 
+  async function refreshProfileFormFromAvailableSources({ force = false } = {}) {
+    if (!force && profileFormTouched) return null;
+    const serverProfile = await hydrateFormFromServerProfile({ force });
+    if (serverProfile) return serverProfile;
+    if (!force && profileFormTouched) return null;
+    loadFormFromActiveProfile();
+    return getActiveProfile();
+  }
+
+  function scheduleProfileHydration(reason) {
+    const requestId = ++profileHydrationRequest;
+    window.setTimeout(() => {
+      if (requestId !== profileHydrationRequest) return;
+      refreshProfileFormFromAvailableSources().catch((err) => {
+        console.warn(`[profile] delayed hydration failed (${reason}):`, err);
+      });
+    }, 0);
+  }
+
   ensureDefaultProfile();
   loadFormFromActiveProfile();
-  hydrateFormFromServerProfile().catch(() => {});
+  refreshProfileFormFromAvailableSources().catch(() => {});
+  window.addEventListener('eshu:auth-success', () => scheduleProfileHydration('auth-success'));
+  window.addEventListener('eshu:remote-activated', () => scheduleProfileHydration('remote-activated'));
+  window.addEventListener('eshu:sync-success', () => scheduleProfileHydration('sync-success'));
   if (saveBtn) {
     saveBtn.textContent = 'Save Player';
   }
@@ -285,13 +313,17 @@
   }
   if (removeProfileImageBtn) {
     removeProfileImageBtn.addEventListener('click', () => {
+      markProfileFormTouched();
       selectedProfileImage = null;
       renderProfileImagePreview(null);
       if (profileImageInput) profileImageInput.value = '';
     });
   }
+  if (profileName) profileName.addEventListener('input', markProfileFormTouched);
+  if (profileDesc) profileDesc.addEventListener('input', markProfileFormTouched);
   if (profileImageInput) {
     profileImageInput.addEventListener('change', async (event) => {
+      markProfileFormTouched();
       const file = event.target.files && event.target.files[0];
       if (file) {
         try {
@@ -425,6 +457,7 @@
       const sSize = boxSize / s;
 
       ctx.drawImage(cropImg, sx, sy, sSize, sSize, 0, 0, outputSize, outputSize);
+      markProfileFormTouched();
       selectedProfileImage = canvas.toDataURL('image/jpeg', 0.85);
       renderProfileImagePreview(selectedProfileImage);
       if (cropOverlay) cropOverlay.classList.remove('open');
