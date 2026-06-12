@@ -1025,7 +1025,7 @@
       const ownerId = group.ownerProfileId || group.createdByProfileId || group.authorProfileId || group.authorId || null;
       const isOwner = !!activeProfileId && ownerId === activeProfileId;
       const isMember = isGroupMember(group, activeProfileId);
-      const isOnboardingJoin = shouldShowOnboardingJoinGroup(group, activeProfileId);
+      const isSystemDefault = group.id === DEFAULT_GROUP_ID || group.isSystemDefault === true;
       const isPrimary = group.id === primaryGroupId;
       const privacyLabel = group.privacy === 'private' ? 'Private' : 'Public';
       const privacyClass = group.privacy === 'private' ? 'private' : 'public';
@@ -1039,9 +1039,7 @@
       // Resolve creator name
       const ownerProfile = ownerId ? profiles.find(p => p.id === ownerId) : null;
       const creatorName = ownerProfile?.name || group.creatorName || 'Unknown';
-      const cardSubtitle = isOnboardingJoin
-        ? 'Step 1: join to unlock the Default Game and Create Game'
-        : `Group · by ${creatorName}`;
+      const cardSubtitle = `Group · by ${creatorName}`;
       const grpLiked = (group.likedBy || []).includes(activeProfileId);
       const grpFollowed = (group.followedBy || []).includes(activeProfileId);
 
@@ -1066,7 +1064,7 @@
       if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); joinGroup('${group.id}', this)">Join</button>`;
 
       return `
-        <div class="u-card ${isSelected ? 'selected' : ''} ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}" data-id="${group.id}">
+        <div class="u-card ${isSelected ? 'selected' : ''} ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}" data-id="${group.id}" data-system-default="${isSystemDefault ? 'true' : 'false'}">
           <div class="u-card-body">
             <div class="u-card-top-right">
               ${isPrimary ? '<span class="u-card-primary-badge">Primary Group</span>' : ''}

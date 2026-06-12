@@ -240,6 +240,12 @@ html[data-theme="dark"] .profile-view-mode.my-profile-badge {
 .u-card:hover {
   background: var(--bg-hover, #f5f5f5);
 }
+.u-card[data-system-default="true"] {
+  transition: none;
+}
+.u-card[data-system-default="true"]:hover {
+  background: var(--bg-card, #fff);
+}
 .u-card.selected {
   border-color: var(--accent-black, #111);
   background: var(--bg-hover, #f0f0f0);
@@ -305,6 +311,11 @@ img.game-placeholder-logo {
 .u-card-thumb:has(.game-placeholder-logo) {
   background: transparent;
   overflow: visible;
+}
+.u-card[data-system-default="true"] .u-card-thumb:has(.group-placeholder-logo),
+.u-card[data-system-default="true"] .u-card-thumb:has(.game-placeholder-logo) {
+  background: var(--bg-card, #fff);
+  overflow: hidden;
 }
 .u-card-thumb .hex-image-frame,
 .u-card-thumb .diamond-image-frame {

@@ -2469,6 +2469,7 @@
       const isMember = getGameMembers(game).includes(activeProfileId);
       const showJoin = !isOwner && !isMember && game.privacy !== 'private' && !isDeleted && !isBurned;
       const DEFAULT_GAME_ID = 'game_default';
+      const isSystemDefault = game.id === DEFAULT_GAME_ID || game.isSystemDefault === true;
       const showEditClear = isOwner && !isDeleted && !isBurned && game.id !== DEFAULT_GAME_ID;
       const showBootBurn = isOwner && isDeleted && !isBurned;
 
@@ -2487,7 +2488,7 @@
       if (showJoin) expandBtns += `<button class="u-card-btn accent" onclick="event.stopPropagation(); window.joinGame('${game.id}')">Join</button>`;
 
       return `
-        <div class="u-card ${isSelected ? 'selected' : ''} ${stateClass}" data-id="${game.id}">
+        <div class="u-card ${isSelected ? 'selected' : ''} ${stateClass}" data-id="${game.id}" data-system-default="${isSystemDefault ? 'true' : 'false'}">
           <div class="u-card-body">
             <div class="u-card-thumb">${iconContent}</div>
             <div class="u-card-content">
