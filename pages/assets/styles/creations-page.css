@@ -400,6 +400,39 @@
 .loading-text { font-size: 12px; font-weight: 600; color: #111; }
 
 /* ── Dark theme ──────────────────────────────────────────────── */
+html[data-theme="dark"] .cu-preview-wrap {
+  background: linear-gradient(180deg, #000000 0%, var(--dark-surface-1, #0b0b0b) 100%);
+}
+html[data-theme="dark"] .cu-tools,
+html[data-theme="dark"] .image-panel-header,
+html[data-theme="dark"] .edit-header,
+html[data-theme="dark"] .edit-footer,
+html[data-theme="dark"] .creation-edit-panel {
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
+}
+html[data-theme="dark"] .cu-tool-header {
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
+}
+html[data-theme="dark"] .cu-tool-header:hover {
+  background: var(--dark-surface-3, #1a1a1a);
+}
+html[data-theme="dark"] .cu-tool-panel {
+  background: var(--dark-surface-1, #0b0b0b);
+}
+html[data-theme="dark"] .cu-ratio-btn,
+html[data-theme="dark"] .cu-color-hex,
+html[data-theme="dark"] .cu-value {
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
+  color: var(--text-primary, #ffffff);
+}
+html[data-theme="dark"] .cu-ratio-btn.active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
 html[data-theme="dark"] .cu-btn-apply { background: #eee; color: #111; }
 html[data-theme="dark"] .cu-btn-apply:hover { background: #fff; }
 html[data-theme="dark"] .cu-upload-trigger { background: #eee; color: #111; }

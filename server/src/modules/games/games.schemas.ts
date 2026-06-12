@@ -37,7 +37,7 @@ export const createGameSchema = z.object({
   name: z.string().min(1).max(120),
   description: z.string().max(2000).optional(),
   rules: z.string().max(4000).optional(),
-  hostGroupId: z.string().nullable().optional(),
+  hostGroupId: z.string().min(1),
   hostGroupName: z.string().max(120).optional(),
   privacy: z.enum(['public', 'private']).optional(),
   gameType: z.string().max(40).optional(),

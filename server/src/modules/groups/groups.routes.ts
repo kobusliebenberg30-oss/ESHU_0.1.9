@@ -88,4 +88,22 @@ router.post('/:id/leave', async (req, res, next) => {
   }
 });
 
+router.post('/:id/like', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ group: await svc.toggleLike(req.params.id!, profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/follow', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ group: await svc.toggleFollow(req.params.id!, profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;

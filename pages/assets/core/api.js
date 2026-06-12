@@ -180,6 +180,8 @@
     create:  (input)   => json.post('/groups', input),
     update:  (id, p)   => json.patch('/groups/' + encodeURIComponent(id), p),
     remove:  (id, mode) => json.delete('/groups/' + encodeURIComponent(id) + qs({ mode })),
+    toggleLike:   (id) => json.post('/groups/' + encodeURIComponent(id) + '/like'),
+    toggleFollow: (id) => json.post('/groups/' + encodeURIComponent(id) + '/follow'),
     /**
      * Authoritative join: server inserts a GroupMember row for the session's
      * active profile. Idempotent — calling twice is a no-op. Returns the
@@ -199,6 +201,9 @@
     create:  (input)   => json.post('/games', input),
     update:  (id, p)   => json.patch('/games/' + encodeURIComponent(id), p),
     join:    (id)      => json.post('/games/' + encodeURIComponent(id) + '/join'),
+    toggleLike:   (id) => json.post('/games/' + encodeURIComponent(id) + '/like'),
+    toggleFollow: (id) => json.post('/games/' + encodeURIComponent(id) + '/follow'),
+    restore: (id)      => json.post('/games/' + encodeURIComponent(id) + '/restore'),
     remove:  (id, mode) => json.delete('/games/' + encodeURIComponent(id) + qs({ mode })),
     /**
      * Authoritative finalization. Owner submits rankings; server picks top
@@ -214,6 +219,8 @@
     get:     (id)      => json.get('/creations/' + encodeURIComponent(id)),
     create:  (input)   => json.post('/creations', input),
     update:  (id, p)   => json.patch('/creations/' + encodeURIComponent(id), p),
+    toggleLike:   (id) => json.post('/creations/' + encodeURIComponent(id) + '/like'),
+    toggleFollow: (id) => json.post('/creations/' + encodeURIComponent(id) + '/follow'),
     remove:  (id, mode) => json.delete('/creations/' + encodeURIComponent(id) + qs({ mode }))
   };
 

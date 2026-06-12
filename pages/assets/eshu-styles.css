@@ -83,6 +83,11 @@
   --bg-secondary: #000000;
   --bg-tertiary: #000000;
   --bg-inset: #000000;
+  --dark-surface-1: #0b0b0b;
+  --dark-surface-2: #121212;
+  --dark-surface-3: #1a1a1a;
+  --dark-border-strong: #3a3a3a;
+  --dark-border-soft: #242424;
 
   /* Text is pure white for primary, secondary AND tertiary. Only
      --text-muted stays slightly dimmed for placeholders / captions
@@ -115,7 +120,7 @@
   --neutral-btn: #334155;
   --neutral-btn-hover: #1e293b;
 
-  --loader-square-color: #000000;
+  --loader-square-color: #ffffff;
   --loader-square-bg: transparent;
  }
 
@@ -1791,8 +1796,6 @@ html[data-theme="dark"] .game-item,
 html[data-theme="dark"] .creation-item,
 html[data-theme="dark"] .item,
 html[data-theme="dark"] .gf-body,
-html[data-theme="dark"] .gf-game-right,
-html[data-theme="dark"] .gf-chamfer-content,
 html[data-theme="dark"] .grf-body,
 html[data-theme="dark"] .eshu-page-wrap,
 html[data-theme="dark"] .eshu-overlay,
@@ -1909,4 +1912,53 @@ html[data-theme="dark"] .eshu-logo {
 html[data-theme="dark"] .diamond-image-overlay g,
 html[data-theme="dark"] .hex-image-overlay g {
   stroke: #ffffff !important;
+}
+
+/* DARK MODE — targeted contrast exceptions after the broad forcing block.
+   Keep the page backdrop black, but lift repeated card/panel components so
+   controls and image frames do not disappear into black-on-black surfaces. */
+html[data-theme="dark"] .u-card,
+html[data-theme="dark"] .u-thumb-card,
+html[data-theme="dark"] .creation-card,
+html[data-theme="dark"] .group-item,
+html[data-theme="dark"] .game-item,
+html[data-theme="dark"] .message-item,
+html[data-theme="dark"] .toast-history-item,
+html[data-theme="dark"] .eshu-comment-item,
+html[data-theme="dark"] .comment-section,
+html[data-theme="dark"] .form-section {
+  background-color: var(--dark-surface-1, #0b0b0b) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
+}
+
+html[data-theme="dark"] .u-card:hover,
+html[data-theme="dark"] .group-item:hover,
+html[data-theme="dark"] .game-item:hover,
+html[data-theme="dark"] .message-item:hover,
+html[data-theme="dark"] .toast-history-item:hover {
+  background-color: var(--dark-surface-2, #121212) !important;
+  border-color: var(--dark-border-strong, #3a3a3a) !important;
+}
+
+html[data-theme="dark"] .u-card-icon,
+html[data-theme="dark"] .u-card-thumb,
+html[data-theme="dark"] .list-item-icon,
+html[data-theme="dark"] .split-item-icon,
+html[data-theme="dark"] .game-item-icon,
+html[data-theme="dark"] .group-item-icon,
+html[data-theme="dark"] .award-diamond-empty,
+html[data-theme="dark"] .global-play-item,
+html[data-theme="dark"] .comment-action-btn,
+html[data-theme="dark"] .comment-option-btn,
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  background-color: var(--dark-surface-2, #121212) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
 }

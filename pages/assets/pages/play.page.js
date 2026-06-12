@@ -2,22 +2,22 @@
   'use strict';
 
   const playButton = document.getElementById('playButton');
-  const COLOR_INTERVAL_MS = 20000;
+  const COLOR_INTERVAL_MS = 6500;
   let colorTimer = null;
 
   function enterApplication() {
     window.location.href = 'home.html';
   }
 
-  function randomRelaxedColor() {
+  function randomVividColor() {
     const hue = Math.floor(Math.random() * 360);
-    const saturation = 48 + Math.floor(Math.random() * 18);
-    const lightness = 78 + Math.floor(Math.random() * 12);
+    const saturation = 82 + Math.floor(Math.random() * 19);
+    const lightness = 38 + Math.floor(Math.random() * 21);
     return `hsl(${hue} ${saturation}% ${lightness}%)`;
   }
 
   function cycleLandingColor() {
-    document.body.style.backgroundColor = randomRelaxedColor();
+    document.body.style.backgroundColor = randomVividColor();
   }
 
   function startLandingColorCycle() {

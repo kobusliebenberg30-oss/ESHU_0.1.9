@@ -88,17 +88,33 @@
       var flat = localStorage.getItem('eshu_theme');
       if (flat === 'dark' || flat === 'light') return flat;
     } catch {}
+    try {
+      var uiPrefsRaw = localStorage.getItem('eshu_ui_prefs');
+      if (uiPrefsRaw) {
+        var prefs = JSON.parse(uiPrefsRaw);
+        if (prefs && (prefs.uiTheme === 'dark' || prefs.uiTheme === 'light')) return prefs.uiTheme;
+      }
+    } catch {}
     // Fallback for first-ever visit or migrated storage.
     const db = readDb();
     if (db && db.values && typeof db.values.uiTheme === 'string' && db.values.uiTheme) {
       return db.values.uiTheme;
     }
-    return 'dark';
+    return 'light';
   }
 
   function applyTheme(theme) {
-    if (theme) document.documentElement.setAttribute('data-theme', theme);
+    const normalized = theme === 'dark' ? 'dark' : 'light';
+    if (normalized) document.documentElement.setAttribute('data-theme', normalized);
     else document.documentElement.removeAttribute('data-theme');
+    try { localStorage.setItem('eshu_theme', normalized); } catch {}
+    try {
+      var raw = localStorage.getItem('eshu_ui_prefs');
+      var prefs = raw ? JSON.parse(raw) : {};
+      if (!prefs || typeof prefs !== 'object') prefs = {};
+      prefs.uiTheme = normalized;
+      localStorage.setItem('eshu_ui_prefs', JSON.stringify(prefs));
+    } catch {}
   }
 
   function applyHideBurned(hide) {

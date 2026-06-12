@@ -488,13 +488,13 @@
    DARK THEME — groups-page
    ============================ */
 html[data-theme="dark"] .group-item {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
   color: #ffffff;
 }
 html[data-theme="dark"] .group-item:hover {
-  background: #111111;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] .group-item.selected {
   background: #ffffff;
@@ -511,8 +511,8 @@ html[data-theme="dark"] .group-item.selected .group-item-icon {
   border-color: #000000;
 }
 html[data-theme="dark"] .group-item-icon {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .group-item-icon .group-placeholder-logo,
 html[data-theme="dark"] .group-item-icon img:not([src*="data:"]) {

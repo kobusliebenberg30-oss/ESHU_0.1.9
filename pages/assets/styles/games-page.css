@@ -1870,6 +1870,38 @@ html[data-theme="dark"] .gf-chamfer-toggle {
   border-color: #ffffff;
 }
 
+html[data-theme="dark"] .gf-chamfer-overlay .gf-chamfer-bg {
+  background: var(--dark-surface-2, #121212);
+}
+
+html[data-theme="dark"] .gf-chamfer-overlay .gf-chamfer-content {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .gf-chamfer-upload {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+html[data-theme="dark"] .gf-chamfer-upload:hover {
+  background: #e8e8e8;
+}
+
+html[data-theme="dark"] .gf-chamfer-play {
+  background: rgba(255, 255, 255, 0.03);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+html[data-theme="dark"] .gf-chamfer-play:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+html[data-theme="dark"] .gf-chamfer-overlay.minimized .gf-chamfer-bg {
+  background: var(--dark-surface-3, #1a1a1a);
+}
+
 /* Legacy maximise tab — superseded by unified toggle */
 .gf-chamfer-tab {
   display: none !important;
@@ -2741,13 +2773,13 @@ html[data-theme="dark"] .gf-chamfer-toggle {
 
 /* Game cards — high contrast black/white */
 html[data-theme="dark"] .game-item {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
   color: #ffffff;
 }
 html[data-theme="dark"] .game-item:hover {
-  background: #111111;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] .game-item.selected {
   background: #ffffff;
@@ -2765,8 +2797,8 @@ html[data-theme="dark"] .game-item.selected .game-item-icon {
   border-color: #000000;
 }
 html[data-theme="dark"] .game-item-icon {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .game-item-icon .game-placeholder-logo,
 html[data-theme="dark"] .game-item-icon img:not([src*="data:"]) {
@@ -2775,7 +2807,7 @@ html[data-theme="dark"] .game-item-icon img:not([src*="data:"]) {
 
 /* Progress bar track */
 html[data-theme="dark"] .progress-bar {
-  background: #333;
+  background: var(--dark-surface-2, #121212);
 }
 
 /* Timing extension tag */
@@ -2794,9 +2826,9 @@ html[data-theme="dark"] .edit-btn:hover {
 
 /* Boot button in light context → invert for dark */
 html[data-theme="dark"] .game-item-actions .boot-btn {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .game-item-actions .boot-btn:hover {
   background: var(--bg-hover);
@@ -2805,9 +2837,9 @@ html[data-theme="dark"] .game-item-actions .boot-btn:hover {
 /* Diamond / Hex editor buttons */
 html[data-theme="dark"] .diamond-editor-btn,
 html[data-theme="dark"] .hex-editor-btn {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .diamond-editor-btn.diamond-editor-apply,
 html[data-theme="dark"] .hex-editor-btn.hex-editor-apply {
@@ -2823,14 +2855,14 @@ html[data-theme="dark"] .hex-editor-btn.hex-editor-apply:hover {
 
 /* Group list item icon */
 html[data-theme="dark"] .group-list-item .group-icon {
-  background: #000000;
-  border-color: var(--border-color);
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Game image preview (create modal) */
 html[data-theme="dark"] .game-image-preview {
-  background: var(--bg-tertiary);
-  border-color: var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Image buttons hover */
@@ -2858,8 +2890,8 @@ html[data-theme="dark"] .timing-mode-message.warning {
 
 /* Change timing button */
 html[data-theme="dark"] .change-timing-btn {
-  background: var(--bg-card);
-  border-color: var(--border-dark);
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-strong, #3a3a3a);
   color: var(--text-primary);
 }
 html[data-theme="dark"] .change-timing-btn:hover {
@@ -2879,9 +2911,9 @@ html[data-theme="dark"] .privacy-info {
 /* Create form — dark theme */
 html[data-theme="dark"] .create-form-group input,
 html[data-theme="dark"] .create-form-group textarea {
-  background: var(--bg-input);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .create-form-group input::placeholder,
 html[data-theme="dark"] .create-form-group textarea::placeholder {
@@ -2895,8 +2927,13 @@ html[data-theme="dark"] .btn-back:hover {
 }
 
 /* Game front body + panels */
+html[data-theme="dark"] .gf-modal-content,
+html[data-theme="dark"] .gf-header {
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
+}
 html[data-theme="dark"] .gf-body {
-  background: var(--bg-inset);
+  background: #000000 !important;
 }
 html[data-theme="dark"] .gf-tab.active {
   background: #eee;
@@ -2916,19 +2953,21 @@ html[data-theme="dark"] .gf-rules li {
 
 /* GF right side (leaderboard) */
 html[data-theme="dark"] .gf-game-right {
-  background: var(--bg-inset);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-left: 1px solid var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .gf-lb-placeholder {
-  color: #555;
+  color: var(--text-muted, #aaaaaa);
 }
 
 /* GF thumb rail */
 html[data-theme="dark"] .gf-thumb-rail {
-  background: var(--bg-surface);
-  border-right-color: var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-right-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .gf-thumb-item {
-  background: #333;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .gf-thumb-placeholder {
   color: #888;
@@ -2936,10 +2975,11 @@ html[data-theme="dark"] .gf-thumb-placeholder {
 
 /* GF main pane */
 html[data-theme="dark"] .gf-main-pane {
-  background: var(--bg-surface);
+  background: #000000;
 }
 html[data-theme="dark"] .gf-comments-pane {
-  background: var(--bg-surface);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-left-color: var(--dark-border-soft, #242424);
 }
 
 /* Player card */
@@ -2952,7 +2992,7 @@ html[data-theme="dark"] .gf-player-stats {
 
 /* Creation image placeholder */
 html[data-theme="dark"] .gf-creation-img {
-  background: #333;
+  background: var(--dark-surface-2, #121212);
 }
 html[data-theme="dark"] .gf-creation-date {
   color: var(--text-muted);
@@ -2996,9 +3036,9 @@ html[data-theme="dark"] .gf-comment-compose button:hover {
 
 /* Comment draw button */
 html[data-theme="dark"] .gf-game-comments-unit .comment-draw-button {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .gf-game-comments-unit .comment-draw-button:hover {
   background: var(--bg-hover);
@@ -3007,9 +3047,9 @@ html[data-theme="dark"] .gf-game-comments-unit .comment-draw-button:hover {
 
 /* Badge infinite */
 html[data-theme="dark"] .gf-badge.badge-infinite {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-dark);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 
 /* Play game item */
@@ -3028,8 +3068,9 @@ html[data-theme="dark"] .games-header-filters input::placeholder {
 
 /* Modal search input */
 html[data-theme="dark"] .modal-search-input {
-  background: var(--bg-input);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Timing wheel */
@@ -3039,18 +3080,18 @@ html[data-theme="dark"] .timing-wheel-label {
 
 /* Timing modal */
 html[data-theme="dark"] .timing-modal-content {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border: 1px solid var(--dark-border-strong, #3a3a3a);
 }
 
 /* GF Header icon */
 html[data-theme="dark"] .gf-icon {
-  background: #000000;
-  border-color: #000000;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Create modal header icon */
 html[data-theme="dark"] .create-modal-header .eshu-icon {
-  background: #000000;
-  border-color: var(--border-color);
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }

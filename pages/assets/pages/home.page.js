@@ -271,6 +271,82 @@
     return !ownerId || ownerId === activeProfileId;
   }
 
+  function getReactionProfileId() {
+    return getOwnedActiveProfileId() || ESHU_DB.getValue('currentProfileId') || null;
+  }
+
+  function entityApiForType(entityType) {
+    if (!window.ESHU_API) return null;
+    if (entityType === 'group') return window.ESHU_API.groups || null;
+    if (entityType === 'game') return window.ESHU_API.games || null;
+    if (entityType === 'creation') return window.ESHU_API.creations || null;
+    if (entityType === 'comment') return window.ESHU_API.comments || null;
+    return null;
+  }
+
+  function responseEntityForType(response, entityType) {
+    if (!response || typeof response !== 'object') return response || null;
+    if (entityType === 'group') return response.group || response;
+    if (entityType === 'game') return response.game || response;
+    if (entityType === 'creation') return response.creation || response;
+    if (entityType === 'comment') return response.comment || response;
+    return response;
+  }
+
+  function toggleProfileId(list, profileId) {
+    const next = Array.isArray(list) ? [...list] : [];
+    const idx = next.indexOf(profileId);
+    if (idx >= 0) next.splice(idx, 1);
+    else next.push(profileId);
+    return next;
+  }
+
+  function upsertLocalEntity(tableName, entity) {
+    if (!tableName || !entity?.id || tableName === 'comments') return;
+    const table = ESHU_DB.getTable(tableName) || [];
+    const idx = table.findIndex((item) => item && item.id === entity.id);
+    const next = idx >= 0 ? [...table] : [...table, entity];
+    if (idx >= 0) next[idx] = { ...next[idx], ...entity };
+    ESHU_DB.setTable(tableName, next);
+  }
+
+  function updatePublicProfileCachedEntity(entityType, entity) {
+    if (!entity?.id) return;
+    const content = publicProfileContentById.get(selectedProfileId);
+    if (!content) return;
+    const key = entityType === 'group'
+      ? 'groups'
+      : entityType === 'game'
+        ? 'games'
+        : entityType === 'creation'
+          ? 'creations'
+          : entityType === 'comment'
+            ? 'comments'
+            : null;
+    if (!key || !Array.isArray(content[key])) return;
+    const idx = content[key].findIndex((item) => item && item.id === entity.id);
+    if (idx >= 0) content[key][idx] = { ...content[key][idx], ...entity };
+  }
+
+  async function persistReaction(entity, entityType, action, tableName) {
+    const api = entityApiForType(entityType);
+    const method = action === 'like' ? 'toggleLike' : 'toggleFollow';
+    if (!entity?.id || !api || typeof api[method] !== 'function') return null;
+    try {
+      const response = await api[method](entity.id);
+      const serverEntity = responseEntityForType(response, entityType);
+      if (serverEntity && typeof serverEntity === 'object') {
+        Object.assign(entity, serverEntity);
+        upsertLocalEntity(tableName, entity);
+        updatePublicProfileCachedEntity(entityType, entity);
+      }
+      return serverEntity || null;
+    } catch (err) {
+      console.warn(`[home] ${entityType} ${action} failed:`, err);
+      return null;
+    }
+  }
+
   function getCreationVoteCount(creation) {
     if (!creation || typeof creation !== 'object') return 0;
     const parsedVotes = Number(creation.votes);
@@ -279,16 +355,14 @@
     return likedBy.length;
   }
 
-  function toggleCreationLike(creation, badgeElement) {
+  async function toggleCreationLike(creation, badgeElement) {
     if (!creation || !creation.id) return;
-    const profileId = selectedProfileId || ESHU_DB.getValue('currentProfileId') || null;
+    const profileId = getReactionProfileId();
     if (!profileId) return;
 
     const creations = ESHU_DB.getTable('creations') || [];
     const idx = creations.findIndex(c => c && c.id === creation.id);
-    if (idx === -1) return;
-
-    const current = creations[idx];
+    const current = idx >= 0 ? creations[idx] : creation;
     const likedBy = Array.isArray(current.likedBy) ? [...current.likedBy] : [];
     const likeIdx = likedBy.indexOf(profileId);
 
@@ -304,20 +378,25 @@
       if (typeof TOAST !== 'undefined') TOAST.info('Creation unliked');
     }
 
-    creations[idx] = { ...current, likedBy };
-    ESHU_DB.setTable('creations', creations);
+    const nextCreation = { ...current, likedBy, liked: likedBy.includes(profileId) };
+    Object.assign(creation, nextCreation);
+    if (idx >= 0) {
+      creations[idx] = nextCreation;
+      ESHU_DB.setTable('creations', creations);
+    } else {
+      updatePublicProfileCachedEntity('creation', nextCreation);
+    }
+    void persistReaction(creation, 'creation', 'like', 'creations');
   }
 
-  function toggleCreationFollow(creation, badgeElement) {
+  async function toggleCreationFollow(creation, badgeElement) {
     if (!creation || !creation.id) return;
-    const profileId = selectedProfileId || ESHU_DB.getValue('currentProfileId') || null;
+    const profileId = getReactionProfileId();
     if (!profileId) return;
 
     const creations = ESHU_DB.getTable('creations') || [];
     const idx = creations.findIndex(c => c && c.id === creation.id);
-    if (idx === -1) return;
-
-    const current = creations[idx];
+    const current = idx >= 0 ? creations[idx] : creation;
     const followedBy = Array.isArray(current.followedBy) ? [...current.followedBy] : [];
     const followIdx = followedBy.indexOf(profileId);
 
@@ -333,31 +412,142 @@
       if (typeof TOAST !== 'undefined') TOAST.info('Unfollowed creation');
     }
 
-    creations[idx] = { ...current, followedBy };
-    ESHU_DB.setTable('creations', creations);
+    const nextCreation = { ...current, followedBy, followed: followedBy.includes(profileId) };
+    Object.assign(creation, nextCreation);
+    if (idx >= 0) {
+      creations[idx] = nextCreation;
+      ESHU_DB.setTable('creations', creations);
+    } else {
+      updatePublicProfileCachedEntity('creation', nextCreation);
+    }
+    void persistReaction(creation, 'creation', 'follow', 'creations');
   }
 
-  function updateEntityStatus(tableName, entityId, nextStatus) {
+  function entityTypeFromTable(tableName) {
+    if (tableName === 'groups') return 'group';
+    if (tableName === 'games') return 'game';
+    if (tableName === 'creations') return 'creation';
+    return null;
+  }
+
+  async function persistEntityStatus(tableName, entity, nextStatus) {
+    const entityType = entityTypeFromTable(tableName);
+    const api = entityApiForType(entityType);
+    if (!entity?.id || !api) return null;
+    if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+      ESHU_SYNC.assertRemotePersistenceReady();
+    }
+    if (nextStatus === 'active') {
+      if (entityType === 'game' && typeof api.restore === 'function') {
+        return responseEntityForType(await api.restore(entity.id), entityType);
+      }
+      if (typeof api.update !== 'function') return null;
+      return responseEntityForType(await api.update(entity.id, { status: 'active' }), entityType);
+    }
+    if (nextStatus === 'burned') {
+      if (typeof api.remove !== 'function') return null;
+      return responseEntityForType(await api.remove(entity.id, 'burned'), entityType);
+    }
+    if (nextStatus === 'deleted') {
+      if (typeof api.remove !== 'function') return null;
+      return responseEntityForType(await api.remove(entity.id), entityType);
+    }
+    return null;
+  }
+
+  async function updateEntityStatus(tableName, entityId, nextStatus) {
     const list = ESHU_DB.getTable(tableName) || [];
     const idx = list.findIndex(item => item && item.id === entityId);
     if (idx === -1) return false;
     if (!canManageEntity(list[idx])) return false;
-    const next = [...list];
-    next[idx] = { ...next[idx], status: nextStatus };
-    ESHU_DB.setTable(tableName, next);
-    return true;
+
+    const previousEntity = { ...list[idx] };
+    const optimisticEntity = { ...list[idx], status: nextStatus, _syncPending: true };
+    const optimisticList = [...list];
+    optimisticList[idx] = optimisticEntity;
+    ESHU_DB.setTable(tableName, optimisticList);
+    updatePublicProfileCachedEntity(entityTypeFromTable(tableName), optimisticEntity);
+    scheduleHomePanelsRender({ keepExpanded: true });
+
+    try {
+      const serverEntity = await persistEntityStatus(tableName, previousEntity, nextStatus);
+      const latest = ESHU_DB.getTable(tableName) || [];
+      const latestIdx = latest.findIndex(item => item && item.id === entityId);
+      if (latestIdx >= 0) {
+        const confirmed = {
+          ...latest[latestIdx],
+          ...(serverEntity || {}),
+          status: serverEntity?.status || nextStatus,
+          _syncPending: false,
+        };
+        const next = [...latest];
+        next[latestIdx] = confirmed;
+        ESHU_DB.setTable(tableName, next);
+        updatePublicProfileCachedEntity(entityTypeFromTable(tableName), confirmed);
+      }
+      scheduleHomePanelsRender({ keepExpanded: true });
+      return true;
+    } catch (err) {
+      console.warn('[home] status persistence failed:', err);
+      const latest = ESHU_DB.getTable(tableName) || [];
+      const latestIdx = latest.findIndex(item => item && item.id === entityId);
+      if (latestIdx >= 0) {
+        const rollback = [...latest];
+        rollback[latestIdx] = { ...rollback[latestIdx], ...previousEntity, _syncPending: false };
+        ESHU_DB.setTable(tableName, rollback);
+        updatePublicProfileCachedEntity(entityTypeFromTable(tableName), rollback[latestIdx]);
+      }
+      scheduleHomePanelsRender({ keepExpanded: true });
+      if (typeof TOAST !== 'undefined') TOAST.error('Could not save this status change. I restored the previous state.');
+      return false;
+    }
   }
 
-  function updateCommentStatus(comment, nextStatus) {
+  function targetForHomeComment(comment) {
+    if (!comment) return null;
+    if (comment.creationId) return { kind: 'creation', id: comment.creationId };
+    if (comment.gameId) return { kind: 'game', id: comment.gameId };
+    if (comment.groupId) return { kind: 'group', id: comment.groupId };
+    const key = comment._threadKey || '';
+    if (key.startsWith('comments_game_')) return { kind: 'game', id: key.slice('comments_game_'.length) };
+    if (key.startsWith('comments_group_')) return { kind: 'group', id: key.slice('comments_group_'.length) };
+    if (key.startsWith('comments_')) return { kind: 'creation', id: key.slice('comments_'.length) };
+    return null;
+  }
+
+  async function persistCommentStatus(comment, nextStatus) {
+    if (!comment?.id || !window.ESHU_COMMENTS) return null;
+    const target = targetForHomeComment(comment);
+    if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+      ESHU_SYNC.assertRemotePersistenceReady();
+    }
+    if (nextStatus === 'active' && typeof window.ESHU_COMMENTS.update === 'function') {
+      return await window.ESHU_COMMENTS.update(comment.id, { status: 'active' }, target);
+    }
+    if ((nextStatus === 'deleted' || nextStatus === 'burned') && typeof window.ESHU_COMMENTS.remove === 'function') {
+      return await window.ESHU_COMMENTS.remove(comment.id, nextStatus, target);
+    }
+    return null;
+  }
+
+  async function updateCommentStatus(comment, nextStatus) {
     if (!comment || !canManageEntity(comment)) return false;
+    let serverComment = null;
+    try {
+      serverComment = await persistCommentStatus(comment, nextStatus);
+    } catch (err) {
+      console.warn('[home] comment status persistence failed:', err);
+      if (typeof TOAST !== 'undefined') TOAST.error('Could not save this comment status change. Please try again.');
+      return false;
+    }
     if (comment._source === 'global') {
       const arr = JSON.parse(localStorage.getItem('comments') || '[]');
       const idx = comment._index;
       if (!Array.isArray(arr) || idx == null || idx < 0 || idx >= arr.length) return false;
       const current = arr[idx];
       const nextObj = (current && typeof current === 'object')
-        ? { ...current, status: nextStatus }
-        : { text: String(current || ''), status: nextStatus, authorProfileId: selectedProfileId || null, timestamp: Date.now() };
+        ? { ...current, ...(serverComment || {}), status: serverComment?.status || nextStatus }
+        : { text: String(current || ''), ...(serverComment || {}), status: serverComment?.status || nextStatus, authorProfileId: selectedProfileId || null, timestamp: Date.now() };
       arr[idx] = nextObj;
       localStorage.setItem('comments', JSON.stringify(arr));
       return true;
@@ -368,8 +558,8 @@
       if (!Array.isArray(arr) || idx == null || idx < 0 || idx >= arr.length) return false;
       const current = arr[idx];
       const nextObj = (current && typeof current === 'object')
-        ? { ...current, status: nextStatus }
-        : { text: String(current || ''), status: nextStatus, authorProfileId: selectedProfileId || null, timestamp: Date.now() };
+        ? { ...current, ...(serverComment || {}), status: serverComment?.status || nextStatus }
+        : { text: String(current || ''), ...(serverComment || {}), status: serverComment?.status || nextStatus, authorProfileId: selectedProfileId || null, timestamp: Date.now() };
       arr[idx] = nextObj;
       localStorage.setItem(comment._threadKey, JSON.stringify(arr));
       return true;
@@ -377,30 +567,52 @@
     return false;
   }
 
-  function rerenderHomePanels() {
+  function rerenderHomePanels(options) {
+    const opts = options || {};
     refreshState();
     upsertPlayerbaseProfiles(playerbaseProfiles);
-    sidebarBuiltIds = [];
+    if (opts.resetSidebar !== false) sidebarBuiltIds = [];
     renderAvatarSidebar();
     renderProfilePanel();
     renderCurrentTab();
     renderFollowedPanel();
   }
 
-  window.homeClearCreation = function (creationId) {
-    if (!updateEntityStatus('creations', creationId, 'deleted')) return;
+  let scheduledHomeRender = null;
+  const scheduledHomeRenderOptions = { resetSidebar: false, keepExpanded: false };
+  function scheduleHomePanelsRender(options) {
+    const opts = options || {};
+    scheduledHomeRenderOptions.resetSidebar = scheduledHomeRenderOptions.resetSidebar || !!opts.resetSidebar;
+    scheduledHomeRenderOptions.keepExpanded = scheduledHomeRenderOptions.keepExpanded || !!opts.keepExpanded;
+    if (scheduledHomeRender) return;
+    const scheduleFrame = typeof requestAnimationFrame === 'function'
+      ? requestAnimationFrame
+      : (fn) => setTimeout(fn, 16);
+    scheduledHomeRender = scheduleFrame(() => {
+      scheduledHomeRender = null;
+      const renderOptions = { ...scheduledHomeRenderOptions };
+      scheduledHomeRenderOptions.resetSidebar = false;
+      scheduledHomeRenderOptions.keepExpanded = false;
+      const expandedId = renderOptions.keepExpanded ? getExpandedCardId() : '';
+      rerenderHomePanels({ resetSidebar: renderOptions.resetSidebar });
+      if (expandedId) restoreExpandedCard(expandedId);
+    });
+  }
+
+  window.homeClearCreation = async function (creationId) {
+    if (!await updateEntityStatus('creations', creationId, 'deleted')) return;
     rerenderHomePanels();
   };
 
-  window.homeBootCreation = function (creationId) {
-    if (!updateEntityStatus('creations', creationId, 'active')) return;
+  window.homeBootCreation = async function (creationId) {
+    if (!await updateEntityStatus('creations', creationId, 'active')) return;
     rerenderHomePanels();
   };
 
   window.homeBurnCreation = async function (creationId) {
     const yes = await MODAL.confirm({ title: 'Burn Creation', message: 'Delete (burn) this creation permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
-    if (!updateEntityStatus('creations', creationId, 'burned')) return;
+    if (!await updateEntityStatus('creations', creationId, 'burned')) return;
     rerenderHomePanels();
   };
 
@@ -422,51 +634,51 @@
     window.location.href = `creations.html?edit=${encodeURIComponent(creationId)}`;
   };
 
-  window.homeClearGroup = function (groupId) {
-    if (!updateEntityStatus('groups', groupId, 'deleted')) return;
+  window.homeClearGroup = async function (groupId) {
+    if (!await updateEntityStatus('groups', groupId, 'deleted')) return;
     rerenderHomePanels();
   };
 
-  window.homeBootGroup = function (groupId) {
-    if (!updateEntityStatus('groups', groupId, 'active')) return;
+  window.homeBootGroup = async function (groupId) {
+    if (!await updateEntityStatus('groups', groupId, 'active')) return;
     rerenderHomePanels();
   };
 
   window.homeBurnGroup = async function (groupId) {
     const yes = await MODAL.confirm({ title: 'Burn Group', message: 'Delete (burn) this group permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
-    if (!updateEntityStatus('groups', groupId, 'burned')) return;
+    if (!await updateEntityStatus('groups', groupId, 'burned')) return;
     rerenderHomePanels();
   };
 
-  window.homeClearGame = function (gameId) {
-    if (!updateEntityStatus('games', gameId, 'deleted')) return;
+  window.homeClearGame = async function (gameId) {
+    if (!await updateEntityStatus('games', gameId, 'deleted')) return;
     rerenderHomePanels();
   };
 
-  window.homeBootGame = function (gameId) {
-    if (!updateEntityStatus('games', gameId, 'active')) return;
+  window.homeBootGame = async function (gameId) {
+    if (!await updateEntityStatus('games', gameId, 'active')) return;
     rerenderHomePanels();
   };
 
   window.homeBurnGame = async function (gameId) {
     const yes = await MODAL.confirm({ title: 'Burn Game', message: 'Delete (burn) this game permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
-    if (!updateEntityStatus('games', gameId, 'burned')) return;
+    if (!await updateEntityStatus('games', gameId, 'burned')) return;
     rerenderHomePanels();
   };
 
-  window.homeClearComment = function (commentId) {
+  window.homeClearComment = async function (commentId) {
     const scoped = comments.find(c => c.id === commentId);
     if (!scoped) return;
-    if (!updateCommentStatus(scoped, 'deleted')) return;
+    if (!await updateCommentStatus(scoped, 'deleted')) return;
     rerenderHomePanels();
   };
 
-  window.homeBootComment = function (commentId) {
+  window.homeBootComment = async function (commentId) {
     const scoped = comments.find(c => c.id === commentId);
     if (!scoped) return;
-    if (!updateCommentStatus(scoped, 'active')) return;
+    if (!await updateCommentStatus(scoped, 'active')) return;
     rerenderHomePanels();
   };
 
@@ -475,7 +687,7 @@
     if (!scoped) return;
     const yes = await MODAL.confirm({ title: 'Burn Comment', message: 'Delete (burn) this comment permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
-    if (!updateCommentStatus(scoped, 'burned')) return;
+    if (!await updateCommentStatus(scoped, 'burned')) return;
     rerenderHomePanels();
   };
 
@@ -776,6 +988,68 @@
     });
 
     comments = next;
+  }
+
+  const hydratedHomeCommentTargets = new Set();
+  let homeCommentsHydrationInFlight = false;
+
+  function homeCommentTargetKey(target) {
+    return target && target.kind && target.id ? `${target.kind}:${target.id}` : '';
+  }
+
+  function getHomeCommentTargets() {
+    const byKey = new Map();
+    const add = (kind, id) => {
+      if (!id) return;
+      const target = { kind, id };
+      const key = homeCommentTargetKey(target);
+      if (key) byKey.set(key, target);
+    };
+
+    (Array.isArray(creations) ? creations : []).forEach((creation) => {
+      if (isItemActive(creation)) add('creation', creation.id);
+    });
+    (Array.isArray(games) ? games : []).forEach((game) => {
+      if (isItemActive(game)) add('game', game.id);
+    });
+    (Array.isArray(groups) ? groups : []).forEach((group) => {
+      if (isItemActive(group)) add('group', group.id);
+    });
+
+    return Array.from(byKey.values());
+  }
+
+  async function hydrateHomeComments(options) {
+    if (!window.ESHU_COMMENTS || typeof window.ESHU_COMMENTS.hydrate !== 'function') return;
+    const remoteMode = !!(window.ESHU_REMOTE && window.ESHU_REMOTE.isEnabled && window.ESHU_REMOTE.isEnabled());
+    if (!remoteMode || homeCommentsHydrationInFlight) return;
+
+    const opts = options || {};
+    const targets = getHomeCommentTargets().filter((target) => {
+      const key = homeCommentTargetKey(target);
+      return opts.force || !hydratedHomeCommentTargets.has(key);
+    });
+    if (!targets.length) return;
+
+    homeCommentsHydrationInFlight = true;
+    try {
+      for (let i = 0; i < targets.length; i += 6) {
+        const batch = targets.slice(i, i + 6);
+        await Promise.all(batch.map(async (target) => {
+          const key = homeCommentTargetKey(target);
+          try {
+            await window.ESHU_COMMENTS.hydrate(target);
+            if (key) hydratedHomeCommentTargets.add(key);
+          } catch (err) {
+            console.warn('[home] comment hydration failed:', target, err);
+          }
+        }));
+      }
+      refreshState();
+      scheduleHomePanelsRender({ keepExpanded: true });
+    } finally {
+      homeCommentsHydrationInFlight = false;
+    }
   }
 
   function isItemActive(item) {
@@ -1348,7 +1622,7 @@
     card.className = 'creation-card';
     card.dataset.id = creation.id;
 
-    const profileId = selectedProfileId || ESHU_DB.getValue('currentProfileId') || null;
+    const profileId = getReactionProfileId();
     const likedBy = Array.isArray(creation.likedBy) ? creation.likedBy : [];
     const followedBy = Array.isArray(creation.followedBy) ? creation.followedBy : [];
     const isLiked = !!(profileId && likedBy.includes(profileId));
@@ -1646,37 +1920,43 @@
   }
 
   function wireCardControls(item, entity, entityType, tableName, saveFn, rerenderFn) {
-    if (isReadOnlyProfileView()) {
-      return;
-    }
     const likedInd = item.querySelector('.u-card-ind.liked');
     const followedInd = item.querySelector('.u-card-ind.followed');
+    const reactionProfileId = getReactionProfileId();
     // Like toggle
     const likeBtn = item.querySelector('.u-card-like-btn');
     if (likeBtn) {
-      likeBtn.addEventListener('click', (e) => {
+      likeBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        if (!reactionProfileId) return;
         entity.likedBy = Array.isArray(entity.likedBy) ? entity.likedBy : [];
-        const idx = entity.likedBy.indexOf(selectedProfileId);
+        const idx = entity.likedBy.indexOf(reactionProfileId);
         if (idx >= 0) { entity.likedBy.splice(idx, 1); likeBtn.classList.remove('active'); likeBtn.title = 'Like'; if (likedInd) likedInd.classList.remove('active'); }
-        else { entity.likedBy.push(selectedProfileId); likeBtn.classList.add('active'); likeBtn.title = 'Unlike'; if (likedInd) likedInd.classList.add('active'); }
+        else { entity.likedBy.push(reactionProfileId); likeBtn.classList.add('active'); likeBtn.title = 'Unlike'; if (likedInd) likedInd.classList.add('active'); }
         // Keep boolean in sync so Likes tab rebuilds accurately.
-        entity.liked = entity.likedBy.includes(selectedProfileId);
+        entity.liked = entity.likedBy.includes(reactionProfileId);
         if (saveFn) saveFn();
+        updatePublicProfileCachedEntity(entityType, entity);
+        upsertLocalEntity(tableName, entity);
+        void persistReaction(entity, entityType, 'like', tableName);
       });
     }
     // Follow toggle
     const followBtn = item.querySelector('.u-card-follow-btn');
     if (followBtn) {
-      followBtn.addEventListener('click', (e) => {
+      followBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
+        if (!reactionProfileId) return;
         entity.followedBy = Array.isArray(entity.followedBy) ? entity.followedBy : [];
-        const idx = entity.followedBy.indexOf(selectedProfileId);
+        const idx = entity.followedBy.indexOf(reactionProfileId);
         if (idx >= 0) { entity.followedBy.splice(idx, 1); followBtn.classList.remove('active'); followBtn.title = 'Follow'; if (followedInd) followedInd.classList.remove('active'); }
-        else { entity.followedBy.push(selectedProfileId); followBtn.classList.add('active'); followBtn.title = 'Unfollow'; if (followedInd) followedInd.classList.add('active'); }
+        else { entity.followedBy.push(reactionProfileId); followBtn.classList.add('active'); followBtn.title = 'Unfollow'; if (followedInd) followedInd.classList.add('active'); }
         // Keep boolean in sync so Follows tab rebuilds accurately.
-        entity.followed = entity.followedBy.includes(selectedProfileId);
+        entity.followed = entity.followedBy.includes(reactionProfileId);
         if (saveFn) saveFn();
+        updatePublicProfileCachedEntity(entityType, entity);
+        upsertLocalEntity(tableName, entity);
+        void persistReaction(entity, entityType, 'follow', tableName);
       });
     }
     // Cog: burned cards open burned modal, others toggle expand panel
@@ -1755,9 +2035,9 @@
   }
 
   function openHomeCommentOptionsModal(comment, rerenderFn) {
-    const activeProfileId = selectedProfileId || ESHU_DB.getValue('currentProfileId') || null;
-    const isLiked = comment.liked;
-    const isFollowed = comment.followed;
+    const activeProfileId = getReactionProfileId();
+    const isLiked = !!(activeProfileId && (comment.likedBy || []).includes(activeProfileId));
+    const isFollowed = !!(activeProfileId && (comment.followedBy || []).includes(activeProfileId));
     const isOwner = canManageEntity(comment);
     const isBurned = comment.status === 'burned';
 
@@ -1969,8 +2249,9 @@
         const isDeleted = game.status === 'deleted' || game.status === 'booted';
         const isBurned = game.status === 'burned';
         const canManage = canManageEntity(game);
-        const gameLiked = (game.likedBy || []).includes(selectedProfileId);
-        const gameFollowed = (game.followedBy || []).includes(selectedProfileId);
+        const reactionProfileId = getReactionProfileId();
+        const gameLiked = !!(reactionProfileId && (game.likedBy || []).includes(reactionProfileId));
+        const gameFollowed = !!(reactionProfileId && (game.followedBy || []).includes(reactionProfileId));
         const gameType = game.gameType || 'arena';
 
         const item = document.createElement('div');
@@ -2087,8 +2368,9 @@
         const isDeleted = creation.status === 'deleted';
         const isBurned = creation.status === 'burned';
         const canManage = canManageEntity(creation);
-        const cLiked = (creation.likedBy || []).includes(selectedProfileId);
-        const cFollowed = (creation.followedBy || []).includes(selectedProfileId);
+        const reactionProfileId = getReactionProfileId();
+        const cLiked = !!(reactionProfileId && (creation.likedBy || []).includes(reactionProfileId));
+        const cFollowed = !!(reactionProfileId && (creation.followedBy || []).includes(reactionProfileId));
 
         const item = document.createElement('div');
         item.className = `u-card ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}`;
@@ -2207,8 +2489,9 @@
         const ownerProfile = group.ownerProfileId ? profiles.find(p => p.id === group.ownerProfileId) : null;
         const creatorName = ownerProfile?.name || group.creatorName || 'Unknown';
 
-        const gLiked = (group.likedBy || []).includes(selectedProfileId);
-        const gFollowed = (group.followedBy || []).includes(selectedProfileId);
+        const reactionProfileId = getReactionProfileId();
+        const gLiked = !!(reactionProfileId && (group.likedBy || []).includes(reactionProfileId));
+        const gFollowed = !!(reactionProfileId && (group.followedBy || []).includes(reactionProfileId));
         const item = document.createElement('div');
         item.className = `u-card ${isBurned ? 'burned' : (isDeleted ? 'deleted' : '')}`;
         item.dataset.entityId = group.id;
@@ -2363,8 +2646,9 @@
         const text = comment.text || '';
         const hasAnim = window.ANIMATION_PLAYER ? window.ANIMATION_PLAYER.hasAnimation(comment) : !!(comment.animation);
         const isOwner = canManage;
-        const isLiked = comment.liked;
-        const isFollowed = comment.followed;
+        const reactionProfileId = getReactionProfileId();
+        const isLiked = !!(reactionProfileId && (comment.likedBy || []).includes(reactionProfileId));
+        const isFollowed = !!(reactionProfileId && (comment.followedBy || []).includes(reactionProfileId));
 
         let entityLabel = '';
         if (comment.creationName) entityLabel = `on "${comment.creationName}"`;
@@ -2709,7 +2993,6 @@
     if (el) el.classList.add('expanded');
   }
   ESHU_DB.subscribe(() => {
-    const expandedId = getExpandedCardId();
     refreshState();
     upsertPlayerbaseProfiles(playerbaseProfiles);
     const ownProfileId = ESHU_DB.getValue('currentProfileId') || null;
@@ -2719,39 +3002,37 @@
       selectedProfileId = ownProfileId || selectedProfileId;
     }
     updateNavProfile();
-    sidebarBuiltIds = [];
-    renderAvatarSidebar();
-    renderProfilePanel();
-    renderCurrentTab();
-    restoreExpandedCard(expandedId);
+    scheduleHomePanelsRender({ resetSidebar: true, keepExpanded: true });
   });
 
   window.addEventListener('eshu:profile-updated', () => {
-    sidebarBuiltIds = [];
-    rerenderHomePanels();
+    scheduleHomePanelsRender({ resetSidebar: true });
     loadPlayerbaseProfiles();
+    hydrateHomeComments();
   });
 
   window.addEventListener('eshu:remote-activated', (event) => {
     if (event?.detail?.user) {
       try { window.ESHU_AUTH = { user: event.detail.user }; } catch {}
     }
-    sidebarBuiltIds = [];
+    hydratedHomeCommentTargets.clear();
     refreshState();
     upsertPlayerbaseProfiles(playerbaseProfiles);
     loadPlayerbaseProfiles();
-    renderAvatarSidebar();
-    renderProfilePanel();
-    renderCurrentTab();
+    hydrateHomeComments({ force: true });
+    scheduleHomePanelsRender({ resetSidebar: true });
   });
 
   window.addEventListener('eshu:sync-success', () => {
-    sidebarBuiltIds = [];
     refreshState();
     upsertPlayerbaseProfiles(playerbaseProfiles);
-    renderAvatarSidebar();
-    renderProfilePanel();
-    renderCurrentTab();
+    hydrateHomeComments();
+    scheduleHomePanelsRender({ resetSidebar: true, keepExpanded: true });
+  });
+
+  window.addEventListener('eshu:comments-updated', () => {
+    refreshState();
+    scheduleHomePanelsRender({ keepExpanded: true });
   });
 
   window.addEventListener('eshu:auth-logout', () => {
@@ -2761,8 +3042,7 @@
   window.addEventListener('storage', e => {
     if (e.key === 'comments' || (e.key && e.key.startsWith('comments_')) || e.key === 'profile') {
       refreshState();
-      renderProfilePanel();
-      renderCurrentTab();
+      scheduleHomePanelsRender();
     }
   });
 
@@ -2789,6 +3069,11 @@
       const next = current === 'light' ? 'dark' : 'light';
       html.setAttribute('data-theme', next);
       try { localStorage.setItem('eshu_theme', next); } catch {}
+      try {
+        const raw = localStorage.getItem('eshu_ui_prefs');
+        const prefs = raw ? JSON.parse(raw) : {};
+        localStorage.setItem('eshu_ui_prefs', JSON.stringify({ ...(prefs && typeof prefs === 'object' ? prefs : {}), uiTheme: next }));
+      } catch {}
       if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
         ESHU_DB.setValue('uiTheme', next);
       }
@@ -2866,6 +3151,7 @@
   refreshState();
   initializeDefaultProfile();
   loadPlayerbaseProfiles();
+  hydrateHomeComments();
   renderAvatarSidebar();
   renderProfilePanel();
   renderCurrentTab();

@@ -164,6 +164,15 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+html[data-theme="dark"] #${ROOT_ID} .eshu-auth-submit {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+}
+html[data-theme="dark"] #${ROOT_ID} .eshu-auth-submit:hover:not([disabled]) {
+  background: #e8e8e8;
+  opacity: 1;
+}
 #${ROOT_ID} .eshu-auth-footer {
   padding: 12px 20px 14px;
   border-top: 1.5px solid var(--border-color, #d0d0d0);
@@ -347,6 +356,87 @@
   -webkit-appearance: none;
 }
 #${ROOT_ID} .eshu-auth-confirm-ok:hover { opacity: 0.80; }
+html[data-theme="dark"] #${ROOT_ID} .eshu-auth-confirm-ok {
+  background: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+}
+html[data-theme="dark"] #${ROOT_ID} .eshu-auth-confirm-ok:hover {
+  background: #e8e8e8;
+  opacity: 1;
+}
+.eshu-signout-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10020;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.58);
+}
+.eshu-signout-confirm-card {
+  width: min(340px, calc(100vw - 40px));
+  background: var(--bg-panel, #ffffff);
+  color: var(--text-primary, #111111);
+  border: 1.5px solid var(--border-color, #d0d0d0);
+  border-radius: 0;
+}
+.eshu-signout-confirm-title {
+  margin: 0;
+  padding: 18px 20px 14px;
+  border-bottom: 1.5px solid var(--border-color, #d0d0d0);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: center;
+}
+.eshu-signout-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 18px 20px 20px;
+}
+.eshu-signout-confirm-actions button {
+  appearance: none;
+  min-height: 40px;
+  border-radius: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.eshu-signout-negative {
+  background: transparent;
+  color: var(--text-primary, #111111);
+  border: 1.5px solid var(--border-color, #d0d0d0);
+}
+.eshu-signout-affirm {
+  background: var(--text-primary, #111111);
+  color: #ffffff;
+  border: 1.5px solid var(--text-primary, #111111);
+}
+html[data-theme="dark"] .eshu-signout-confirm-card {
+  background: var(--dark-surface-1, #0b0b0b);
+  color: #ffffff;
+  border-color: var(--dark-border-strong, #3a3a3a);
+}
+html[data-theme="dark"] .eshu-signout-confirm-title {
+  border-bottom-color: var(--dark-border-strong, #3a3a3a);
+}
+html[data-theme="dark"] .eshu-signout-negative {
+  background: var(--dark-surface-2, #121212);
+  color: #ffffff;
+  border-color: var(--dark-border-strong, #3a3a3a);
+}
+html[data-theme="dark"] .eshu-signout-affirm {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
 `;
     const el = document.createElement('style');
     el.id = STYLE_ID;
@@ -1253,8 +1343,60 @@
     }
   }
 
-  async function logout() {
-    if (!window.ESHU_API) return;
+  function confirmSignOut() {
+    injectStyles();
+    return new Promise((resolve) => {
+      const previousActiveElement = document.activeElement;
+      const backdrop = document.createElement('div');
+      backdrop.className = 'eshu-signout-confirm-backdrop';
+      backdrop.setAttribute('role', 'dialog');
+      backdrop.setAttribute('aria-modal', 'true');
+      backdrop.setAttribute('aria-labelledby', 'eshuSignoutConfirmTitle');
+      backdrop.innerHTML = `
+        <div class="eshu-signout-confirm-card">
+          <h2 class="eshu-signout-confirm-title" id="eshuSignoutConfirmTitle">SIGN OUT</h2>
+          <div class="eshu-signout-confirm-actions">
+            <button type="button" class="eshu-signout-negative">Negative</button>
+            <button type="button" class="eshu-signout-affirm">Affirm</button>
+          </div>
+        </div>
+      `;
+
+      const close = (confirmed) => {
+        backdrop.remove();
+        document.removeEventListener('keydown', onConfirmKey);
+        try {
+          if (!confirmed && previousActiveElement && typeof previousActiveElement.focus === 'function') {
+            previousActiveElement.focus();
+          }
+        } catch {}
+        resolve(!!confirmed);
+      };
+
+      const onConfirmKey = (event) => {
+        if (event.key === 'Escape') close(false);
+        if (event.key === 'Enter') close(true);
+      };
+
+      backdrop.addEventListener('click', (event) => {
+        if (event.target === backdrop) close(false);
+      });
+      backdrop.querySelector('.eshu-signout-negative')?.addEventListener('click', () => close(false));
+      backdrop.querySelector('.eshu-signout-affirm')?.addEventListener('click', () => close(true));
+      document.addEventListener('keydown', onConfirmKey);
+      document.body.appendChild(backdrop);
+      setTimeout(() => {
+        try { backdrop.querySelector('.eshu-signout-negative')?.focus(); } catch {}
+      }, 0);
+    });
+  }
+
+  async function performLogout() {
+    if (!window.ESHU_API) {
+      try { location.replace(landingHref()); }
+      catch { location.href = 'play.html'; }
+      return;
+    }
 
     // CRITICAL ORDERING: flush any unsynced changes to the server BEFORE we
     // destroy the session below. Writes are debounced (~600ms) and may also be
@@ -1326,6 +1468,12 @@
     // return to the now-empty authenticated view.
     try { location.replace(landingHref()); }
     catch { location.reload(); }
+  }
+
+  async function logout() {
+    const confirmed = await confirmSignOut();
+    if (!confirmed) return;
+    await performLogout();
   }
 
   function maybeAutoOpen() {

@@ -2,6 +2,75 @@
   'use strict';
 
   const DEVELOPER_CODE = 'pijin.net';
+  const DEV_UI_PREF_KEYS = [
+    'devModeEnabled',
+    'infiniteVotes',
+    'architectMode',
+    'metaModeEnabled',
+    'hideBurned',
+    'prebuiltInstalled',
+  ];
+
+  function readDevUiPrefs() {
+    try {
+      const raw = localStorage.getItem('eshu_ui_prefs');
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function persistDevUiPrefs() {
+    if (typeof ESHU_DB === 'undefined' || !ESHU_DB.getValue) return;
+    const prefs = readDevUiPrefs();
+    DEV_UI_PREF_KEYS.forEach((key) => {
+      const value = ESHU_DB.getValue(key);
+      if (value !== undefined && value !== null) prefs[key] = value;
+    });
+    try { localStorage.setItem('eshu_ui_prefs', JSON.stringify(prefs)); } catch {}
+  }
+
+  function readStoredTheme() {
+    try {
+      const flat = localStorage.getItem('eshu_theme');
+      if (flat === 'dark' || flat === 'light') return flat;
+    } catch {}
+    try {
+      const prefs = readDevUiPrefs();
+      if (prefs.uiTheme === 'dark' || prefs.uiTheme === 'light') return prefs.uiTheme;
+    } catch {}
+    const docTheme = document.documentElement.getAttribute('data-theme');
+    if (docTheme === 'dark' || docTheme === 'light') return docTheme;
+    if (typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue) {
+      const dbTheme = ESHU_DB.getValue('uiTheme');
+      if (dbTheme === 'dark' || dbTheme === 'light') return dbTheme;
+    }
+    return 'light';
+  }
+
+  function persistThemePreference(theme) {
+    const next = theme === 'dark' ? 'dark' : 'light';
+    try { localStorage.setItem('eshu_theme', next); } catch {}
+    try {
+      const prefs = readDevUiPrefs();
+      prefs.uiTheme = next;
+      localStorage.setItem('eshu_ui_prefs', JSON.stringify(prefs));
+    } catch {}
+    if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
+      ESHU_DB.setValue('uiTheme', next);
+    }
+  }
+
+  function hydrateDevUiPrefs() {
+    if (typeof ESHU_DB === 'undefined' || !ESHU_DB.setValue) return;
+    const prefs = readDevUiPrefs();
+    DEV_UI_PREF_KEYS.forEach((key) => {
+      if (prefs[key] === undefined || prefs[key] === null) return;
+      ESHU_DB.setValue(key, prefs[key]);
+    });
+  }
 
   function injectDeveloperCodeModalStyles() {
     if (document.getElementById('developer-code-modal-styles')) return;
@@ -11,7 +80,7 @@
       .developer-code-backdrop {
         position: fixed;
         inset: 0;
-        z-index: var(--z-modal-backdrop, 400);
+        z-index: 1300;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -108,6 +177,8 @@
 
   function promptDeveloperCode() {
     injectDeveloperCodeModalStyles();
+    const settingsDropdown = document.getElementById('settingsDropdown');
+    if (settingsDropdown) settingsDropdown.classList.remove('open');
 
     return new Promise((resolve) => {
       const previousActiveElement = document.activeElement;
@@ -177,6 +248,8 @@
     if (!settingsBtn) return;
     if (settingsBtn.dataset.settingsDropdownBound === 'true') return;
 
+    hydrateDevUiPrefs();
+
     const wrapper = settingsBtn.parentElement;
     if (!wrapper) return;
 
@@ -190,9 +263,7 @@
       wrapper.appendChild(dropdown);
     }
 
-    const currentTheme = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue)
-      ? ESHU_DB.getValue('uiTheme') || 'light'
-      : document.documentElement.getAttribute('data-theme') || 'light';
+    const currentTheme = readStoredTheme();
 
     const hideBurned = (typeof ESHU_DB !== 'undefined' && ESHU_DB.getValue)
       ? !!ESHU_DB.getValue('hideBurned')
@@ -404,12 +475,7 @@
         themeToggle.classList.toggle('is-dark', next === 'dark');
         themeToggle.setAttribute('aria-checked', String(next === 'dark'));
         document.documentElement.setAttribute('data-theme', next);
-
-        try { localStorage.setItem('eshu_theme', next); } catch {}
-        if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
-          ESHU_DB.setValue('uiTheme', next);
-        }
-        try { localStorage.setItem('eshu_ui_prefs', JSON.stringify({ uiTheme: next })); } catch {}
+        persistThemePreference(next);
 
         const profileThemeSelect = document.getElementById('themeSelect');
         if (profileThemeSelect) {
@@ -441,6 +507,7 @@
         } else {
           ESHU_DB.uninstallPrivatePrebuilt();
         }
+        persistDevUiPrefs();
         // Broadcast event so all pages update immediately
         window.dispatchEvent(new CustomEvent('eshu:prebuilt-pack-changed', { detail: { installed: nextInstalled } }));
         if (typeof TOAST !== 'undefined' && TOAST && typeof TOAST.success === 'function') {
@@ -464,6 +531,7 @@
         if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
           ESHU_DB.setValue('hideBurned', nextHide);
         }
+        persistDevUiPrefs();
       });
     }
 
@@ -479,6 +547,7 @@
         if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
           ESHU_DB.setValue('infiniteVotes', nextState);
         }
+        persistDevUiPrefs();
         // Broadcast event so all pages update immediately
         window.dispatchEvent(new CustomEvent('eshu:infinite-votes-changed', { detail: { enabled: nextState } }));
         if (typeof TOAST !== 'undefined') {
@@ -499,6 +568,7 @@
         if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
           ESHU_DB.setValue('architectMode', nextState);
         }
+        persistDevUiPrefs();
         // Broadcast event so creation edit forms can update
         window.dispatchEvent(new CustomEvent('eshu:architect-mode-changed', { detail: { enabled: nextState } }));
         if (typeof TOAST !== 'undefined') {
@@ -519,6 +589,7 @@
         if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
           ESHU_DB.setValue('metaModeEnabled', nextState);
         }
+        persistDevUiPrefs();
         window.dispatchEvent(new CustomEvent('eshu:meta-mode-changed', { detail: { enabled: nextState } }));
         if (typeof TOAST !== 'undefined') {
           TOAST.success(nextState ? 'Meta enabled' : 'Meta disabled');
@@ -536,7 +607,8 @@
     
     if (buildInfo) {
       buildInfo.style.cursor = 'pointer';
-      buildInfo.addEventListener('click', async () => {
+      buildInfo.addEventListener('click', async (event) => {
+        event.stopPropagation();
         devModeClicks++;
         
         if (devModeClicks >= 6) {
@@ -554,9 +626,12 @@
               if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
                 ESHU_DB.setValue('devModeEnabled', true);
               }
+              persistDevUiPrefs();
               // Show developer settings
               const devSection = document.getElementById('devSettingsSection');
               if (devSection) devSection.classList.remove('hidden');
+              const dropdown = document.getElementById('settingsDropdown');
+              if (dropdown) dropdown.classList.add('open');
               if (typeof TOAST !== 'undefined') TOAST.success('Developer Mode enabled');
             } else if (typeof TOAST !== 'undefined') {
               TOAST.error('Developer Mode locked');
@@ -567,6 +642,7 @@
               if (typeof ESHU_DB !== 'undefined' && ESHU_DB.setValue) {
                 ESHU_DB.setValue('devModeEnabled', false);
               }
+              persistDevUiPrefs();
               // Hide developer settings
               const devSection = document.getElementById('devSettingsSection');
               if (devSection) devSection.classList.add('hidden');

@@ -260,7 +260,8 @@ html[data-theme="dark"] .profile-panel-header {
   border-bottom-color: var(--border-color);
 }
 html[data-theme="dark"] .profile-panel-avatar {
-  background: #222;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
   color: var(--text-muted);
 }
 html[data-theme="dark"] .profile-cap-svg {
@@ -276,7 +277,7 @@ html[data-theme="dark"] .profile-panel-subtitle {
   color: var(--text-muted);
 }
 html[data-theme="dark"] .profile-panel-body {
-  background: var(--bg-panel);
+  background: #000000;
 }
 html[data-theme="dark"] .profile-form-section-title {
   color: var(--text-muted);
@@ -296,8 +297,8 @@ html[data-theme="dark"] .profile-form-group textarea::placeholder {
   color: var(--text-tertiary);
 }
 html[data-theme="dark"] .profile-actions {
-  border-top-color: var(--border-color);
-  background: var(--bg-surface);
+  border-top-color: var(--dark-border-soft, #242424);
+  background: var(--dark-surface-1, #0b0b0b);
 }
 html[data-theme="dark"] #saveProfileBtn {
   background: #eeeeee;
@@ -307,11 +308,12 @@ html[data-theme="dark"] #saveProfileBtn:hover {
   background: #ffffff;
 }
 html[data-theme="dark"] #burnBtn {
-  background: #333;
-  color: #eee;
+  background: var(--dark-surface-2, #121212);
+  color: #eeeeee;
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] #burnBtn:hover {
-  background: #444;
+  background: var(--dark-surface-3, #1a1a1a);
 }
 html[data-theme="dark"] #deleteProfileBtn {
   background: var(--accent-coral-dark, #c62828);
@@ -321,17 +323,17 @@ html[data-theme="dark"] #deleteProfileBtn:hover {
   background: #e53935;
 }
 html[data-theme="dark"] .profile-image-actions button {
-  background: var(--bg-card);
+  background: var(--dark-surface-1, #0b0b0b);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .profile-image-actions button:hover {
   background: var(--bg-hover);
 }
 html[data-theme="dark"] .collapsible {
-  background: var(--bg-card);
+  background: var(--dark-surface-1, #0b0b0b);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .collapsible:hover {
   background: var(--bg-hover);
@@ -340,7 +342,7 @@ html[data-theme="dark"] .right-panel h2 {
   color: var(--text-primary);
 }
 html[data-theme="dark"] .right-panel .content {
-  background: var(--bg-surface);
+  background: var(--dark-surface-1, #0b0b0b);
   color: var(--text-primary);
 }
 </style>

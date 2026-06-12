@@ -525,7 +525,7 @@
           ownerHasLeft: isOwner ? false : !!group.ownerHasLeft,
         };
       },
-      refresh: true,
+      refresh: 'background',
     });
 
     if (ESHU_SYNC.isRemote()) {
@@ -695,7 +695,7 @@
             const serverGroup = resp && resp.group ? resp.group : resp;
             return { ...group, ...serverGroup, ownerHasLeft: !!group.ownerHasLeft };
           },
-          refresh: true,
+          refresh: 'background',
         });
       } catch (err) {
         console.warn('[leaveGroup] server unavailable, falling back to local:', err);
@@ -1314,8 +1314,42 @@
     groupPreviewPanel.classList.add('active');
   };
 
+  async function persistGroupStatus(group, nextStatus) {
+    if (!group?.id) return null;
+    if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+      ESHU_SYNC.assertRemotePersistenceReady();
+    }
+    if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+      if (nextStatus === 'active') {
+        return await ESHU_SYNC.mutate({
+          entity: 'groups',
+          call: () => ESHU_API.groups.update(group.id, { status: 'active' }),
+          pick: (resp) => resp && resp.group,
+          refresh: 'background',
+        });
+      }
+      return await ESHU_SYNC.mutate({
+        entity: 'groups',
+        call: () => ESHU_API.groups.remove(group.id, nextStatus === 'burned' ? 'burned' : undefined),
+        pick: (resp) => resp && resp.group,
+        refresh: 'background',
+      });
+    }
+    return { ...group, status: nextStatus };
+  }
+
+  function upsertGroupStatusLocally(group) {
+    if (!group?.id) return;
+    const current = STATE.get('groups') || [];
+    const idx = current.findIndex(g => g && g.id === group.id);
+    if (idx === -1) return;
+    const next = [...current];
+    next[idx] = { ...next[idx], ...group };
+    STATE.set('groups', next);
+  }
+
   // ===== Clear Group (set to deleted) =====
-  window.clearGroup = function(groupId) {
+  window.clearGroup = async function(groupId) {
     const activeProfileId = getActiveProfileId();
     const existing = (STATE.get('groups') || []).find(g => g.id === groupId);
     if (!existing) return;
@@ -1332,17 +1366,26 @@
       return;
     }
 
-    const groups = STATE.get('groups') || [];
-    const idx = groups.findIndex(g => g.id === groupId);
-    if (idx === -1) return;
-    const next = [...groups];
-    next[idx] = { ...next[idx], status: 'deleted' };
-    STATE.set('groups', next);
-    TOAST.success('Group booted!');
+    const optimistic = { ...existing, status: 'deleted', _syncPending: true };
+    upsertGroupStatusLocally(optimistic);
+    renderGroupsList();
+
+    try {
+      const saved = await persistGroupStatus(existing, 'deleted');
+      upsertGroupStatusLocally({ ...(saved || optimistic), _syncPending: false });
+      renderGroupsList();
+      TOAST.success('Group booted!');
+    } catch (err) {
+      console.warn('[groups.status] boot failed:', err);
+      upsertGroupStatusLocally({ ...existing, _syncPending: false });
+      renderGroupsList();
+      TOAST.error('Could not save group boot state. I restored the previous state.');
+      return;
+    }
   };
 
   // ===== Boot Group (restore from deleted) =====
-  window.bootGroup = function(groupId) {
+  window.bootGroup = async function(groupId) {
     const activeProfileId = getActiveProfileId();
     const groups = STATE.get('groups') || [];
     const idx = groups.findIndex(g => g.id === groupId);
@@ -1352,10 +1395,22 @@
       TOAST.error('Only the group owner can restore this group');
       return;
     }
-    const next = [...groups];
-    next[idx] = { ...next[idx], status: 'active' };
-    STATE.set('groups', next);
-    TOAST.success('Group restored!');
+    const optimistic = { ...existing, status: 'active', _syncPending: true };
+    upsertGroupStatusLocally(optimistic);
+    renderGroupsList();
+
+    try {
+      const saved = await persistGroupStatus(existing, 'active');
+      upsertGroupStatusLocally({ ...(saved || optimistic), _syncPending: false });
+      renderGroupsList();
+      TOAST.success('Group restored!');
+    } catch (err) {
+      console.warn('[groups.status] restore failed:', err);
+      upsertGroupStatusLocally({ ...existing, _syncPending: false });
+      renderGroupsList();
+      TOAST.error('Could not restore this group. I restored the previous state.');
+      return;
+    }
   };
 
   // ===== Burn Group (permanent delete state) =====
@@ -1380,13 +1435,25 @@
     const yes = await MODAL.confirm({ title: 'Burn Group', message: 'Delete (burn) this group permanently?', danger: true, confirmLabel: 'Burn' });
     if (!yes) return;
 
-    const next = [...groups];
-    next[idx] = { ...next[idx], status: 'burned' };
-    STATE.set('groups', next);
+    const optimistic = { ...existing, status: 'burned', _syncPending: true };
+    upsertGroupStatusLocally(optimistic);
+    renderGroupsList();
+
+    try {
+      const saved = await persistGroupStatus(existing, 'burned');
+      upsertGroupStatusLocally({ ...(saved || optimistic), _syncPending: false });
+      renderGroupsList();
+      TOAST.error('Group burned!');
+    } catch (err) {
+      console.warn('[groups.status] burn failed:', err);
+      upsertGroupStatusLocally({ ...existing, _syncPending: false });
+      renderGroupsList();
+      TOAST.error('Could not burn this group. I restored the previous state.');
+      return;
+    }
     if (getPrimaryGroupIdForProfile(getActiveProfileId()) === groupId) {
       setPrimaryGroup(null);
     }
-    TOAST.error('Group burned!');
 
     if (selectedGroupId === groupId) {
       selectedGroupId = null;
@@ -1587,6 +1654,15 @@
         };
 
         let savedGroup = newGroup;
+        if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+          try {
+            ESHU_SYNC.assertRemotePersistenceReady();
+          } catch (err) {
+            console.warn('[groups.save] remote persistence not ready:', err);
+            TOAST.error('Sign in must finish before creating a group. Please sign in again and retry.');
+            return;
+          }
+        }
         if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && ESHU_API.groups && typeof ESHU_API.groups.create === 'function') {
           try {
             savedGroup = await ESHU_SYNC.mutate({
@@ -1605,13 +1681,16 @@
                 const serverGroup = resp && resp.group ? resp.group : resp;
                 return { ...newGroup, ...serverGroup };
               },
-              refresh: true
+              refresh: 'background'
             }) || newGroup;
           } catch (err) {
             console.warn('[groups.save] server create failed:', err);
             TOAST.error('Could not sync this group to the backend. Please check your connection and try again.');
             return;
           }
+        } else if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+          TOAST.error('Group was not saved because the database connection is not ready. Please sign in again and retry.');
+          return;
         }
 
         const groups = STATE.get('groups') || [];
@@ -1684,7 +1763,7 @@
                 const serverGroup = resp && resp.group ? resp.group : resp;
                 return { ...updatedGroup, ...serverGroup };
               },
-              refresh: true
+              refresh: 'background'
             }) || updatedGroup;
           } catch (err) {
             console.warn('[groups.save] server update failed:', err);

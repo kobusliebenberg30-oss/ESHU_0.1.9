@@ -49,6 +49,24 @@ router.patch('/:id', validate(updateCreationSchema), async (req, res, next) => {
   }
 });
 
+router.post('/:id/like', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ creation: await svc.toggleLike(req.params.id!, profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/follow', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ creation: await svc.toggleFollow(req.params.id!, profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete('/:id', async (req, res, next) => {
   try {
     const profileId = await ensureActiveProfileId(req.session.userId!);

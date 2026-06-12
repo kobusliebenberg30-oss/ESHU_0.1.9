@@ -113,14 +113,14 @@
     let startedAt = 0;
     try { startedAt = parseInt(sessionStorage.getItem(NAV_PENDING_KEY) || '0', 10); } catch {}
     if (!startedAt || Date.now() - startedAt > 8000) return;
-    window.ESHU_LOADING.show({ key: 'navigation-target', maxMs: 6000 });
+    window.ESHU_LOADING.show({ key: 'navigation-target', maxMs: 2500 });
 
     const pathname = (window.location && window.location.pathname) || '';
     const waitsForPageRender = /(?:^|\/)(games|groups)\.html$/.test(pathname);
     if (!waitsForPageRender) {
-      window.addEventListener('load', () => setTimeout(completeNavigationLoading, 1000), { once: true });
+      window.addEventListener('load', () => setTimeout(completeNavigationLoading, 120), { once: true });
     }
-    setTimeout(completeNavigationLoading, 12000);
+    setTimeout(completeNavigationLoading, waitsForPageRender ? 12000 : 3000);
   }
 
   function completeNavigationLoading() {
@@ -342,8 +342,8 @@
 
   function initIdleScreensaver() {
     const IDLE_TIMEOUT_MS = 7.5 * 60 * 1000;
-    const COLOR_INTERVAL_MS = 20000;
-    const COLOR_TRANSITION_MS = 18000;
+    const COLOR_INTERVAL_MS = 6500;
+    const COLOR_TRANSITION_MS = 5200;
     let lastActivityAt = Date.now();
     let idleTimer = null;
     let colorTimer = null;
@@ -351,10 +351,10 @@
     let overlay = null;
     let playButton = null;
 
-    function randomRelaxedColor() {
+    function randomVividColor() {
       const hue = Math.floor(Math.random() * 360);
-      const saturation = 48 + Math.floor(Math.random() * 18);
-      const lightness = 78 + Math.floor(Math.random() * 12);
+      const saturation = 82 + Math.floor(Math.random() * 19);
+      const lightness = 38 + Math.floor(Math.random() * 21);
       return `hsl(${hue} ${saturation}% ${lightness}%)`;
     }
 
@@ -406,14 +406,19 @@
           stroke-linecap: round;
         }
         .eshu-idle-play-button {
+          appearance: none;
+          -webkit-appearance: none;
           position: relative;
           z-index: 1;
           width: 150px;
           height: 150px;
           border: 0;
-          border-radius: 50%;
+          border-radius: 9999px !important;
           background: #000;
           color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           font: 700 22px/1 Arial, sans-serif;
           letter-spacing: 0.02em;
           cursor: pointer;
@@ -464,7 +469,7 @@
     }
 
     function cycleColor() {
-      ensureOverlay().style.setProperty('--eshu-idle-bg', randomRelaxedColor());
+      ensureOverlay().style.setProperty('--eshu-idle-bg', randomVividColor());
     }
 
     function startColorCycle() {

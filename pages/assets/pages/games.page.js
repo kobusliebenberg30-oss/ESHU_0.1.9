@@ -3337,6 +3337,9 @@
 
   async function persistGameCreationStatus(creation, status) {
     const updated = { ...creation, status };
+    if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+      ESHU_SYNC.assertRemotePersistenceReady();
+    }
     if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote() && window.ESHU_API?.creations?.update) {
       const saved = await ESHU_SYNC.mutate({
         entity: 'creations',
@@ -3345,9 +3348,12 @@
           const serverCreation = resp && resp.creation ? resp.creation : resp;
           return { ...updated, ...serverCreation };
         },
-        refresh: true,
+        refresh: 'background',
       });
       return saved || updated;
+    }
+    if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+      throw new Error('Remote persistence is required before changing creation status.');
     }
     if (window.ESHU_SYNC && typeof ESHU_SYNC.applyEntityResponse === 'function') {
       ESHU_SYNC.applyEntityResponse('creations', updated);
@@ -3367,24 +3373,39 @@
       return null;
     }
 
-    let savedCreation;
-    try {
-      savedCreation = await persistGameCreationStatus(creations[idx], status);
-    } catch (err) {
-      console.warn('[games.creation-status] failed:', err);
-      TOAST.error('Could not update this creation. Please try again.');
-      return null;
+    const previousCreation = { ...creations[idx] };
+    const optimisticCreation = { ...creations[idx], status, _syncPending: true };
+    const optimisticCreations = creations.map(c => c && c.id === creationId ? optimisticCreation : c);
+    STATE.set('creations', optimisticCreations);
+    const optimisticGame = gameId ? getGameById(gameId) : null;
+    if (optimisticGame) {
+      populateCreationsTab(optimisticGame);
+      populateGameTab(optimisticGame);
     }
 
-    const latest = STATE.get('creations') || creations;
-    const next = latest.map(c => c && c.id === creationId ? { ...c, ...savedCreation } : c);
-    STATE.set('creations', next);
-    const game = gameId ? getGameById(gameId) : null;
-    if (game) {
-      populateCreationsTab(game);
-      populateGameTab(game);
+    try {
+      const savedCreation = await persistGameCreationStatus(previousCreation, status);
+      const latest = STATE.get('creations') || optimisticCreations;
+      const next = latest.map(c => c && c.id === creationId ? { ...c, ...(savedCreation || optimisticCreation), _syncPending: false } : c);
+      STATE.set('creations', next);
+      const game = gameId ? getGameById(gameId) : null;
+      if (game) {
+        populateCreationsTab(game);
+        populateGameTab(game);
+      }
+      return savedCreation || optimisticCreation;
+    } catch (err) {
+      console.warn('[games.creation-status] failed:', err);
+      const latest = STATE.get('creations') || optimisticCreations;
+      STATE.set('creations', latest.map(c => c && c.id === creationId ? { ...c, ...previousCreation, _syncPending: false } : c));
+      const game = gameId ? getGameById(gameId) : null;
+      if (game) {
+        populateCreationsTab(game);
+        populateGameTab(game);
+      }
+      TOAST.error('Could not update this creation. I restored the previous state.');
+      return null;
     }
-    return savedCreation;
   }
 
   window.clearGameCreation = async function(creationId, gameId) {
@@ -3958,6 +3979,16 @@
       };
 
       let savedGame = newGame;
+      if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+        try {
+          ESHU_SYNC.assertRemotePersistenceReady();
+        } catch (err) {
+          console.warn('[createGame] remote persistence not ready:', err);
+          hideLoading();
+          TOAST.error('Sign in must finish before creating a game. Please sign in again and retry.');
+          return;
+        }
+      }
       if (ESHU_SYNC.isRemote() && ESHU_API.games && typeof ESHU_API.games.create === 'function') {
         try {
           savedGame = await ESHU_SYNC.mutate({
@@ -3989,7 +4020,7 @@
               const serverGame = resp && resp.game ? resp.game : resp;
               return { ...newGame, ...serverGame };
             },
-            refresh: true
+            refresh: 'background'
           }) || newGame;
         } catch (err) {
           console.warn('[createGame] server create failed:', err);
@@ -3997,6 +4028,10 @@
           TOAST.error('Could not sync this game to the backend. Please check your connection and try again.');
           return;
         }
+      } else if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+        hideLoading();
+        TOAST.error('Game was not saved because the database connection is not ready. Please sign in again and retry.');
+        return;
       } else {
         ESHU_SYNC.applyEntityResponse('games', newGame);
       }
@@ -4164,7 +4199,7 @@
               const serverGame = resp && resp.game ? resp.game : resp;
               return { ...updatedGame, ...serverGame };
             },
-            refresh: true,
+            refresh: 'background',
           });
         } catch (err) {
           console.warn('[updateGame] server unavailable, falling back to local:', err);
@@ -4201,7 +4236,7 @@
           entity: 'games',
           call: () => ESHU_API.games.remove(gameIdToDelete),
           removeIds: () => gameIdToDelete,
-          refresh: true,
+          refresh: 'background',
         });
         serverHandled = true;
       } catch (err) {
@@ -4294,7 +4329,7 @@
             const serverGame = resp && resp.game ? resp.game : resp;
             return { ...game, ...serverGame };
           },
-          refresh: true,
+          refresh: 'background',
         });
         if (updatedGame) {
           TOAST.success('Joined game');
@@ -4335,8 +4370,52 @@
     setTimeout(() => enterEditMode(), 100);
   };
 
+  async function persistGameStatus(game, status) {
+    const updated = { ...game, status };
+    if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+      ESHU_SYNC.assertRemotePersistenceReady();
+    }
+    if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
+      if (status === 'active' && window.ESHU_API?.games?.restore) {
+        return await ESHU_SYNC.mutate({
+          entity: 'games',
+          call: () => ESHU_API.games.restore(game.id),
+          pick: (resp) => {
+            const serverGame = resp && resp.game ? resp.game : resp;
+            return { ...updated, ...serverGame };
+          },
+          refresh: 'background',
+        });
+      }
+      if (status === 'deleted' || status === 'burned') {
+        return await ESHU_SYNC.mutate({
+          entity: 'games',
+          call: () => ESHU_API.games.remove(game.id, status === 'burned' ? 'burned' : undefined),
+          pick: (resp) => {
+            const serverGame = resp && resp.game ? resp.game : resp;
+            return { ...updated, ...serverGame };
+          },
+          refresh: 'background',
+        });
+      }
+      return await ESHU_SYNC.mutate({
+        entity: 'games',
+        call: () => ESHU_API.games.update(game.id, { status }),
+        pick: (resp) => {
+          const serverGame = resp && resp.game ? resp.game : resp;
+          return { ...updated, ...serverGame };
+        },
+        refresh: 'background',
+      });
+    }
+    if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+      throw new Error('Remote persistence is required before changing game status.');
+    }
+    return updated;
+  }
+
   // ===== Clear Game (set to deleted - shows Boot/Delete buttons) =====
-  window.clearGame = function(gameId) {
+  window.clearGame = async function(gameId) {
     const games = STATE.get('games') || [];
     const gameIndex = games.findIndex(g => g.id === gameId);
     if (gameIndex === -1) return;
@@ -4347,26 +4426,53 @@
     }
 
     const game = games[gameIndex];
-    const updatedGame = { ...game, status: 'deleted' };
-    const newGames = [...games];
+    const previousGame = { ...game };
+    const previousCreations = [...(STATE.get('creations') || [])];
+    let updatedGame = { ...game, status: 'deleted', _syncPending: true };
+    let newGames = [...games];
     newGames[gameIndex] = updatedGame;
     STATE.set('games', newGames);
 
-    // Cascade: also boot active creations in this game
+    // Cascade immediately in the UI; the server persists the same cascade.
     const creations = STATE.get('creations') || [];
     const newCreations = creations.map(c => {
       if ((c.gameId || c.hostGameId) === gameId && c.status !== 'burned' && c.status !== 'deleted') {
-        return { ...c, status: 'deleted' };
+        return { ...c, status: 'deleted', _syncPending: true };
       }
       return c;
     });
     STATE.set('creations', newCreations);
+    renderGamesList();
 
-    TOAST.info('Game cleared - Boot to restore or Delete permanently');
+    try {
+      const savedGame = await persistGameStatus(previousGame, 'deleted');
+      updatedGame = { ...(savedGame || updatedGame), _syncPending: false };
+      newGames = [...(STATE.get('games') || newGames)];
+      const latestGameIndex = newGames.findIndex(g => g && g.id === gameId);
+      if (latestGameIndex >= 0) {
+        newGames[latestGameIndex] = { ...newGames[latestGameIndex], ...updatedGame };
+        STATE.set('games', newGames);
+      }
+      STATE.set('creations', (STATE.get('creations') || []).map(c => (
+        (c.gameId || c.hostGameId) === gameId ? { ...c, _syncPending: false } : c
+      )));
+      renderGamesList();
+      TOAST.info('Game cleared - Boot to restore or Delete permanently');
+    } catch (err) {
+      console.warn('[games.status] clear failed:', err);
+      const rollbackGames = [...(STATE.get('games') || games)];
+      const rollbackIdx = rollbackGames.findIndex(g => g && g.id === gameId);
+      if (rollbackIdx >= 0) rollbackGames[rollbackIdx] = { ...rollbackGames[rollbackIdx], ...previousGame, _syncPending: false };
+      STATE.set('games', rollbackGames);
+      STATE.set('creations', previousCreations);
+      renderGamesList();
+      TOAST.error('Could not save game boot state. I restored the previous state.');
+      return;
+    }
   };
 
   // ===== Boot Game (restore from deleted) =====
-  window.bootGame = function(gameId) {
+  window.bootGame = async function(gameId) {
     const games = STATE.get('games') || [];
     const gameIndex = games.findIndex(g => g.id === gameId);
     if (gameIndex === -1) return;
@@ -4377,26 +4483,52 @@
     }
 
     const game = games[gameIndex];
-    const updatedGame = { ...game, status: 'active' };
-    const newGames = [...games];
+    const previousGame = { ...game };
+    const previousCreations = [...(STATE.get('creations') || [])];
+    let updatedGame = { ...game, status: 'active', _syncPending: true };
+    let newGames = [...games];
     newGames[gameIndex] = updatedGame;
     STATE.set('games', newGames);
 
-    // Cascade: also restore deleted creations in this game
     const creations = STATE.get('creations') || [];
     const newCreations = creations.map(c => {
       if ((c.gameId || c.hostGameId) === gameId && c.status === 'deleted') {
-        return { ...c, status: 'active' };
+        return { ...c, status: 'active', _syncPending: true };
       }
       return c;
     });
     STATE.set('creations', newCreations);
+    renderGamesList();
 
-    TOAST.success('Game restored!');
+    try {
+      const savedGame = await persistGameStatus(previousGame, 'active');
+      updatedGame = { ...(savedGame || updatedGame), _syncPending: false };
+      newGames = [...(STATE.get('games') || newGames)];
+      const latestGameIndex = newGames.findIndex(g => g && g.id === gameId);
+      if (latestGameIndex >= 0) {
+        newGames[latestGameIndex] = { ...newGames[latestGameIndex], ...updatedGame };
+        STATE.set('games', newGames);
+      }
+      STATE.set('creations', (STATE.get('creations') || []).map(c => (
+        (c.gameId || c.hostGameId) === gameId ? { ...c, _syncPending: false } : c
+      )));
+      renderGamesList();
+      TOAST.success('Game restored!');
+    } catch (err) {
+      console.warn('[games.status] restore failed:', err);
+      const rollbackGames = [...(STATE.get('games') || games)];
+      const rollbackIdx = rollbackGames.findIndex(g => g && g.id === gameId);
+      if (rollbackIdx >= 0) rollbackGames[rollbackIdx] = { ...rollbackGames[rollbackIdx], ...previousGame, _syncPending: false };
+      STATE.set('games', rollbackGames);
+      STATE.set('creations', previousCreations);
+      renderGamesList();
+      TOAST.error('Could not restore this game. I restored the previous state.');
+      return;
+    }
   };
 
   // ===== Burn Game (permanent delete state) =====
-  window.burnGame = function(gameId) {
+  window.burnGame = async function(gameId) {
     const games = STATE.get('games') || [];
     const gameIndex = games.findIndex(g => g.id === gameId);
     if (gameIndex === -1) return;
@@ -4407,29 +4539,54 @@
     }
 
     const game = games[gameIndex];
-    const updatedGame = { ...game, status: 'burned' };
-    const newGames = [...games];
+    const previousGame = { ...game };
+    const previousCreations = [...(STATE.get('creations') || [])];
+    let updatedGame = { ...game, status: 'burned', _syncPending: true };
+    let newGames = [...games];
     newGames[gameIndex] = updatedGame;
     STATE.set('games', newGames);
 
-    // Cascade: also burn creations in this game
     const creations = STATE.get('creations') || [];
     const newCreations = creations.map(c => {
       if ((c.gameId || c.hostGameId) === gameId && c.status !== 'burned') {
-        return { ...c, status: 'burned' };
+        return { ...c, status: 'burned', _syncPending: true };
       }
       return c;
     });
     STATE.set('creations', newCreations);
 
-    // If this was the selected game, clear selection
     if (selectedGameId === gameId) {
       selectedGameId = null;
       emptyState.style.display = 'flex';
       gamePreviewPanel.classList.remove('active');
     }
+    renderGamesList();
 
-    TOAST.error('Game burned!');
+    try {
+      const savedGame = await persistGameStatus(previousGame, 'burned');
+      updatedGame = { ...(savedGame || updatedGame), _syncPending: false };
+      newGames = [...(STATE.get('games') || newGames)];
+      const latestGameIndex = newGames.findIndex(g => g && g.id === gameId);
+      if (latestGameIndex >= 0) {
+        newGames[latestGameIndex] = { ...newGames[latestGameIndex], ...updatedGame };
+        STATE.set('games', newGames);
+      }
+      STATE.set('creations', (STATE.get('creations') || []).map(c => (
+        (c.gameId || c.hostGameId) === gameId ? { ...c, _syncPending: false } : c
+      )));
+      renderGamesList();
+      TOAST.error('Game burned!');
+    } catch (err) {
+      console.warn('[games.status] burn failed:', err);
+      const rollbackGames = [...(STATE.get('games') || games)];
+      const rollbackIdx = rollbackGames.findIndex(g => g && g.id === gameId);
+      if (rollbackIdx >= 0) rollbackGames[rollbackIdx] = { ...rollbackGames[rollbackIdx], ...previousGame, _syncPending: false };
+      STATE.set('games', rollbackGames);
+      STATE.set('creations', previousCreations);
+      renderGamesList();
+      TOAST.error('Could not burn this game. I restored the previous state.');
+      return;
+    }
   };
 
   // ===== Timing Preview =====

@@ -147,6 +147,15 @@
     return pendingRefresh;
   }
 
+  function refreshInBackground() {
+    if (!isRemote()) return;
+    setTimeout(() => {
+      refresh().catch((err) => {
+        console.warn('[ESHU_SYNC] background refresh failed:', err);
+      });
+    }, 0);
+  }
+
   function applySnapshot(snapshot) {
     if (!snapshot || typeof snapshot !== 'object') return;
     // Set identity first. Table updates notify page subscribers immediately,
@@ -174,6 +183,25 @@
       window.ESHU_REMOTE.isEnabled &&
       window.ESHU_REMOTE.isEnabled()
     );
+  }
+
+  function isHostedDeployment() {
+    try {
+      const host = window.location && window.location.hostname;
+      return !!(host && host !== 'localhost' && host !== '127.0.0.1');
+    } catch {
+      return false;
+    }
+  }
+
+  function requiresRemotePersistence() {
+    return isHostedDeployment();
+  }
+
+  function assertRemotePersistenceReady() {
+    if (!requiresRemotePersistence() || isRemote()) return true;
+    try { window.dispatchEvent(new CustomEvent('eshu:sync-unauthenticated')); } catch {}
+    throw new Error('Remote persistence is required before saving entities.');
   }
 
   /**
@@ -221,7 +249,9 @@
         applyEntityResponse(entity, picked);
       }
     }
-    if (opts.refresh) {
+    if (opts.refresh === 'background') {
+      refreshInBackground();
+    } else if (opts.refresh) {
       await refresh();
     }
     return typeof opts.pick === 'function' ? opts.pick(resp) : resp;
@@ -230,9 +260,12 @@
   window.ESHU_SYNC = {
     mutate,
     refresh,
+    refreshInBackground,
     applyEntityResponse,
     removeEntity,
     applySnapshot,
     isRemote,
+    requiresRemotePersistence,
+    assertRemotePersistenceReady,
   };
 })();

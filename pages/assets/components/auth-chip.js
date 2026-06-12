@@ -95,6 +95,21 @@
   display: inline-block; width: 1px; height: 12px;
   background: var(--border-color, #e0e0e0);
 }
+html[data-theme="dark"] .${CHIP_CLASS} {
+  background: var(--dark-surface-1, #0b0b0b);
+  color: #ffffff;
+  border-color: var(--dark-border-strong, #3a3a3a);
+}
+html[data-theme="dark"] .${CHIP_CLASS} .eshu-auth-chip-name,
+html[data-theme="dark"] .${CHIP_CLASS} .eshu-auth-chip-action {
+  color: #ffffff !important;
+}
+html[data-theme="dark"] .${CHIP_CLASS} .eshu-auth-chip-action:hover {
+  color: #dcdcdc !important;
+}
+html[data-theme="dark"] .${CHIP_CLASS} .eshu-auth-chip-sep {
+  background: var(--dark-border-strong, #3a3a3a);
+}
 `;
     const el = document.createElement('style');
     el.id = STYLE_ID;

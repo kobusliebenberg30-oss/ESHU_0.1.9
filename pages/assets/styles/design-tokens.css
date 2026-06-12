@@ -167,6 +167,11 @@ html[data-theme="dark"] {
   --bg-surface: #000000;
   --bg-inset: #000000;
   --bg-nav: #000000;
+  --dark-surface-1: #0b0b0b;
+  --dark-surface-2: #121212;
+  --dark-surface-3: #1a1a1a;
+  --dark-border-strong: #3a3a3a;
+  --dark-border-soft: #242424;
   
   --text-primary: #ffffff;
   --text-secondary: #aaaaaa;
@@ -264,10 +269,13 @@ html[data-theme="dark"] {
    they are completely inert in light mode.
    ============================================================== */
 
-/* --- Panel-level surfaces: pure black to match the rest of the page --- */
-html[data-theme="dark"] .gf-body,
-html[data-theme="dark"] .gf-game-right {
+/* --- Panel-level surfaces: keep page body black, lift side panels subtly. --- */
+html[data-theme="dark"] .gf-body {
   background: #000000 !important;
+}
+html[data-theme="dark"] .gf-game-right {
+  background: var(--dark-surface-1, #0b0b0b) !important;
+  border-left-color: var(--dark-border-soft, #242424) !important;
 }
 
 /* --- Thumbnail / preview / empty-state blocks ---
@@ -280,15 +288,15 @@ html[data-theme="dark"] .creation-card,
 html[data-theme="dark"] .preview-image,
 html[data-theme="dark"] .empty-state-icon,
 html[data-theme="dark"] .game-image-preview,
-html[data-theme="dark"] .progress-bar,
-html[data-theme="dark"] .gf-chamfer-content {
-  background: #000000 !important;
+html[data-theme="dark"] .progress-bar {
+  background: var(--dark-surface-1, #0b0b0b) !important;
 }
 
 /* --- Leaderboard tiles & rank chip --- */
 html[data-theme="dark"] .gf-lb-item,
 html[data-theme="dark"] .gf-lb-rank {
-  background: #000000 !important;
+  background: var(--dark-surface-2, #121212) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
 }
 html[data-theme="dark"] .gf-lb-placeholder {
   color: var(--text-muted) !important;
@@ -300,12 +308,12 @@ html[data-theme="dark"] .gf-lb-placeholder {
        black", matching the rest of the dark theme. Hover inverts
        to a solid white fill with black text for clear feedback. */
 html[data-theme="dark"] .gf-chamfer-upload {
-  background: transparent !important;
-  color: #ffffff !important;
+  background: #ffffff !important;
+  color: #000000 !important;
   border: 1px solid #ffffff !important;
 }
 html[data-theme="dark"] .gf-chamfer-upload:hover {
-  background: #ffffff !important;
+  background: #e8e8e8 !important;
   color: #000000 !important;
   border-color: #ffffff !important;
 }
@@ -313,26 +321,24 @@ html[data-theme="dark"] .gf-chamfer-content {
   background: transparent !important;
 }
 
-/* Chamfer triangle backdrop in dark mode → pure black so it disappears
-   into the page background, leaving only the chamfered diagonal edge
-   and the inset content (PLAY / UPLOAD / status text) visible. */
+/* Chamfer triangle backdrop needs to read against the black page. */
 html[data-theme="dark"] .gf-chamfer-overlay .gf-chamfer-bg {
-  background: #000000 !important;
+  background: var(--dark-surface-2, #121212) !important;
 }
 
 /* --- Comment options popover panel + buttons --- */
 html[data-theme="dark"] .comment-options-panel {
-  background: var(--bg-panel) !important;
+  background: var(--dark-surface-1, #0b0b0b) !important;
   color: var(--text-primary) !important;
-  border: 1px solid var(--border-color) !important;
+  border: 1px solid var(--dark-border-strong, #3a3a3a) !important;
 }
 html[data-theme="dark"] .comment-options-title {
   color: var(--text-primary) !important;
 }
 html[data-theme="dark"] .comment-option-btn {
-  background: var(--bg-card) !important;
+  background: var(--dark-surface-2, #121212) !important;
   color: var(--text-primary) !important;
-  border-color: var(--border-color) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
 }
 html[data-theme="dark"] .comment-option-btn:hover {
   background: var(--bg-hover) !important;
@@ -430,15 +436,15 @@ html[data-theme="dark"] .avatar-sidebar {
   border-right-color: var(--border-color) !important;
 }
 html[data-theme="dark"] .avatar-item {
-  background: var(--bg-tertiary) !important;
-  border-color: var(--border-dark) !important;
+  background: var(--dark-surface-1, #0b0b0b) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
 }
 html[data-theme="dark"] .avatar-add-item {
-  background: var(--bg-tertiary) !important;
+  background: var(--dark-surface-1, #0b0b0b) !important;
   color: var(--text-primary) !important;
 }
 html[data-theme="dark"] .badge {
-  background: var(--bg-tertiary) !important;
+  background: var(--dark-surface-2, #121212) !important;
 }
 html[data-theme="dark"] .list-item:hover,
 html[data-theme="dark"] .split-item:hover {
@@ -450,7 +456,7 @@ html[data-theme="dark"] .loading-text {
   color: var(--text-primary) !important;
 }
 html[data-theme="dark"] .loading-spinner {
-  background: var(--loader-square-color, #000000) !important;
+  background: var(--loader-square-color, #ffffff) !important;
 }
 
 /* --- Form placeholder contrast --- */
@@ -549,9 +555,9 @@ html[data-theme="dark"] .group-list-container {
   border-color: var(--border-color) !important;
 }
 html[data-theme="dark"] .group-list-header {
-  background: var(--bg-surface) !important;
+  background: var(--dark-surface-1, #0b0b0b) !important;
   color: var(--text-secondary) !important;
-  border-bottom-color: var(--border-color) !important;
+  border-bottom-color: var(--dark-border-soft, #242424) !important;
 }
 html[data-theme="dark"] .group-list-item {
   border-bottom-color: var(--border-light) !important;
@@ -562,8 +568,8 @@ html[data-theme="dark"] .group-list-item.selected {
   background: var(--bg-hover) !important;
 }
 html[data-theme="dark"] .group-list-item .group-icon {
-  background: #000000 !important;
-  border-color: var(--border-color) !important;
+  background: var(--dark-surface-2, #121212) !important;
+  border-color: var(--dark-border-soft, #242424) !important;
 }
 html[data-theme="dark"] .group-list-item .group-icon img {
   filter: invert(1) !important;

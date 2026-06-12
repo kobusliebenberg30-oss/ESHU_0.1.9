@@ -966,7 +966,7 @@
       db.values = createEmptyDb().values;
     }
     if (typeof db.values.uiTheme !== 'string' || !db.values.uiTheme) {
-      db.values.uiTheme = 'dark';
+      db.values.uiTheme = 'light';
     }
     if (!db.values.currentProfileId) {
       db.values.currentProfileId = null;

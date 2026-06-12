@@ -1728,6 +1728,15 @@
               updatedAt: Date.now()
             };
         let savedCreation = updatedCreation;
+        if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+          try {
+            ESHU_SYNC.assertRemotePersistenceReady();
+          } catch (err) {
+            console.warn('[creations.save] remote persistence not ready:', err);
+            if (typeof TOAST !== 'undefined') TOAST.error('Sign in must finish before saving this creation. Please sign in again and retry.');
+            return;
+          }
+        }
         if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
           savedCreation = await ESHU_SYNC.mutate({
             entity: 'creations',
@@ -1753,8 +1762,14 @@
               },
             }),
             pick: (resp) => resp && resp.creation,
-            refresh: true,
+            refresh: false,
           }) || updatedCreation;
+          if (window.ESHU_SYNC && typeof ESHU_SYNC.refresh === 'function') {
+            setTimeout(() => { ESHU_SYNC.refresh().catch(() => {}); }, 0);
+          }
+        } else if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+          if (typeof TOAST !== 'undefined') TOAST.error('Creation was not saved because the database connection is not ready. Please sign in again and retry.');
+          return;
         } else {
           ESHU_DB.updateTable('creations', (currentCreations) => {
             return currentCreations.map(c => c.id === editingCreation.id ? updatedCreation : c);
@@ -1763,6 +1778,9 @@
 
         updateXPDisplay();
         updateUploadAccessUi();
+        setLoading(false);
+        setSubmitDisabled(false);
+        isSubmitting = false;
 
         if (typeof TOAST !== 'undefined') {
           TOAST.success('Creation updated successfully!');
@@ -1810,6 +1828,15 @@
         };
 
         let savedCreation = newCreation;
+        if (window.ESHU_SYNC && ESHU_SYNC.assertRemotePersistenceReady) {
+          try {
+            ESHU_SYNC.assertRemotePersistenceReady();
+          } catch (err) {
+            console.warn('[creations.save] remote persistence not ready:', err);
+            if (typeof TOAST !== 'undefined') TOAST.error('Sign in must finish before creating a creation. Please sign in again and retry.');
+            return;
+          }
+        }
         if (window.ESHU_SYNC && ESHU_SYNC.isRemote && ESHU_SYNC.isRemote()) {
           savedCreation = await ESHU_SYNC.mutate({
             entity: 'creations',
@@ -1847,8 +1874,14 @@
               const serverCreation = resp && resp.creation ? resp.creation : resp;
               return { ...newCreation, ...serverCreation };
             },
-            refresh: true
+            refresh: false
           }) || newCreation;
+          if (window.ESHU_SYNC && typeof ESHU_SYNC.refresh === 'function') {
+            setTimeout(() => { ESHU_SYNC.refresh().catch(() => {}); }, 0);
+          }
+        } else if (window.ESHU_SYNC && ESHU_SYNC.requiresRemotePersistence && ESHU_SYNC.requiresRemotePersistence()) {
+          if (typeof TOAST !== 'undefined') TOAST.error('Creation was not saved because the database connection is not ready. Please sign in again and retry.');
+          return;
         } else if (typeof ESHU_DB !== 'undefined') {
           ESHU_DB.updateTable('creations', (currentCreations) => [newCreation, ...currentCreations]);
         } else if (typeof STATE !== 'undefined') {
@@ -1859,8 +1892,12 @@
         const xpBeforeUpload = parseInt(xpPoints || 0, 10);
         let awardResult = null;
         try {
-          if (ESHU_API && ESHU_API.xp && typeof ESHU_API.xp.awardSafe === 'function') {
-            awardResult = await ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id);
+          if (ESHU_API && ESHU_API.xp && typeof ESHU_API.xp.awardBackground === 'function') {
+            awardResult = ESHU_API.xp.awardBackground('creation_uploaded', savedCreation.id);
+          } else if (ESHU_API && ESHU_API.xp && typeof ESHU_API.xp.awardSafe === 'function') {
+            ESHU_API.xp.awardSafe('creation_uploaded', savedCreation.id).catch((err) => {
+              console.warn('[creations.save] background XP award failed:', err);
+            });
           }
         } catch (err) {
           console.warn('[creations.save] XP award failed:', err);
@@ -1881,6 +1918,9 @@
 
         updateXPDisplay();
         updateUploadAccessUi();
+        setLoading(false);
+        setSubmitDisabled(false);
+        isSubmitting = false;
 
         if (typeof TOAST !== 'undefined') {
           const unlockedComments = xpBeforeUpload < 3 && xpPoints >= 3;
@@ -1895,12 +1935,7 @@
         const returnToGameFront = () => {
           window.location.href = `games.html?view=front&gameId=${encodeURIComponent(hostGameId)}${sourceGroupPart}`;
         };
-        await new Promise((resolve) => {
-          runHype('RIGHT ON!', () => {
-            returnToGameFront();
-            resolve();
-          }, 1500);
-        });
+        runHype('RIGHT ON!', returnToGameFront, 1500);
       }
     } catch (err) {
       console.error('Create upload failed:', err);

@@ -211,6 +211,7 @@ export const getPublicProfileContent = async (profileId: string) => {
     where: {
       ownerProfileId: profileId,
       privacy: { not: 'private' },
+      status: EntityStatus.ACTIVE,
     },
     orderBy: [{ isSystemDefault: 'desc' }, { createdAt: 'asc' }],
   });
@@ -220,13 +221,14 @@ export const getPublicProfileContent = async (profileId: string) => {
     where: {
       ownerProfileId: profileId,
       privacy: { not: 'private' },
+      status: EntityStatus.ACTIVE,
     },
     orderBy: { createdAt: 'asc' },
   });
   const gameIds = games.map((g) => g.id);
 
   const creations = await prisma.creation.findMany({
-    where: { ownerProfileId: profileId },
+    where: { ownerProfileId: profileId, status: EntityStatus.ACTIVE },
     orderBy: [{ timestamp: 'desc' }, { createdAt: 'desc' }],
   });
 

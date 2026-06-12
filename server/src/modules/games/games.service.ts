@@ -208,6 +208,20 @@ const ensureOwned = async (id: string, profileId: string): Promise<Game> => {
   return game;
 };
 
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+const toggleDataProfileId = (data: unknown, field: 'likedBy' | 'followedBy', profileId: string) => {
+  const nextData = data && typeof data === 'object' && !Array.isArray(data)
+    ? { ...(data as Record<string, unknown>) }
+    : {};
+  const current = asStringArray(nextData[field]);
+  nextData[field] = current.includes(profileId)
+    ? current.filter((id) => id !== profileId)
+    : [...current, profileId];
+  return nextData;
+};
+
 export const list = async (
   profileId: string,
   filters: { status: string; hostGroupId?: string },
@@ -307,11 +321,9 @@ export const create = async (profileId: string, input: CreateGameInput) => {
   // Phase 2 gate: if a hostGroupId is supplied, the caller's profile must be
   // a member of that group (owner counts implicitly). Prevents a stale or
   // tampered client from creating games inside groups it hasn't joined.
-  if (input.hostGroupId) {
-    const allowed = await groupsSvc.isMember(input.hostGroupId, profileId);
-    if (!allowed) {
-      throw new HttpError(403, 'NOT_GROUP_MEMBER');
-    }
+  const allowed = await groupsSvc.isMember(input.hostGroupId, profileId);
+  if (!allowed) {
+    throw new HttpError(403, 'NOT_GROUP_MEMBER');
   }
 
   const offsets = offsetsFromInput(input.timingOffsets);
@@ -328,7 +340,7 @@ export const create = async (profileId: string, input: CreateGameInput) => {
       name: input.name,
       description: input.description ?? null,
       rules: input.rules ?? null,
-      hostGroupId: input.hostGroupId ?? null,
+      hostGroupId: input.hostGroupId,
       hostGroupName: input.hostGroupName ?? null,
       privacy: input.privacy ?? 'public',
       gameType: input.gameType ?? 'book',
@@ -395,6 +407,60 @@ export const update = async (id: string, profileId: string, input: UpdateGameInp
   if (input.timingExtensions?.length) {
     await appendTimingExtensions(id, input.timingExtensions);
   }
+  const memberIds = await loadMemberIds(id);
+  const extensions = await loadTimingExtensions(id);
+  return toWire(updated, memberIds, extensions);
+};
+
+const toggleReaction = async (id: string, profileId: string, field: 'likedBy' | 'followedBy') => {
+  const game = await prisma.game.findUnique({ where: { id } });
+  if (!game) throw new HttpError(404, 'Game not found');
+  if (game.status !== 'ACTIVE') throw new HttpError(409, 'Game is not active');
+  if (game.privacy === 'private' && game.ownerProfileId !== profileId) {
+    const member = await prisma.gameMember.findUnique({
+      where: { gameId_profileId: { gameId: id, profileId } },
+      select: { gameId: true },
+    });
+    if (!member) throw new HttpError(403, 'Forbidden');
+  }
+  const updated = await prisma.game.update({
+    where: { id },
+    data: {
+      data: toggleDataProfileId(game.data, field, profileId) as Prisma.InputJsonValue,
+    },
+  });
+  const memberIds = await loadMemberIds(id);
+  const extensions = await loadTimingExtensions(id);
+  return toWire(updated, memberIds, extensions);
+};
+
+export const toggleLike = (id: string, profileId: string) => toggleReaction(id, profileId, 'likedBy');
+export const toggleFollow = (id: string, profileId: string) => toggleReaction(id, profileId, 'followedBy');
+
+export const softRemove = async (id: string, profileId: string, mode: 'deleted' | 'burned' | 'finished' = 'deleted') => {
+  if (id === DEFAULT_GAME_ID) {
+    throw new HttpError(403, 'SYSTEM_DEFAULT_IMMUTABLE');
+  }
+  await ensureOwned(id, profileId);
+  const nextStatus = statusFromWire(mode);
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.game.update({
+      where: { id },
+      data: { status: nextStatus },
+    });
+    if (mode === 'burned') {
+      await tx.creation.updateMany({
+        where: { hostGameId: id, status: { not: 'BURNED' } },
+        data: { status: 'BURNED' },
+      });
+    } else if (mode === 'deleted') {
+      await tx.creation.updateMany({
+        where: { hostGameId: id, status: 'ACTIVE' },
+        data: { status: 'DELETED' },
+      });
+    }
+    return row;
+  });
   const [memberIds, extensions] = await Promise.all([
     loadMemberIds(id),
     loadTimingExtensions(id),
@@ -402,19 +468,24 @@ export const update = async (id: string, profileId: string, input: UpdateGameInp
   return toWire(updated, memberIds, extensions);
 };
 
-export const softRemove = async (id: string, profileId: string, mode: 'deleted' | 'burned' | 'finished' = 'deleted') => {
+export const restore = async (id: string, profileId: string) => {
   if (id === DEFAULT_GAME_ID) {
     throw new HttpError(403, 'SYSTEM_DEFAULT_IMMUTABLE');
   }
   await ensureOwned(id, profileId);
-  const updated = await prisma.game.update({
-    where: { id },
-    data: { status: statusFromWire(mode) },
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.game.update({
+      where: { id },
+      data: { status: 'ACTIVE' },
+    });
+    await tx.creation.updateMany({
+      where: { hostGameId: id, status: 'DELETED' },
+      data: { status: 'ACTIVE' },
+    });
+    return row;
   });
-  const [memberIds, extensions] = await Promise.all([
-    loadMemberIds(id),
-    loadTimingExtensions(id),
-  ]);
+  const memberIds = await loadMemberIds(id);
+  const extensions = await loadTimingExtensions(id);
   return toWire(updated, memberIds, extensions);
 };
 

@@ -60,6 +60,33 @@ router.post('/:id/join', async (req, res, next) => {
   }
 });
 
+router.post('/:id/like', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ game: await svc.toggleLike(String(req.params.id), profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/follow', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ game: await svc.toggleFollow(String(req.params.id), profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/restore', async (req, res, next) => {
+  try {
+    const profileId = await ensureActiveProfileId(req.session.userId!);
+    res.json({ game: await svc.restore(String(req.params.id), profileId) });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.delete('/:id', async (req, res, next) => {
   try {
     const profileId = await ensureActiveProfileId(req.session.userId!);

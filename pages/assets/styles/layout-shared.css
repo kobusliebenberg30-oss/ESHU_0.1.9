@@ -2001,13 +2001,13 @@ html[data-theme="dark"] .u-card.deleted .u-card-ind.active svg {
 
 /* Base card: black bg, white border */
 html[data-theme="dark"] .u-card {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
   color: #ffffff;
 }
 html[data-theme="dark"] .u-card:hover {
-  background: #111111;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 /* Selected: visibly lighter bg, thicker white border, bold white left bar */
 html[data-theme="dark"] .u-card.selected {
@@ -2023,13 +2023,13 @@ html[data-theme="dark"] .u-card.selected .u-card-title {
 
 /* Card thumbnails */
 html[data-theme="dark"] .u-card-thumb {
-  background: #000000;
-  border-color: #000000;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
   color: #ffffff;
 }
 html[data-theme="dark"] .u-card-icon {
-  background: #000000;
-  border-color: #ffffff;
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
   color: var(--text-primary);
 }
 html[data-theme="dark"] .u-card-icon img:not([src*="data:"]) {
@@ -2038,20 +2038,21 @@ html[data-theme="dark"] .u-card-icon img:not([src*="data:"]) {
 
 /* Thumb image cards */
 html[data-theme="dark"] .u-thumb-card {
-  background: var(--bg-tertiary);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Card expand panel */
 html[data-theme="dark"] .u-card-expand {
-  background: var(--bg-surface);
-  border-top-color: var(--border-color);
+  background: #000000;
+  border-top-color: var(--dark-border-soft, #242424);
 }
 
 /* Card buttons */
 html[data-theme="dark"] .u-card-btn {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .u-card-btn:hover {
   background: var(--bg-hover);
@@ -2081,8 +2082,8 @@ html[data-theme="dark"] .u-card.booted .u-card-btn * {
 
 /* Comment sections */
 html[data-theme="dark"] .comment-section {
-  background: var(--bg-surface);
-  border-color: var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .comment-section::-webkit-scrollbar-thumb {
   background: #555;
@@ -2090,15 +2091,15 @@ html[data-theme="dark"] .comment-section::-webkit-scrollbar-thumb {
 
 /* Comment cards */
 html[data-theme="dark"] .eshu-comment-item {
-  background: var(--bg-card);
-  border-color: var(--border-light);
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-soft, #242424);
 }
 
 /* Comment action buttons */
 html[data-theme="dark"] .comment-action-btn {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .comment-action-btn:hover {
   background: var(--bg-hover);
@@ -2106,13 +2107,13 @@ html[data-theme="dark"] .comment-action-btn:hover {
 
 /* Comment options panel */
 html[data-theme="dark"] .comment-options-panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border: 1px solid var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] .comment-option-btn {
-  background: var(--bg-card);
+  background: var(--dark-surface-2, #121212);
   color: var(--text-primary);
-  border-color: var(--border-color);
+  border-color: var(--dark-border-soft, #242424);
 }
 html[data-theme="dark"] .comment-option-btn:hover {
   background: var(--bg-hover);

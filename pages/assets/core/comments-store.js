@@ -324,23 +324,26 @@
    */
   async function update(id, fields, targetCandidates) {
     const client = api();
+    const localUpdated = updateCacheById(targetCandidates, id, (prev) => ({
+      ...prev,
+      ...fields,
+      editedAt: fields?.text !== undefined ? new Date().toISOString() : prev.editedAt,
+    }), 'update');
     if (!canUseRemoteComments() || !client || !client.comments) {
-      return updateCacheById(targetCandidates, id, (prev) => ({
-        ...prev,
-        ...fields,
-        editedAt: fields?.text !== undefined ? new Date().toISOString() : prev.editedAt,
-      }));
+      return localUpdated;
     }
-    try {
-      const resp = await client.comments.update(id, fields);
-      const next = toLegacy(resp && resp.comment ? resp.comment : resp);
-      updateCacheById(targetCandidates, id, () => next);
-      return next;
-    } catch (err) {
-      applyRemoteBackoff(err, 'update');
-      console.warn('[ESHU_COMMENTS] update failed:', err);
-      return null;
-    }
+    void (async () => {
+      try {
+        const resp = await client.comments.update(id, fields);
+        const next = toLegacy(resp && resp.comment ? resp.comment : resp);
+        updateCacheById(targetCandidates, id, () => next, 'update');
+      } catch (err) {
+        applyRemoteBackoff(err, 'update');
+        console.warn('[ESHU_COMMENTS] background update failed:', err);
+        dispatchUpdated(Array.isArray(targetCandidates) ? targetCandidates[0] : targetCandidates, readCache(Array.isArray(targetCandidates) ? targetCandidates[0] : targetCandidates), 'sync-error');
+      }
+    })();
+    return localUpdated;
   }
 
   async function toggleLike(id, targetCandidates) {
@@ -355,17 +358,19 @@
       }
       return { ...prev, likedBy: list };
     }, 'like');
-    if (!canUseRemoteComments() || !client || !client.comments) return localToggle();
-    try {
-      const resp = await client.comments.toggleLike(id);
-      const next = toLegacy(resp && resp.comment ? resp.comment : resp);
-      updateCacheById(targetCandidates, id, () => next, 'like');
-      return next;
-    } catch (err) {
-      applyRemoteBackoff(err, 'toggleLike');
-      console.warn('[ESHU_COMMENTS] toggleLike failed:', err);
-      return localToggle();
-    }
+    const local = localToggle();
+    if (!canUseRemoteComments() || !client || !client.comments) return local;
+    void (async () => {
+      try {
+        const resp = await client.comments.toggleLike(id);
+        const next = toLegacy(resp && resp.comment ? resp.comment : resp);
+        updateCacheById(targetCandidates, id, () => next, 'like');
+      } catch (err) {
+        applyRemoteBackoff(err, 'toggleLike');
+        console.warn('[ESHU_COMMENTS] background toggleLike failed:', err);
+      }
+    })();
+    return local;
   }
 
   async function toggleFollow(id, targetCandidates) {
@@ -380,39 +385,43 @@
       }
       return { ...prev, followedBy: list };
     }, 'follow');
-    if (!canUseRemoteComments() || !client || !client.comments) return localToggle();
-    try {
-      const resp = await client.comments.toggleFollow(id);
-      const next = toLegacy(resp && resp.comment ? resp.comment : resp);
-      updateCacheById(targetCandidates, id, () => next, 'follow');
-      return next;
-    } catch (err) {
-      applyRemoteBackoff(err, 'toggleFollow');
-      console.warn('[ESHU_COMMENTS] toggleFollow failed:', err);
-      return localToggle();
-    }
+    const local = localToggle();
+    if (!canUseRemoteComments() || !client || !client.comments) return local;
+    void (async () => {
+      try {
+        const resp = await client.comments.toggleFollow(id);
+        const next = toLegacy(resp && resp.comment ? resp.comment : resp);
+        updateCacheById(targetCandidates, id, () => next, 'follow');
+      } catch (err) {
+        applyRemoteBackoff(err, 'toggleFollow');
+        console.warn('[ESHU_COMMENTS] background toggleFollow failed:', err);
+      }
+    })();
+    return local;
   }
 
   async function remove(id, mode, targetCandidates) {
     const client = api();
+    const local = updateCacheById(targetCandidates, id, (prev) => ({
+      ...prev,
+      status: mode === 'burned' ? 'burned' : 'deleted',
+    }), 'remove');
     if (!canUseRemoteComments() || !client || !client.comments) {
       // Local: keep the row, just mark status. The legacy render code
       // already filters by status === 'active'.
-      return updateCacheById(targetCandidates, id, (prev) => ({
-        ...prev,
-        status: mode === 'burned' ? 'burned' : 'deleted',
-      }));
+      return local;
     }
-    try {
-      const resp = await client.comments.remove(id, mode);
-      const next = toLegacy(resp && resp.comment ? resp.comment : resp);
-      updateCacheById(targetCandidates, id, () => next);
-      return next;
-    } catch (err) {
-      applyRemoteBackoff(err, 'remove');
-      console.warn('[ESHU_COMMENTS] remove failed:', err);
-      return null;
-    }
+    void (async () => {
+      try {
+        const resp = await client.comments.remove(id, mode);
+        const next = toLegacy(resp && resp.comment ? resp.comment : resp);
+        updateCacheById(targetCandidates, id, () => next, 'remove');
+      } catch (err) {
+        applyRemoteBackoff(err, 'remove');
+        console.warn('[ESHU_COMMENTS] background remove failed:', err);
+      }
+    })();
+    return local;
   }
 
   window.ESHU_COMMENTS = {

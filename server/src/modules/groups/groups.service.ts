@@ -177,6 +177,20 @@ const ensureOwned = async (id: string, profileId: string): Promise<Group> => {
   return group;
 };
 
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+const toggleDataProfileId = (data: unknown, field: 'likedBy' | 'followedBy', profileId: string) => {
+  const nextData = data && typeof data === 'object' && !Array.isArray(data)
+    ? { ...(data as Record<string, unknown>) }
+    : {};
+  const current = asStringArray(nextData[field]);
+  nextData[field] = current.includes(profileId)
+    ? current.filter((id) => id !== profileId)
+    : [...current, profileId];
+  return nextData;
+};
+
 export const list = async (
   profileId: string,
   filters: { status: string; privacy: string },
@@ -384,6 +398,29 @@ export const leave = async (id: string, profileId: string) => {
   const fresh = await prisma.group.findUniqueOrThrow({ where: { id } });
   return toWire(fresh, await loadMemberIds(id));
 };
+
+const toggleReaction = async (id: string, profileId: string, field: 'likedBy' | 'followedBy') => {
+  const group = await prisma.group.findUnique({ where: { id } });
+  if (!group) throw new HttpError(404, 'Group not found');
+  if (group.status !== 'ACTIVE') throw new HttpError(409, 'Group is not active');
+  if (group.privacy === 'private' && group.ownerProfileId !== profileId) {
+    const member = await prisma.groupMember.findUnique({
+      where: { groupId_profileId: { groupId: id, profileId } },
+      select: { groupId: true },
+    });
+    if (!member) throw new HttpError(403, 'Forbidden');
+  }
+  const updated = await prisma.group.update({
+    where: { id },
+    data: {
+      data: toggleDataProfileId(group.data, field, profileId) as Prisma.InputJsonValue,
+    },
+  });
+  return toWire(updated, await loadMemberIds(id));
+};
+
+export const toggleLike = (id: string, profileId: string) => toggleReaction(id, profileId, 'likedBy');
+export const toggleFollow = (id: string, profileId: string) => toggleReaction(id, profileId, 'followedBy');
 
 /**
  * Predicate used by other services to enforce membership-gated actions

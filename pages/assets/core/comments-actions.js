@@ -63,9 +63,9 @@
         const likedInd = card.querySelector('.u-card-ind.liked');
         if (likedInd) likedInd.classList.toggle('active', btn.classList.contains('active'));
         if (typeof toggleLike === 'function') {
-          await toggleLike({ comment, comments, idx, threadId, target, card, button: btn });
+          Promise.resolve(toggleLike({ comment, comments, idx, threadId, target, card, button: btn })).catch((err) => console.warn('[comments-actions] like failed:', err));
         } else if (commentsStore && comment.id) {
-          await commentsStore.toggleLike(comment.id, target);
+          Promise.resolve(commentsStore.toggleLike(comment.id, target)).catch((err) => console.warn('[comments-actions] like failed:', err));
         }
         if (typeof onLikeToggled === 'function') onLikeToggled({ comment, comments, idx, threadId, target, card, button: btn });
         return;
@@ -76,9 +76,9 @@
         const followedInd = card.querySelector('.u-card-ind.followed');
         if (followedInd) followedInd.classList.toggle('active', btn.classList.contains('active'));
         if (typeof toggleFollow === 'function') {
-          await toggleFollow({ comment, comments, idx, threadId, target, card, button: btn });
+          Promise.resolve(toggleFollow({ comment, comments, idx, threadId, target, card, button: btn })).catch((err) => console.warn('[comments-actions] follow failed:', err));
         } else if (commentsStore && comment.id) {
-          await commentsStore.toggleFollow(comment.id, target);
+          Promise.resolve(commentsStore.toggleFollow(comment.id, target)).catch((err) => console.warn('[comments-actions] follow failed:', err));
         }
         if (typeof onFollowToggled === 'function') onFollowToggled({ comment, comments, idx, threadId, target, card, button: btn });
         return;
@@ -89,21 +89,21 @@
         const confirmed = await confirmBurn();
         if (!confirmed) return;
         if (typeof applyStatus === 'function') {
-          await applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn });
+          Promise.resolve(applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn })).catch((err) => console.warn('[comments-actions] burn failed:', err));
         } else if (commentsStore && comment.id) {
-          await commentsStore.remove(comment.id, 'burned', target);
+          Promise.resolve(commentsStore.remove(comment.id, 'burned', target)).catch((err) => console.warn('[comments-actions] burn failed:', err));
         }
       } else if (action === 'clear') {
         if (typeof applyStatus === 'function') {
-          await applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn });
+          Promise.resolve(applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn })).catch((err) => console.warn('[comments-actions] clear failed:', err));
         } else if (commentsStore && comment.id) {
-          await commentsStore.remove(comment.id, 'deleted', target);
+          Promise.resolve(commentsStore.remove(comment.id, 'deleted', target)).catch((err) => console.warn('[comments-actions] clear failed:', err));
         }
       } else if (action === 'boot') {
         if (typeof applyStatus === 'function') {
-          await applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn });
+          Promise.resolve(applyStatus({ action, comment, comments, idx, threadId, target, card, button: btn })).catch((err) => console.warn('[comments-actions] restore failed:', err));
         } else if (commentsStore && comment.id) {
-          await commentsStore.update(comment.id, { status: 'active' }, target);
+          Promise.resolve(commentsStore.update(comment.id, { status: 'active' }, target)).catch((err) => console.warn('[comments-actions] restore failed:', err));
         }
       } else {
         return;

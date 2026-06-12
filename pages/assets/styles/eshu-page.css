@@ -1200,15 +1200,15 @@
    DARK THEME — eshu-page
    ============================ */
 html[data-theme="dark"] .current-game-info-content {
-  background: var(--bg-panel);
-  border-color: var(--border-color);
+  background: var(--dark-surface-1, #0b0b0b);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] .current-game-info-close {
-  background: var(--bg-card);
-  border-color: var(--border-color);
+  background: var(--dark-surface-2, #121212);
+  border-color: var(--dark-border-strong, #3a3a3a);
 }
 html[data-theme="dark"] .current-game-info-close:hover {
-  background: var(--bg-hover);
+  background: var(--dark-surface-3, #1a1a1a);
 }
 html[data-theme="dark"] .cgi-phase {
   background: rgba(255,255,255,0.04);
@@ -1217,8 +1217,48 @@ html[data-theme="dark"] .cgi-phase {
 html[data-theme="dark"] .cgi-grid .cgi-row {
   border-bottom-color: rgba(255,255,255,0.04);
 }
+html[data-theme="dark"] .current-game-info-actions button {
+  background: #ffffff;
+  color: #000000;
+}
+html[data-theme="dark"] .current-game-info-actions button:hover {
+  background: #e8e8e8;
+}
+html[data-theme="dark"] .current-game-info-actions button.is-accent {
+  background: var(--accent-coral, #e53935);
+  color: #ffffff;
+}
 html[data-theme="dark"] .comment-section::-webkit-scrollbar-thumb {
   background: #555;
+}
+
+html[data-theme="dark"] .side.left:not(.chosen):hover,
+html[data-theme="dark"] .side.left.hover-preview:not(.chosen),
+html[data-theme="dark"] .side.right:not(.chosen):hover,
+html[data-theme="dark"] .side.right.hover-preview:not(.chosen) {
+  border-color: #ffffff;
+}
+
+html[data-theme="dark"] .image-box {
+  background: #000000;
+  border-color: var(--dark-border-soft, #242424);
+}
+
+html[data-theme="dark"] .image-box-loader {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+html[data-theme="dark"] .chamfer-button.left,
+html[data-theme="dark"] .chamfer-button.right {
+  background: rgba(24, 24, 24, 0.94);
+}
+
+html[data-theme="dark"] .chamfer-button:hover {
+  background: rgba(42, 42, 42, 0.98);
+}
+
+html[data-theme="dark"] .draw-overlay {
+  background: var(--dark-surface-1, #0b0b0b);
 }
 
 @media (max-width: 640px) {

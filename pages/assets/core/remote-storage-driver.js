@@ -93,7 +93,15 @@
 
   // UI-only preferences that are never stored on the server and must always
   // be taken from the local snapshot when merging with a server pull.
-  const LOCAL_ONLY_VALUE_KEYS = ['uiTheme', 'hideBurned', 'devModeEnabled', 'infiniteVotes', 'metaModeEnabled'];
+  const LOCAL_ONLY_VALUE_KEYS = [
+    'uiTheme',
+    'hideBurned',
+    'devModeEnabled',
+    'infiniteVotes',
+    'metaModeEnabled',
+    'architectMode',
+    'prebuiltInstalled',
+  ];
 
   function mergeProfileScopedFlags(baseSnapshot, localSnapshot) {
     if (!baseSnapshot || typeof baseSnapshot !== 'object') return baseSnapshot;
@@ -200,10 +208,34 @@
     return { snapshot: next, added };
   }
 
+  function applyStoredUiPrefs(snapshot) {
+    if (!snapshot || typeof snapshot !== 'object') return snapshot;
+    let prefs = null;
+    try {
+      const raw = localStorage.getItem(UI_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw);
+    } catch {}
+    if (!prefs || typeof prefs !== 'object') return snapshot;
+    let merged;
+    try {
+      merged = JSON.parse(JSON.stringify(snapshot));
+    } catch {
+      return snapshot;
+    }
+    if (!merged.values || typeof merged.values !== 'object') merged.values = {};
+    LOCAL_ONLY_VALUE_KEYS.forEach((key) => {
+      if (prefs[key] !== undefined && prefs[key] !== null) {
+        merged.values[key] = prefs[key];
+      }
+    });
+    return merged;
+  }
+
   function adoptServer(pulled, local) {
     const flagged = mergeProfileScopedFlags(pulled, local);
-    const unioned = unionLocalRows(flagged, local);
-    const changed = flagged !== pulled || unioned.added;
+    const withPrefs = applyStoredUiPrefs(flagged);
+    const unioned = unionLocalRows(withPrefs, local);
+    const changed = withPrefs !== pulled || unioned.added;
     return { snapshot: unioned.snapshot, source: changed ? 'merged' : 'server' };
   }
 

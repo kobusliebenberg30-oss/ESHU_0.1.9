@@ -9,7 +9,7 @@ export const createCreationSchema = z.object({
   devices: z.string().max(500).optional(),
   tags: z.string().max(500).optional(),
   dateMade: z.string().max(40).optional(),
-  hostGameId: z.string().nullable().optional(),
+  hostGameId: z.string().min(1),
   imageAssetId: z.string().nullable().optional(),
   status: STATUS,
   timestamp: z.number().int().optional(),
