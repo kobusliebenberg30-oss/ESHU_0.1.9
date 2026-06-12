@@ -25,6 +25,8 @@
 
   const STYLE_ID = 'eshu-auth-overlay-styles';
   const ROOT_ID = 'eshu-auth-overlay';
+  const AUTH_LOADING_KEY = 'eshu:auth-loading-started-at';
+  const SIGNOUT_LOADING_KEY = 'signout';
 
   function injectStyles() {
     if (document.getElementById(STYLE_ID)) return;
@@ -501,6 +503,34 @@ html[data-theme="dark"] .eshu-signout-affirm {
   function persistRemoteAuthSuccess() {
     try { localStorage.setItem('eshu_backend', 'remote'); } catch {}
     try { window.dispatchEvent(new CustomEvent('eshu:auth-success')); } catch {}
+  }
+
+  function markAuthHydrationLoading() {
+    try { sessionStorage.setItem(AUTH_LOADING_KEY, String(Date.now())); } catch {}
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.show === 'function') {
+        window.ESHU_LOADING.show({ key: 'auth-hydration', maxMs: 30000 });
+      }
+    } catch {}
+  }
+
+  function showSignOutLoading() {
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.show === 'function') {
+        window.ESHU_LOADING.show({ key: SIGNOUT_LOADING_KEY, maxMs: 30000 });
+        return;
+      }
+      if (!document || !document.body) return;
+      let overlay = document.getElementById('loadingOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.id = 'loadingOverlay';
+        overlay.innerHTML = '<div class="loading-diamond-frame" aria-hidden="true"><div class="loading-spinner"></div></div>';
+        document.body.appendChild(overlay);
+      }
+      overlay.classList.add('active');
+    } catch {}
   }
 
   function isPlayPage() {
@@ -1202,6 +1232,7 @@ html[data-theme="dark"] .eshu-signout-affirm {
         await window.ESHU_API.auth.register({ email, username, password });
       }
 
+      markAuthHydrationLoading();
       await finalizeSuccess();
     } catch (err) {
       // On forgot-password view: show confirmation regardless (no enumeration).
@@ -1473,13 +1504,16 @@ html[data-theme="dark"] .eshu-signout-affirm {
   async function logout() {
     const confirmed = await confirmSignOut();
     if (!confirmed) return;
+    showSignOutLoading();
     await performLogout();
   }
 
   function maybeAutoOpen() {
+    if (isPlayPage()) return;
     // Defer one tick so concurrently-loading scripts (e.g. ESHU_API) finish
     // booting and the overlay can render its styles cleanly.
     setTimeout(() => {
+      if (isPlayPage()) return;
       try { open({ tab: 'signin' }); } catch {}
     }, 0);
   }

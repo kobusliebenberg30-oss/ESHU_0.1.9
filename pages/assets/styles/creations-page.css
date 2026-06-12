@@ -395,7 +395,7 @@
 }
 
 /* ── Loading Overlay ─────────────────────────────────────────── */
-/* Square + transparent backdrop live in eshu-styles.css. */
+/* Shared content-panel overlay and diamond loader live in eshu-styles.css. */
 .loading-content { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .loading-text { font-size: 12px; font-weight: 600; color: #111; }
 

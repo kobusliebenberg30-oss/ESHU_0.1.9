@@ -36,6 +36,7 @@
   const LEGACY_STORAGE_KEYS = ['eshu_db_v1', 'groups', 'games', 'creationsList', 'xpPoints', 'profileName', 'profileDesc', 'primaryGroupId', 'userProfile'];
   const DRIVER_NAME = 'remote';
   const PUSH_DEBOUNCE_MS = 200;
+  const AUTH_LOADING_KEY = 'eshu:auth-loading-started-at';
 
   function isHostedDeployment() {
     try {
@@ -72,6 +73,48 @@
 
   function emit(name, detail) {
     try { window.dispatchEvent(new CustomEvent(name, { detail: detail || {} })); } catch {}
+  }
+
+  function hasPendingAuthLoading() {
+    try {
+      const startedAt = parseInt(sessionStorage.getItem(AUTH_LOADING_KEY) || '0', 10);
+      return !!startedAt && Date.now() - startedAt < 30000;
+    } catch {
+      return false;
+    }
+  }
+
+  function showRemoteActivationLoading() {
+    if (!hasPendingAuthLoading()) return;
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.show === 'function') {
+        window.ESHU_LOADING.show({ key: 'remote-activation', maxMs: 30000 });
+        return;
+      }
+      if (!document || !document.body) return;
+      let overlay = document.getElementById('loadingOverlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.id = 'loadingOverlay';
+        overlay.innerHTML = '<div class="loading-diamond-frame" aria-hidden="true"><div class="loading-spinner"></div></div>';
+        document.body.appendChild(overlay);
+      }
+      overlay.classList.add('active');
+    } catch {}
+  }
+
+  function clearRemoteActivationLoading() {
+    try { sessionStorage.removeItem(AUTH_LOADING_KEY); } catch {}
+    try {
+      if (window.ESHU_LOADING && typeof window.ESHU_LOADING.hide === 'function') {
+        window.ESHU_LOADING.hide({ key: 'remote-activation', force: true });
+        window.ESHU_LOADING.hide({ key: 'auth-hydration', force: true });
+        return;
+      }
+      const overlay = document.getElementById('loadingOverlay');
+      if (overlay) overlay.classList.remove('active');
+    } catch {}
   }
 
   function safeParseJson(value) {
@@ -830,8 +873,11 @@
   }
 
   async function activate() {
+    showRemoteActivationLoading();
+
     if (!window.ESHU_API) {
       console.warn('[ESHU remote] api.js not loaded; remote backend disabled');
+      clearRemoteActivationLoading();
       return;
     }
 
@@ -839,6 +885,7 @@
       await waitFor(() => !!(window.ESHU_DB && typeof window.ESHU_DB.registerStorageDriver === 'function'), 5000);
     } catch {
       console.warn('[ESHU remote] ESHU_DB never became available; remote backend disabled');
+      clearRemoteActivationLoading();
       return;
     }
 
@@ -853,6 +900,7 @@
       console.error('[ESHU remote] /auth/me failed', err);
       preflightDiagnose('auth-me-error');
       emit('eshu:sync-error', { error: err });
+      clearRemoteActivationLoading();
       return;
     }
     if (!me) {
@@ -890,6 +938,7 @@
       }
       preflightDiagnose('unauthenticated');
       emit('eshu:sync-unauthenticated');
+      clearRemoteActivationLoading();
       return;
     }
 

@@ -2,6 +2,8 @@
   'use strict';
 
   const NAV_PENDING_KEY = 'eshu:navigation-loading-started-at';
+  const AUTH_LOADING_KEY = 'eshu:auth-loading-started-at';
+  const AUTH_LOADING_RUNTIME_KEY = 'auth-hydration';
 
   function ensureLoadingOverlay() {
     if (!document || !document.body) return null;
@@ -10,7 +12,7 @@
       overlay = document.createElement('div');
       overlay.className = 'loading-overlay';
       overlay.id = 'loadingOverlay';
-      overlay.innerHTML = '<div class="loading-spinner" aria-hidden="true"></div>';
+      overlay.innerHTML = '<div class="loading-diamond-frame" aria-hidden="true"><div class="loading-spinner"></div></div>';
       document.body.appendChild(overlay);
     }
     return overlay;
@@ -129,6 +131,40 @@
       window.ESHU_LOADING.hide({ key: 'navigation', force: true });
       window.ESHU_LOADING.hide({ key: 'navigation-target', force: true });
     }
+  }
+
+  function initAuthHydrationLoading() {
+    let startedAt = 0;
+    try { startedAt = parseInt(sessionStorage.getItem(AUTH_LOADING_KEY) || '0', 10); } catch {}
+    if (!startedAt || Date.now() - startedAt > 30000) {
+      try { sessionStorage.removeItem(AUTH_LOADING_KEY); } catch {}
+      return;
+    }
+
+    window.ESHU_LOADING.show({ key: AUTH_LOADING_RUNTIME_KEY, maxMs: 30000 });
+
+    let settleTimer = null;
+    const finish = () => {
+      if (settleTimer) window.clearTimeout(settleTimer);
+      // Allow page listeners to render profile and panels from the hydrated DB.
+      settleTimer = window.setTimeout(() => {
+        try { sessionStorage.removeItem(AUTH_LOADING_KEY); } catch {}
+        if (window.ESHU_LOADING) {
+          window.ESHU_LOADING.hide({ key: AUTH_LOADING_RUNTIME_KEY, force: true });
+          window.ESHU_LOADING.hide({ key: 'remote-activation', force: true });
+        }
+      }, 350);
+    };
+
+    window.addEventListener('eshu:remote-activated', finish);
+    window.addEventListener('eshu:sync-success', finish);
+    window.addEventListener('eshu:sync-error', finish);
+    window.addEventListener('load', () => {
+      // Cached sessions may already have rendered before this runtime starts.
+      if (window.ESHU_AUTH) finish();
+    }, { once: true });
+    if (window.ESHU_AUTH) window.setTimeout(finish, 0);
+    window.setTimeout(finish, 12000);
   }
 
   function isRemoteMode() {
@@ -553,6 +589,7 @@
   };
 
   window.ESHU_LOADING = window.ESHU_LOADING || createLoadingRuntime();
+  initAuthHydrationLoading();
   wireNavigationLoading();
   resumeNavigationLoading();
 })();

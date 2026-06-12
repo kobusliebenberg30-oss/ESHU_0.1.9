@@ -126,14 +126,16 @@
 
 /* === Unified Loading Indicator === */
 /* Content-area layer only (below the 56px nav) so the top bar stays visible
-   during navigation/loading. Transparent — only the diamond shows. */
+   while the page/profile data hydrates. */
 .loading-overlay {
   position: fixed;
   top: 56px;
   left: 0;
   right: 0;
   bottom: 0;
-  background: transparent !important;
+  background: var(--bg-panel, #ffffff) !important;
+  border: 1px solid var(--ring, #111111);
+  border-top: 0;
   display: none;
   align-items: center;
   justify-content: center;
@@ -144,6 +146,24 @@
 .loading-overlay.active {
   display: flex;
   pointer-events: auto;
+}
+
+.loading-diamond-frame {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-diamond-frame::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border: 3px solid var(--ring, #111111);
+  transform: rotate(45deg);
+  animation: eshuDiamondBorderBlink var(--loader-square-duration) steps(1, end) infinite;
 }
 
 /* Diamond tile: rotated square with a full border, like the game image tile. */
@@ -163,6 +183,15 @@
 .loading-overlay .loading-spinner {
   width: 30px;
   height: 30px;
+}
+
+html[data-theme="dark"] .loading-overlay {
+  background: var(--dark-surface-1, #0b0b0b) !important;
+  border-color: var(--dark-border-strong, #3a3a3a);
+}
+
+html[data-theme="dark"] .loading-diamond-frame::before {
+  border-color: var(--text-primary, #ffffff);
 }
 
 .eshu-action-loading {
@@ -190,6 +219,11 @@
 @keyframes eshuDiamondBlink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
+}
+
+@keyframes eshuDiamondBorderBlink {
+  0%, 49% { opacity: 0.25; }
+  50%, 100% { opacity: 1; }
 }
 
 @keyframes eshuButtonDiamondBlink {
