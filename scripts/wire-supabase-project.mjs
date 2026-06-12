@@ -7,7 +7,7 @@
  *
  * Optional:
  *   --region=eu-central-1   (pooler host; copy from Supabase Connect → Transaction pooler if unsure)
- *   --cors=https://echo-0-1-9.vercel.app
+ *   --cors=https://eshu-0-2-1.vercel.app
  *   --bucket=eshu-assets
  */
 import { randomBytes } from 'node:crypto';
@@ -30,7 +30,7 @@ const publishable = args.publishable;
 const serviceRole = args['service-role'] || args.serviceRole;
 const poolerPrefix = args.prefix || 'aws-1';
 const region = args.region || 'eu-central-1';
-const cors = args.cors || 'https://echo-0-1-9.vercel.app,http://localhost:8080';
+const cors = args.cors || 'https://eshu-0-2-1.vercel.app,http://localhost:8080';
 const bucket = args.bucket || 'eshu-assets';
 
 if (!ref || !password || password === 'true') {
@@ -93,5 +93,5 @@ console.log('  1. In Supabase Connect modal, confirm pooler region matches --reg
 console.log('  2. cd server && npm run db:deploy');
 console.log('  3. In Supabase Storage, create a private bucket named:', bucket);
 console.log('  4. Add the same vars to Vercel → Settings → Environment Variables (Production + Preview).');
-console.log('  5. Redeploy echo-0-1-9 on Vercel.');
+console.log('  5. Redeploy eshu-0-2-1 on Vercel.');
 console.log('\nESHU env names (not Next.js): SUPABASE_URL + SUPABASE_ANON_KEY (publishable key is OK).');

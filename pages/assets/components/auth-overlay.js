@@ -565,7 +565,7 @@ html[data-theme="dark"] .eshu-signout-affirm {
   }
 
   function buildEmailConfirmationRedirect() {
-    const productionOrigin = 'https://eshu-0-1-9.vercel.app';
+    const productionOrigin = 'https://eshu-0-2-1.vercel.app';
     const localHosts = new Set(['localhost', '127.0.0.1', '::1']);
     const origin = localHosts.has(location.hostname) ? productionOrigin : location.origin;
     const path = location.pathname && location.pathname !== '/' ? location.pathname : '/play.html';

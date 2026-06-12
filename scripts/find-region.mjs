@@ -1,5 +1,11 @@
 import pg from 'pg';
 const { Client } = pg;
+const password = process.env.SUPABASE_DB_PASSWORD;
+
+if (!password) {
+  console.error('Set SUPABASE_DB_PASSWORD before running this script.');
+  process.exit(1);
+}
 
 const candidates = [
   // Raw IPv6 resolved by PowerShell for db.shkoazonbwjplrsjtkne.supabase.co
@@ -13,7 +19,7 @@ for (const c of candidates) {
   const client = new Client({
     host: c.host, port: c.port, database: 'postgres',
     user: c.user,
-    password: 'Openthedoor1!',
+    password,
     ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 6000,
   });

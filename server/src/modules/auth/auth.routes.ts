@@ -87,7 +87,7 @@ router.post('/supabase/session', authLimiter, validate(supabaseSessionSchema), a
 router.post('/forgot-password', authLimiter, validate(forgotPasswordSchema), async (req, res, next) => {
   try {
     const origin = (req.headers.origin as string | undefined) ||
-      (env.CORS_ORIGIN && env.CORS_ORIGIN[0] ? env.CORS_ORIGIN[0] : 'https://eshu-0-1-9.vercel.app');
+      (env.CORS_ORIGIN && env.CORS_ORIGIN[0] ? env.CORS_ORIGIN[0] : 'https://eshu-0-2-1.vercel.app');
     const redirectTo = `${origin}/play.html?auth=reset`;
     await requestPasswordReset(req.body, redirectTo);
     res.status(204).end();

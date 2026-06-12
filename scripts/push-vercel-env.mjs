@@ -5,11 +5,11 @@
  * Option A — API (recommended in CI):
  *   set VERCEL_TOKEN=...  (Vercel → Account → Tokens)
  *   set VERCEL_TEAM=eshu002   (optional team slug)
- *   node scripts/push-vercel-env.mjs --project=eshu-0-1-9
+ *   node scripts/push-vercel-env.mjs --project=eshu-0-2-1
  *
  * Option B — CLI (interactive login):
  *   npx vercel login
- *   npx vercel link   # pick echo-0-1-9
+ *   npx vercel link   # pick eshu-0-2-1
  *   node scripts/push-vercel-env.mjs
  */
 import { spawnSync } from 'node:child_process';
@@ -48,7 +48,7 @@ const vars = {
   SUPABASE_URL: parsed.SUPABASE_URL,
   SUPABASE_ANON_KEY: parsed.SUPABASE_ANON_KEY,
   SUPABASE_SERVICE_ROLE_KEY: parsed.SUPABASE_SERVICE_ROLE_KEY,
-  CORS_ORIGIN: parsed.CORS_ORIGIN || 'https://eshu-0-1-9.vercel.app',
+  CORS_ORIGIN: parsed.CORS_ORIGIN || 'https://eshu-0-2-1.vercel.app',
   STORAGE_DRIVER: parsed.STORAGE_DRIVER || 'supabase',
   STORAGE_SUPABASE_BUCKET: parsed.STORAGE_SUPABASE_BUCKET || 'eshu-assets',
   STORAGE_MAX_BYTES: parsed.STORAGE_MAX_BYTES || '26214400',
@@ -61,7 +61,7 @@ if (missing.length) {
 }
 
 const projectArg = process.argv.find((a) => a.startsWith('--project='));
-const projectName = projectArg ? projectArg.split('=')[1] : 'eshu-0-1-9';
+const projectName = projectArg ? projectArg.split('=')[1] : 'eshu-0-2-1';
 const token = process.env.VERCEL_TOKEN;
 const team = process.env.VERCEL_TEAM || process.env.VERCEL_ORG_ID || 'team_phmxFS3tS7bSRiG8ta7pqkGN';
 

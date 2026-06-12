@@ -1,0 +1,29 @@
+---
+description: Treat ESHU as a persistent hierarchical content engine
+alwaysApply: true
+---
+
+# Persistent Content Engine
+
+ESHU is fundamentally a hierarchical content engine, not a collection of pages.
+Persistence, hierarchy, and data integrity are the foundation of the platform.
+
+Core hierarchy:
+
+- `Group` is the top-level organizational entity.
+- `Game` must belong to exactly one `Group`.
+- `Creation` must belong to exactly one `Game`.
+- The Engine never owns data; it consumes `Creation` data for competitive and chronological workflows.
+
+Non-negotiable persistence rules:
+
+- The database is the source of truth. Frontend state is only a cache.
+- Creating a `Group`, `Game`, `Creation`, or `Comment` must not report success until database persistence is confirmed.
+- Every page load must be able to reconstruct durable state from the database.
+- Data must survive refreshes, logouts, deployments, server restarts, frontend rebuilds, and environment changes.
+- Any flow where created entities disappear later is a critical failure, even if the UI appeared to work.
+- Parent-child relationships must be preserved and enforced by backend/database logic.
+- New features must preserve the `Group -> Game -> Creation -> Engine` hierarchy.
+- Data integrity takes priority over feature velocity and presentation.
+
+When changing architecture, backend routes, frontend mutation flows, sync, deployment, storage, or database schema, first verify that created entities remain durable and retrievable across sessions.

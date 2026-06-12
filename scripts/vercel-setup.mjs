@@ -1,7 +1,13 @@
 import https from 'node:https';
 
-const TOKEN = 'vcp_7Sh5gn04dTINTS9iBqTXgT3Lk5zCJ4meDs7QSQuve4GIVM2GS90IgtPX';
-const TEAM_SLUG = 'eshu002';
+const TOKEN = process.env.VERCEL_TOKEN;
+const TEAM_SLUG = process.env.VERCEL_TEAM || 'eshu002';
+const PROJECT_NAME = process.env.VERCEL_PROJECT || 'eshu-0-2-1';
+
+if (!TOKEN) {
+  console.error('Set VERCEL_TOKEN before running this script.');
+  process.exit(1);
+}
 
 function req(method, path, body) {
   return new Promise((resolve, reject) => {
@@ -28,33 +34,41 @@ function req(method, path, body) {
 
 // 1. Find project
 const projects = await req('GET', `/v9/projects?teamId=${TEAM_SLUG}&limit=20`);
-const project = projects.body.projects?.find(p => p.name === 'eshu-0-1-6b');
+const project = projects.body.projects?.find(p => p.name === PROJECT_NAME);
 if (!project) {
   console.log('Projects found:', projects.body.projects?.map(p => p.name + ' / ' + p.id));
   process.exit(1);
 }
 console.log('Project:', project.name, project.id);
 
-const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SERVICE_ROLE) {
-  console.error('Set SUPABASE_SERVICE_ROLE_KEY in your shell before running this script.');
+const requiredEnv = [
+  'DATABASE_URL',
+  'DIRECT_URL',
+  'SESSION_SECRET',
+  'SUPABASE_URL',
+  'SUPABASE_ANON_KEY',
+  'SUPABASE_SERVICE_ROLE_KEY',
+];
+const missing = requiredEnv.filter((name) => !process.env[name]);
+if (missing.length) {
+  console.error('Set required env before running this script:', missing.join(', '));
   process.exit(1);
 }
 
 const envVars = [
-  { key: 'DATABASE_URL',             value: 'postgresql://postgres.shkoazonbwjplrsjtkne:Openthedoor1!@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true' },
-  { key: 'DIRECT_URL',               value: 'postgresql://postgres.shkoazonbwjplrsjtkne:Openthedoor1!@aws-1-eu-central-1.pooler.supabase.com:5432/postgres' },
-  { key: 'SESSION_SECRET',           value: '7f0f1f75743ff8315c996acf3cba1df67ebd794381eaf2aa24d84d09cfd9c52d804ad2449f39f3b0871c15193306405a' },
+  { key: 'DATABASE_URL',             value: process.env.DATABASE_URL },
+  { key: 'DIRECT_URL',               value: process.env.DIRECT_URL },
+  { key: 'SESSION_SECRET',           value: process.env.SESSION_SECRET },
   { key: 'SESSION_COOKIE_NAME',      value: 'eshu.sid' },
   { key: 'SESSION_MAX_AGE_MS',       value: '2592000000' },
   { key: 'SESSION_COOKIE_SAME_SITE', value: 'lax' },
-  { key: 'SUPABASE_URL',             value: 'https://shkoazonbwjplrsjtkne.supabase.co' },
-  { key: 'SUPABASE_ANON_KEY',        value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNoa29hem9uYndqcGxyc2p0a25lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MTk1MDYsImV4cCI6MjA5NTM5NTUwNn0.4zXRj6gTPkXCVMuZZ6J6gnSCWZ6DW57sfTjLsoTz014' },
-  { key: 'SUPABASE_SERVICE_ROLE_KEY', value: SERVICE_ROLE },
-  { key: 'CORS_ORIGIN',              value: 'https://eshu-0-1-6b.vercel.app' },
+  { key: 'SUPABASE_URL',             value: process.env.SUPABASE_URL },
+  { key: 'SUPABASE_ANON_KEY',        value: process.env.SUPABASE_ANON_KEY },
+  { key: 'SUPABASE_SERVICE_ROLE_KEY', value: process.env.SUPABASE_SERVICE_ROLE_KEY },
+  { key: 'CORS_ORIGIN',              value: process.env.CORS_ORIGIN || 'https://eshu-0-2-1.vercel.app' },
   { key: 'NODE_ENV',                 value: 'production' },
   { key: 'STORAGE_DRIVER',           value: 'supabase' },
-  { key: 'STORAGE_SUPABASE_BUCKET',  value: 'eshu-assets' },
+  { key: 'STORAGE_SUPABASE_BUCKET',  value: process.env.STORAGE_SUPABASE_BUCKET || 'eshu-assets' },
   { key: 'STORAGE_MAX_BYTES',        value: '26214400' },
 ];
 

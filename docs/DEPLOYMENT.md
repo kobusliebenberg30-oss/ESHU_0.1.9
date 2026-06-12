@@ -17,7 +17,7 @@ Auth is application-owned: `POST /api/auth/register`, `POST /api/auth/login`, Ar
 ## Prerequisites
 
 1. A **Supabase** project with Postgres enabled.
-2. A **GitHub** repo connected to **Vercel** (`liebenbergkobus00-sketch/ESHU_0.1.4` or your fork).
+2. A **GitHub** repo connected to **Vercel** (`liebenbergkobus00-sketch/ESHU_0.2.1` or your fork).
 3. Node **20+** locally for migrations and smoke tests.
 
 ## 1. Supabase database

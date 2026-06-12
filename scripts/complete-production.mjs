@@ -6,7 +6,9 @@
  *   node scripts/complete-production.mjs --password=YOUR_DB_PASSWORD
  *
  * Optional:
+ *   --ref=YOUR_SUPABASE_PROJECT_REF
  *   --region=us-east-1
+ *   --publishable=YOUR_SUPABASE_PUBLISHABLE_KEY
  *   --service-role=YOUR_SUPABASE_SERVICE_ROLE_KEY
  *   --bucket=eshu-assets
  */
@@ -15,7 +17,6 @@ import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const PROJECT_REF = 'qyylmniugajchuynvjgv';
 const ROOT = resolve(import.meta.dirname, '..');
 const SERVER = resolve(ROOT, 'server');
 
@@ -27,13 +28,26 @@ const args = Object.fromEntries(
 );
 
 const password = args.password;
+const projectRef = args.ref || process.env.SUPABASE_PROJECT_REF;
+const publishable = args.publishable || process.env.SUPABASE_ANON_KEY;
 const region = args.region || 'eu-central-1';
 const serviceRole = args['service-role'] || args.serviceRole;
 const bucket = args.bucket || 'eshu-assets';
+const productionOrigin = args.cors || process.env.CORS_ORIGIN || 'https://eshu-0-2-1.vercel.app';
 
 if (!password || password === 'true') {
   console.error('\nMissing --password=YOUR_SUPABASE_DATABASE_PASSWORD\n');
   console.error('Supabase → Project → Settings → Database → Database password\n');
+  process.exit(1);
+}
+
+if (!projectRef || projectRef === 'true') {
+  console.error('\nMissing --ref=YOUR_SUPABASE_PROJECT_REF\n');
+  process.exit(1);
+}
+
+if (!publishable || publishable === 'true') {
+  console.error('\nMissing --publishable=YOUR_SUPABASE_PUBLISHABLE_KEY or SUPABASE_ANON_KEY\n');
   process.exit(1);
 }
 
@@ -44,8 +58,8 @@ if (!serviceRole || serviceRole === 'true') {
 }
 
 const encoded = encodeURIComponent(password);
-const direct = `postgresql://postgres:${encoded}@db.${PROJECT_REF}.supabase.co:5432/postgres?sslmode=require`;
-const pooled = `postgresql://postgres.${PROJECT_REF}:${encoded}@aws-0-${region}.pooler.supabase.com:5432/postgres?sslmode=require`;
+const direct = `postgresql://postgres:${encoded}@db.${projectRef}.supabase.co:5432/postgres?sslmode=require`;
+const pooled = `postgresql://postgres.${projectRef}:${encoded}@aws-0-${region}.pooler.supabase.com:5432/postgres?sslmode=require`;
 
 const prodEnv = resolve(SERVER, '.env.production');
 const sessionSecret = randomBytes(48).toString('hex');
@@ -61,10 +75,10 @@ DIRECT_URL=${direct}
 SESSION_SECRET=${sessionSecret}
 SESSION_COOKIE_NAME=eshu.sid
 SESSION_MAX_AGE_MS=2592000000
-SUPABASE_URL=https://${PROJECT_REF}.supabase.co
-SUPABASE_ANON_KEY=sb_publishable_ef87uC-eCGwhqArQnb2USQ_3Q6RODkb
+SUPABASE_URL=https://${projectRef}.supabase.co
+SUPABASE_ANON_KEY=${publishable}
 SUPABASE_SERVICE_ROLE_KEY=${serviceRole}
-CORS_ORIGIN=https://eshu-0-1-4.vercel.app
+CORS_ORIGIN=${productionOrigin}
 STORAGE_DRIVER=supabase
 STORAGE_SUPABASE_BUCKET=${bucket}
 STORAGE_MAX_BYTES=26214400
@@ -93,10 +107,10 @@ const vars = {
   SESSION_SECRET: sessionSecret,
   SESSION_COOKIE_NAME: 'eshu.sid',
   SESSION_MAX_AGE_MS: '2592000000',
-  SUPABASE_URL: `https://${PROJECT_REF}.supabase.co`,
-  SUPABASE_ANON_KEY: 'sb_publishable_ef87uC-eCGwhqArQnb2USQ_3Q6RODkb',
+  SUPABASE_URL: `https://${projectRef}.supabase.co`,
+  SUPABASE_ANON_KEY: publishable,
   SUPABASE_SERVICE_ROLE_KEY: serviceRole,
-  CORS_ORIGIN: 'https://eshu-0-1-4.vercel.app',
+  CORS_ORIGIN: productionOrigin,
   STORAGE_DRIVER: 'supabase',
   STORAGE_SUPABASE_BUCKET: bucket,
   STORAGE_MAX_BYTES: '26214400',
@@ -120,5 +134,5 @@ console.log('\nDeploying to Vercel production…');
 run('npx', ['vercel', 'deploy', '--prod'], { cwd: ROOT });
 
 console.log('\nDone. Test:');
-console.log('  https://eshu-0-1-4.vercel.app/healthz');
-console.log('  https://eshu-0-1-4.vercel.app/api/auth/supabase/config');
+console.log(`  ${productionOrigin}/healthz`);
+console.log(`  ${productionOrigin}/api/auth/supabase/config`);
